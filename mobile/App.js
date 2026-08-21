@@ -1,11 +1,12 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { fetchDownloads } from "./src/api";
+import { cancelDownload, downloadId } from "./src/downloadManager";
 import DetailScreen from "./src/screens/DetailScreen";
 import DownloadsScreen from "./src/screens/DownloadsScreen";
 import HomeScreen from "./src/screens/HomeScreen";
+import PlayerScreen from "./src/screens/PlayerScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import SearchScreen from "./src/screens/SearchScreen";
 import { colors } from "./src/theme";
@@ -21,65 +22,56 @@ export default function App() {
   const [tab, setTab] = useState("home");
   const [query, setQuery] = useState("");
   const [detail, setDetail] = useState(null);
+  const [player, setPlayer] = useState(null);
   const [downloads, setDownloads] = useState([]);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setDownloads((list) =>
-        list.map((item) => {
-          if (item.status === "done") return item;
-          const next = Math.min(1, item.progress + 0.08);
-          return { ...item, progress: next, status: next >= 1 ? "done" : "progress" };
-        })
-      );
-    }, 800);
-    return () => clearInterval(timer);
-  }, []);
+  function upsertDownload(partial) {
+    setDownloads((list) => {
+      const idx = list.findIndex((d) => d.id === partial.id);
+      if (idx === -1) {
+        return [
+          {
+            progress: 0,
+            status: "progress",
+            title: partial.title,
+            cover: partial.cover,
+            ...partial,
+          },
+          ...list,
+        ];
+      }
+      const next = [...list];
+      next[idx] = { ...next[idx], ...partial };
+      return next;
+    });
+  }
+
+  function playItem(item) {
+    const id = item.id || downloadId(item);
+    setPlayer({ ...item, id });
+  }
 
   async function addDownload(item) {
-    let quality = item.quality;
-    let size = item.size;
-    let url = item.url;
-    if (!url) {
-      const pack = await fetchDownloads(item.subjectId);
-      const best = (pack.downloads || [])[0];
-      if (!best) return;
-      quality = best.quality;
-      size = best.size;
-      url = best.url;
-    }
-    const id = `${item.subjectId}-${item.season || 0}-${item.episode || 0}-${quality}`;
-    setDownloads((list) => {
-      if (list.some((d) => d.id === id)) return list;
-      return [
-        {
-          id,
-          subjectId: item.subjectId,
-          title: item.displayTitle || item.title,
-          cover: item.coverSmall || item.cover,
-          quality,
-          size,
-          url,
-          progress: 0.08,
-          status: "progress",
-        },
-        ...list,
-      ];
-    });
-    setTab("downloads");
-    setDetail(null);
+    playItem(item);
   }
 
   return (
     <SafeAreaProvider>
       <View style={styles.root}>
         <StatusBar style="light" />
-        {detail ? (
+        {player ? (
+          <PlayerScreen
+            item={player}
+            onBack={() => setPlayer(null)}
+            onDownloadUpdate={upsertDownload}
+          />
+        ) : detail ? (
           <DetailScreen
             item={detail}
             onBack={() => setDetail(null)}
             onAddDownload={addDownload}
             onOpenItem={setDetail}
+            onPlay={playItem}
           />
         ) : (
           <>
@@ -91,6 +83,7 @@ export default function App() {
                 downloads={downloads}
                 onOpenItem={setDetail}
                 onAddDownload={addDownload}
+                onPlay={playItem}
               />
             )}
             {tab === "search" && (
@@ -99,31 +92,37 @@ export default function App() {
             {tab === "downloads" && (
               <DownloadsScreen
                 downloads={downloads}
-                onRemove={(id) => setDownloads((list) => list.filter((d) => d.id !== id))}
+                onPlay={playItem}
+                onRemove={(id) => {
+                  cancelDownload(id);
+                  setDownloads((list) => list.filter((d) => d.id !== id));
+                }}
               />
             )}
             {tab === "profile" && <ProfileScreen onOpenItem={setDetail} />}
           </>
         )}
 
-        <View style={styles.tabBar}>
-          {TABS.map((item) => {
-            const active = !detail && tab === item.id;
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => {
-                  setDetail(null);
-                  setTab(item.id);
-                }}
-                style={styles.tab}
-              >
-                <Text style={[styles.tabIcon, active && styles.active]}>{item.icon}</Text>
-                <Text style={[styles.tabLabel, active && styles.active]}>{item.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {!player ? (
+          <View style={styles.tabBar}>
+            {TABS.map((item) => {
+              const active = !detail && tab === item.id;
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => {
+                    setDetail(null);
+                    setTab(item.id);
+                  }}
+                  style={styles.tab}
+                >
+                  <Text style={[styles.tabIcon, active && styles.active]}>{item.icon}</Text>
+                  <Text style={[styles.tabLabel, active && styles.active]}>{item.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
       </View>
     </SafeAreaProvider>
   );

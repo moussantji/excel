@@ -42,6 +42,7 @@ export default function HomeScreen({
   downloads,
   onOpenItem,
   onAddDownload,
+  onPlay,
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -122,7 +123,7 @@ export default function HomeScreen({
               <Text style={styles.title}>{hero.displayTitle || hero.title}</Text>
               <Text style={styles.genres}>{(hero.genres || []).join(" · ")}</Text>
               <View style={styles.actions}>
-                <Pressable style={styles.play} onPress={() => onOpenItem(hero)}>
+                <Pressable style={styles.play} onPress={() => onPlay(hero)}>
                   <Text style={styles.playText}>Lecture  ▶</Text>
                 </Pressable>
                 <Pressable style={styles.info} onPress={() => onAddDownload(hero)}>
@@ -151,7 +152,7 @@ export default function HomeScreen({
       ) : (
         <View style={styles.dlRow}>
           {preview.map((item) => (
-            <View key={item.id} style={styles.dlCard}>
+            <Pressable key={item.id} style={styles.dlCard} onPress={() => onPlay(item)}>
               <Image source={{ uri: item.cover }} style={styles.dlThumb} />
               <View style={{ flex: 1 }}>
                 <Text numberOfLines={1} style={styles.dlTitle}>
@@ -171,7 +172,7 @@ export default function HomeScreen({
                   </>
                 )}
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
       )}

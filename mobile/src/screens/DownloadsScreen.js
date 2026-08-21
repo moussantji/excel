@@ -2,7 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { formatBytes } from "../api";
 import { colors } from "../theme";
 
-export default function DownloadsScreen({ downloads, onRemove }) {
+export default function DownloadsScreen({ downloads, onRemove, onPlay }) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.h1}>Téléchargements</Text>
@@ -10,7 +10,7 @@ export default function DownloadsScreen({ downloads, onRemove }) {
         <Text style={styles.empty}>Rien en file. Ajoute un titre depuis l’accueil.</Text>
       ) : null}
       {downloads.map((item) => (
-        <View key={item.id} style={styles.card}>
+        <Pressable key={item.id} style={styles.card} onPress={() => onPlay(item)}>
           <Image source={{ uri: item.cover }} style={styles.thumb} />
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>{item.title}</Text>
@@ -33,7 +33,7 @@ export default function DownloadsScreen({ downloads, onRemove }) {
               <Text style={styles.remove}>Retirer</Text>
             </Pressable>
           </View>
-        </View>
+        </Pressable>
       ))}
     </View>
   );

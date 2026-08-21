@@ -11,7 +11,7 @@ import {
 import { fetchDetail, fetchDownloads, formatBytes } from "../api";
 import { colors } from "../theme";
 
-export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem }) {
+export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, onPlay }) {
   const [pack, setPack] = useState(null);
   const [files, setFiles] = useState([]);
   const [season, setSeason] = useState(1);
@@ -77,6 +77,21 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem }
       </Text>
       <Text style={styles.genres}>{(detail.genres || []).join(" · ")}</Text>
       {detail.description ? <Text style={styles.desc}>{detail.description}</Text> : null}
+      <Pressable
+        style={styles.playNow}
+        onPress={() =>
+          onPlay({
+            ...detail,
+            season: pack?.isSeries ? season : undefined,
+            episode: pack?.isSeries ? episode : undefined,
+            url: files[0]?.url,
+            quality: files[0]?.quality,
+            size: files[0]?.size,
+          })
+        }
+      >
+        <Text style={styles.playNowText}>Lecture + téléchargement  ▶</Text>
+      </Pressable>
 
       {loading ? <ActivityIndicator color={colors.gold} style={{ marginTop: 24 }} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -120,21 +135,38 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem }
             <Text style={styles.q}>{file.quality}</Text>
             <Text style={styles.size}>{formatBytes(file.size)}</Text>
           </View>
-          <Pressable
-            style={styles.btn}
-            onPress={() =>
-              onAddDownload({
-                ...detail,
-                quality: file.quality,
-                size: file.size,
-                url: file.url,
-                season,
-                episode,
-              })
-            }
-          >
-            <Text style={styles.btnText}>Télécharger</Text>
-          </Pressable>
+          <View style={styles.fileBtns}>
+            <Pressable
+              style={styles.btn}
+              onPress={() =>
+                onPlay({
+                  ...detail,
+                  quality: file.quality,
+                  size: file.size,
+                  url: file.url,
+                  season,
+                  episode,
+                })
+              }
+            >
+              <Text style={styles.btnText}>Jouer</Text>
+            </Pressable>
+            <Pressable
+              style={styles.btnGhost}
+              onPress={() =>
+                onAddDownload({
+                  ...detail,
+                  quality: file.quality,
+                  size: file.size,
+                  url: file.url,
+                  season,
+                  episode,
+                })
+              }
+            >
+              <Text style={styles.btnGhostText}>DL</Text>
+            </Pressable>
+          </View>
         </View>
       ))}
 
@@ -202,8 +234,25 @@ const styles = StyleSheet.create({
   },
   q: { color: colors.text, fontWeight: "700" },
   size: { color: colors.dim, marginTop: 4 },
+  playNow: {
+    marginTop: 16,
+    backgroundColor: colors.gold,
+    borderRadius: 24,
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  playNowText: { color: "#1A1404", fontWeight: "800", fontSize: 16 },
+  fileBtns: { flexDirection: "row", gap: 8 },
   btn: { backgroundColor: colors.gold, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8 },
   btnText: { color: "#1A1404", fontWeight: "700" },
+  btnGhost: {
+    borderWidth: 1.5,
+    borderColor: colors.gold,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  btnGhostText: { color: colors.goldSoft, fontWeight: "700" },
   error: { color: "#F87171", marginTop: 16 },
   actor: { width: 72, alignItems: "center" },
   avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#222" },

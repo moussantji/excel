@@ -20,6 +20,10 @@ Branche sur `https://stream.mandenbaoubab.com/api` :
 - `GET /downloads?subjectId=&season=&episode=` — qualités
 - `GET /auth/me` + `POST /auth/login` — profil
 
+Lecture progressive **du fichier local** : un seul téléchargement écrit le MP4 ; un mini serveur HTTP (`127.0.0.1`) sert des **Range** uniquement sur les octets déjà reçus. Le player lit ces parties pendant que le DL continue (pas un 2e stream).
+
+Build natif requis pour le serveur local (`react-native-tcp-socket`) : `npx expo prebuild` / dev client. Sur le web, repli sur l’URL distante.
+
 ```bash
 cd mobile
 npm install

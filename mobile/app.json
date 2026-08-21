@@ -6,7 +6,8 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#050505",
-    "ios": { "supportsTablet": false },
+    "plugins": ["expo-av"],
+    "ios": { "supportsTablet": false, "infoPlist": { "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true } } },
     "android": { "adaptiveIcon": { "backgroundColor": "#050505" } }
   }
 }
