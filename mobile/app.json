@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Stream",
+    "slug": "manden-stream",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#050505",
+    "plugins": ["expo-av"],
+    "ios": { "supportsTablet": false, "infoPlist": { "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true } } },
+    "android": { "adaptiveIcon": { "backgroundColor": "#050505" } }
+  }
+}
