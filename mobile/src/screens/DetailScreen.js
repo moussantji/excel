@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { fetchDetail, fetchDownloads, formatBytes } from "../api";
 import { colors } from "../theme";
+import { Icon, PrimaryButton } from "../ui";
 
 export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, onPlay }) {
   const [pack, setPack] = useState(null);
@@ -65,35 +66,45 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
     };
   }, [item.subjectId, season, episode, pack?.isSeries]);
 
+  const playPayload = (file) => ({
+    ...detail,
+    quality: file?.quality,
+    size: file?.size,
+    url: file?.url,
+    season: pack?.isSeries ? season : undefined,
+    episode: pack?.isSeries ? episode : undefined,
+  });
+
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={{ paddingBottom: 120 }}>
-      <Pressable onPress={onBack} style={styles.back}>
-        <Text style={styles.backText}>‹ Retour</Text>
+    <ScrollView style={styles.wrap} contentContainerStyle={{ paddingBottom: 48 }}>
+      <Pressable onPress={onBack} style={styles.back} hitSlop={8}>
+        <Icon name="chevron-back" size={22} color={colors.redSoft} />
+        <Text style={styles.backText}>Retour</Text>
       </Pressable>
       <Image source={{ uri: detail.cover || detail.coverSmall }} style={styles.cover} />
       <Text style={styles.title}>{detail.displayTitle || detail.title}</Text>
-      <Text style={styles.meta}>
-        {detail.typeLabel} · {detail.year} · ★ {detail.imdbRating ?? "–"}
-      </Text>
+      <View style={styles.metaRow}>
+        <Text style={styles.meta}>
+          {detail.typeLabel} · {detail.year}
+        </Text>
+        {detail.imdbRating ? (
+          <>
+            <Text style={styles.meta}> · </Text>
+            <Icon name="star" size={13} color={colors.redSoft} />
+            <Text style={styles.meta}> {detail.imdbRating}</Text>
+          </>
+        ) : null}
+      </View>
       <Text style={styles.genres}>{(detail.genres || []).join(" · ")}</Text>
       {detail.description ? <Text style={styles.desc}>{detail.description}</Text> : null}
-      <Pressable
+      <PrimaryButton
+        label="Lecture + téléchargement"
+        icon="play"
         style={styles.playNow}
-        onPress={() =>
-          onPlay({
-            ...detail,
-            season: pack?.isSeries ? season : undefined,
-            episode: pack?.isSeries ? episode : undefined,
-            url: files[0]?.url,
-            quality: files[0]?.quality,
-            size: files[0]?.size,
-          })
-        }
-      >
-        <Text style={styles.playNowText}>Lecture + téléchargement  ▶</Text>
-      </Pressable>
+        onPress={() => onPlay(playPayload(files[0]))}
+      />
 
-      {loading ? <ActivityIndicator color={colors.gold} style={{ marginTop: 24 }} /> : null}
+      {loading ? <ActivityIndicator color={colors.red} style={{ marginTop: 24 }} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {seasons.length ? (
@@ -136,34 +147,12 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
             <Text style={styles.size}>{formatBytes(file.size)}</Text>
           </View>
           <View style={styles.fileBtns}>
-            <Pressable
-              style={styles.btn}
-              onPress={() =>
-                onPlay({
-                  ...detail,
-                  quality: file.quality,
-                  size: file.size,
-                  url: file.url,
-                  season,
-                  episode,
-                })
-              }
-            >
+            <Pressable style={styles.btn} onPress={() => onPlay(playPayload(file))}>
+              <Icon name="play" size={14} color={colors.onRed} />
               <Text style={styles.btnText}>Jouer</Text>
             </Pressable>
-            <Pressable
-              style={styles.btnGhost}
-              onPress={() =>
-                onAddDownload({
-                  ...detail,
-                  quality: file.quality,
-                  size: file.size,
-                  url: file.url,
-                  season,
-                  episode,
-                })
-              }
-            >
+            <Pressable style={styles.btnGhost} onPress={() => onAddDownload(playPayload(file))}>
+              <Icon name="download-outline" size={14} color={colors.redSoft} />
               <Text style={styles.btnGhostText}>DL</Text>
             </Pressable>
           </View>
@@ -204,13 +193,15 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg, paddingTop: 54, paddingHorizontal: 16 },
-  back: { marginBottom: 12 },
-  backText: { color: colors.goldSoft, fontSize: 16 },
+  back: { marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 2 },
+  backText: { color: colors.redSoft, fontSize: 16 },
   cover: { width: "100%", height: 220, borderRadius: 16, backgroundColor: "#222" },
   title: { color: colors.text, fontSize: 26, fontWeight: "800", marginTop: 14 },
-  meta: { color: colors.muted, marginTop: 6 },
+  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 6 },
+  meta: { color: colors.muted },
   genres: { color: colors.muted, marginTop: 4 },
   desc: { color: "#D4D4D4", marginTop: 12, lineHeight: 20 },
+  playNow: { marginTop: 16, justifyContent: "center", borderRadius: 24, paddingVertical: 12 },
   h2: { color: colors.text, fontSize: 18, fontWeight: "700", marginTop: 24, marginBottom: 10 },
   chips: { gap: 8, paddingRight: 8 },
   chip: {
@@ -220,9 +211,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  chipOn: { backgroundColor: colors.gold, borderColor: colors.gold },
+  chipOn: { backgroundColor: colors.red, borderColor: colors.red },
   chipText: { color: colors.muted, fontWeight: "700" },
-  chipTextOn: { color: "#1A1404" },
+  chipTextOn: { color: colors.onRed },
   file: {
     backgroundColor: colors.card,
     borderRadius: 14,
@@ -234,25 +225,28 @@ const styles = StyleSheet.create({
   },
   q: { color: colors.text, fontWeight: "700" },
   size: { color: colors.dim, marginTop: 4 },
-  playNow: {
-    marginTop: 16,
-    backgroundColor: colors.gold,
-    borderRadius: 24,
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  playNowText: { color: "#1A1404", fontWeight: "800", fontSize: 16 },
   fileBtns: { flexDirection: "row", gap: 8 },
-  btn: { backgroundColor: colors.gold, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8 },
-  btnText: { color: "#1A1404", fontWeight: "700" },
+  btn: {
+    backgroundColor: colors.red,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  btnText: { color: colors.onRed, fontWeight: "700" },
   btnGhost: {
     borderWidth: 1.5,
-    borderColor: colors.gold,
+    borderColor: colors.red,
     borderRadius: 18,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  btnGhostText: { color: colors.goldSoft, fontWeight: "700" },
+  btnGhostText: { color: colors.redSoft, fontWeight: "700" },
   error: { color: "#F87171", marginTop: 16 },
   actor: { width: 72, alignItems: "center" },
   avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#222" },
