@@ -7,7 +7,8 @@ Maquette interactive de [stream.mandenbaoubab.com](http://stream.mandenbaoubab.c
 - séries populaires
 - zone **Téléchargements**
 - onglets Accueil / Recherche / Téléchargements / Profil
-- palette sombre + or
+- palette sombre + rouge (`#E50914`)
+- icônes vectorielles Ionicons (`@expo/vector-icons`)
 
 Branche sur `https://stream.mandenbaoubab.com/api` :
 

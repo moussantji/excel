@@ -10,12 +10,13 @@ import PlayerScreen from "./src/screens/PlayerScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import SearchScreen from "./src/screens/SearchScreen";
 import { colors } from "./src/theme";
+import { Icon } from "./src/ui";
 
 const TABS = [
-  { id: "home", label: "Accueil", icon: "⌂" },
-  { id: "search", label: "Recherche", icon: "⌕" },
-  { id: "downloads", label: "Téléchargements", icon: "↓" },
-  { id: "profile", label: "Profil", icon: "☺" },
+  { id: "home", label: "Accueil", icon: "home-outline", iconOn: "home" },
+  { id: "search", label: "Recherche", icon: "search-outline", iconOn: "search" },
+  { id: "downloads", label: "Téléchargements", icon: "download-outline", iconOn: "download" },
+  { id: "profile", label: "Profil", icon: "person-outline", iconOn: "person" },
 ];
 
 export default function App() {
@@ -54,6 +55,8 @@ export default function App() {
   async function addDownload(item) {
     playItem(item);
   }
+
+  const showTabs = !player && !detail;
 
   return (
     <SafeAreaProvider>
@@ -103,10 +106,10 @@ export default function App() {
           </>
         )}
 
-        {!player ? (
+        {showTabs ? (
           <View style={styles.tabBar}>
             {TABS.map((item) => {
-              const active = !detail && tab === item.id;
+              const active = tab === item.id;
               return (
                 <Pressable
                   key={item.id}
@@ -114,9 +117,13 @@ export default function App() {
                     setDetail(null);
                     setTab(item.id);
                   }}
-                  style={styles.tab}
+                  style={({ pressed }) => [styles.tab, pressed && { opacity: 0.75 }]}
                 >
-                  <Text style={[styles.tabIcon, active && styles.active]}>{item.icon}</Text>
+                  <Icon
+                    name={active ? item.iconOn : item.icon}
+                    size={22}
+                    color={active ? colors.redSoft : colors.dim}
+                  />
                   <Text style={[styles.tabLabel, active && styles.active]}>{item.label}</Text>
                 </Pressable>
               );
@@ -138,13 +145,12 @@ const styles = StyleSheet.create({
     height: 86,
     backgroundColor: colors.bar,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#2A2A2A",
+    borderTopColor: "rgba(229,9,20,0.28)",
     flexDirection: "row",
     paddingBottom: 18,
     paddingTop: 8,
   },
-  tab: { flex: 1, alignItems: "center" },
-  tabIcon: { color: "#8A8A8A", fontSize: 20 },
-  tabLabel: { color: "#8A8A8A", fontSize: 11, marginTop: 4 },
-  active: { color: colors.goldSoft },
+  tab: { flex: 1, alignItems: "center", gap: 4 },
+  tabLabel: { color: colors.dim, fontSize: 11 },
+  active: { color: colors.redSoft },
 });

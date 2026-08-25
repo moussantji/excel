@@ -6,11 +6,11 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { searchTitles } from "../api";
 import { colors } from "../theme";
+import { Icon, SearchField } from "../ui";
 
 export default function SearchScreen({ query, setQuery, onOpenItem }) {
   const [loading, setLoading] = useState(false);
@@ -41,18 +41,10 @@ export default function SearchScreen({ query, setQuery, onOpenItem }) {
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.searchWrap}>
-        <Text style={styles.icon}>⌕</Text>
-        <TextInput
-          autoFocus
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Rechercher films, séries..."
-          placeholderTextColor="#9A9A9A"
-          style={styles.search}
-        />
+      <View style={styles.searchPad}>
+        <SearchField autoFocus value={query} onChangeText={setQuery} />
       </View>
-      {loading ? <ActivityIndicator color={colors.gold} style={{ marginTop: 24 }} /> : null}
+      {loading ? <ActivityIndicator color={colors.red} style={{ marginTop: 24 }} /> : null}
       {error ? <Text style={styles.empty}>{error}</Text> : null}
       <FlatList
         data={items}
@@ -60,9 +52,12 @@ export default function SearchScreen({ query, setQuery, onOpenItem }) {
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 120 }}
         ListEmptyComponent={
           !loading ? (
-            <Text style={styles.empty}>
-              {query.trim().length < 2 ? "Tape au moins 2 lettres" : "Aucun résultat"}
-            </Text>
+            <View style={styles.emptyBox}>
+              <Icon name="search-outline" size={36} color={colors.dim} />
+              <Text style={styles.empty}>
+                {query.trim().length < 2 ? "Tape au moins 2 lettres" : "Aucun résultat"}
+              </Text>
+            </View>
           ) : null
         }
         renderItem={({ item }) => (
@@ -70,11 +65,20 @@ export default function SearchScreen({ query, setQuery, onOpenItem }) {
             <Image source={{ uri: item.coverSmall || item.cover }} style={styles.thumb} />
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{item.displayTitle || item.title}</Text>
-              <Text style={styles.meta}>
-                {item.typeLabel} · {item.year}
-                {item.imdbRating ? ` · ★ ${item.imdbRating}` : ""}
-              </Text>
+              <View style={styles.metaRow}>
+                <Text style={styles.meta}>
+                  {item.typeLabel} · {item.year}
+                </Text>
+                {item.imdbRating ? (
+                  <>
+                    <Text style={styles.meta}> · </Text>
+                    <Icon name="star" size={12} color={colors.redSoft} />
+                    <Text style={styles.meta}> {item.imdbRating}</Text>
+                  </>
+                ) : null}
+              </View>
             </View>
+            <Icon name="chevron-forward" size={18} color={colors.dim} />
           </Pressable>
         )}
       />
@@ -84,20 +88,12 @@ export default function SearchScreen({ query, setQuery, onOpenItem }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg, paddingTop: 58 },
-  searchWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.search,
-    borderRadius: 22,
-    height: 44,
-    marginHorizontal: 16,
-    paddingHorizontal: 14,
-  },
-  icon: { color: "#C8C8C8", fontSize: 20, marginRight: 8 },
-  search: { flex: 1, color: colors.text, fontSize: 16 },
+  searchPad: { marginHorizontal: 16 },
   row: { flexDirection: "row", gap: 12, alignItems: "center" },
   thumb: { width: 64, height: 88, borderRadius: 10, backgroundColor: "#222" },
   title: { color: colors.text, fontSize: 16, fontWeight: "700" },
-  meta: { color: colors.muted, marginTop: 4 },
-  empty: { color: colors.muted, textAlign: "center", marginTop: 40 },
+  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  meta: { color: colors.muted },
+  emptyBox: { alignItems: "center", marginTop: 48, gap: 10 },
+  empty: { color: colors.muted, textAlign: "center" },
 });
