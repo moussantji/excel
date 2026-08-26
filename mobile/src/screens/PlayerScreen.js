@@ -188,6 +188,7 @@ export default function PlayerScreen({ item, onBack, onNext }) {
       : rec?.displayTitle || rec?.title || item.displayTitle || item.title;
 
   const waitingReason = !playUrl ? waitingMessage(rec, error) : null;
+  const pct = Math.round((rec?.progress || 0) * 100);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
@@ -220,7 +221,12 @@ export default function PlayerScreen({ item, onBack, onNext }) {
           />
         ) : (
           <View style={styles.waitBox}>
-            {!error ? <ActivityIndicator color={colors.red} size="small" /> : null}
+            {!error ? (
+              <>
+                <ActivityIndicator color={colors.red} size="small" />
+                {pct > 0 ? <Text style={styles.waitPct}>{pct} %</Text> : null}
+              </>
+            ) : null}
             <Text style={styles.hint}>{waitingReason}</Text>
           </View>
         )}
@@ -275,7 +281,7 @@ export default function PlayerScreen({ item, onBack, onNext }) {
 
       {onNext ? (
         <Pressable onPress={onNext} style={styles.nextBtn}>
-          <Icon name="play-skip-forward" size={16} color={colors.onRed} />
+          <Icon name="play-skip-forward" size={16} color={colors.playText} />
           <Text style={styles.nextText}>Épisode suivant</Text>
         </Pressable>
       ) : null}
@@ -317,18 +323,20 @@ function downloadLabel(rec) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#000", paddingHorizontal: 12 },  back: { marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 2 },
-  backText: { color: colors.redSoft, fontSize: 16 },
-  title: { color: colors.text, fontSize: 18, fontWeight: "800", marginBottom: 12 },
+  root: { flex: 1, backgroundColor: "#000", paddingHorizontal: 12 },
+  back: { marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 2 },
+  backText: { color: colors.redSoft, fontSize: 16, fontWeight: "700" },
+  title: { color: colors.text, fontSize: 18, fontWeight: "800", marginBottom: 12, letterSpacing: -0.3 },
   player: {
     width: "100%",
     aspectRatio: 16 / 9,
     backgroundColor: "#111",
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
+  waitPct: { color: colors.text, fontSize: 22, fontWeight: "900", letterSpacing: -0.4 },
   video: { width: "100%", height: "100%" },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -356,7 +364,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  nextText: { color: colors.onRed, fontWeight: "700" },
+  nextText: { color: colors.playText, fontWeight: "800" },
   errRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12 },
   error: { color: "#F87171", flex: 1 },
 });

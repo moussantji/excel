@@ -21,7 +21,7 @@ const Stack = createNativeStackNavigator();
 const TABS = [
   { id: "home", label: "Accueil", icon: "home-outline", iconOn: "home" },
   { id: "search", label: "Recherche", icon: "search-outline", iconOn: "search" },
-  { id: "downloads", label: "Fichiers", icon: "download-outline", iconOn: "download" },
+  { id: "downloads", label: "Téléchargements", icon: "download-outline", iconOn: "download" },
   { id: "profile", label: "Profil", icon: "person-outline", iconOn: "person" },
 ];
 
@@ -72,7 +72,7 @@ function Tabs({ navigation }) {
       <View
         style={[
           styles.tabBar,
-          { paddingBottom: 18 + insets.bottom, height: TAB_BAR_HEIGHT + insets.bottom },
+          { paddingBottom: Math.max(8, insets.bottom), height: TAB_BAR_HEIGHT + insets.bottom },
         ]}
       >
         {TABS.map((item) => {
@@ -83,14 +83,18 @@ function Tabs({ navigation }) {
               onPress={() => setTab(item.id)}
               style={({ pressed }) => [styles.tab, pressed && { opacity: 0.75 }]}
             >
-              <View style={[styles.tabIcon, active && styles.tabIconOn]}>
-                <Icon
-                  name={active ? item.iconOn : item.icon}
-                  size={20}
-                  color={active ? colors.redSoft : colors.dim}
-                />
-              </View>
-              <Text style={[styles.tabLabel, active && styles.active]}>{item.label}</Text>
+              <Icon
+                name={active ? item.iconOn : item.icon}
+                size={22}
+                color={active ? colors.redSoft : colors.dim}
+              />
+              <Text
+                style={[styles.tabLabel, active && styles.active]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {item.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -184,21 +188,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.bar,
+    backgroundColor: "rgba(8,8,8,0.96)",
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(229,9,20,0.28)",
+    borderTopColor: "rgba(255,255,255,0.08)",
     flexDirection: "row",
     paddingTop: 8,
   },
-  tab: { flex: 1, alignItems: "center", gap: 4 },
-  tabIcon: {
-    width: 46,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabIconOn: { backgroundColor: "rgba(229,9,20,0.18)" },
-  tabLabel: { color: colors.dim, fontSize: 11 },
-  active: { color: colors.redSoft },
+  tab: { flex: 1, alignItems: "center", gap: 3 },
+  tabLabel: { color: colors.dim, fontSize: 10.5, fontWeight: "600" },
+  active: { color: colors.redSoft, fontWeight: "800" },
 });

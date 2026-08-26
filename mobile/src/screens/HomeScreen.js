@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   fetchCategory,
-  fetchHistory,
   fetchHome,
   fetchTrending,
   formatBytes,
@@ -20,12 +19,22 @@ import {
 } from "../api";
 import { colors } from "../theme";
 import { useJobs } from "../useJobs";
-import { Icon, ImageWithFallback, SectionTitle } from "../ui";
+import { loadWatchHistory } from "../watchHistory";
+import {
+  GlassButton,
+  Icon,
+  ImageWithFallback,
+  Logo,
+  PlayButton,
+  PosterCard,
+  SectionTitle,
+} from "../ui";
 
 const SCREEN_W = Dimensions.get("window").width;
+const SCREEN_H = Dimensions.get("window").height;
 const GAP = 8;
 const CELL_W = (SCREEN_W - 32 - GAP * 2) / 3;
-const CARDS_W = SCREEN_W - 110; // bannière centrale + aper latéraux
+const HERO_H = Math.round(Math.min(SCREEN_H * 0.74, 640));
 
 const TABS = [
   { id: "trend", label: "Tendance" },
@@ -84,58 +93,153 @@ function Grid3({ items, onOpen }) {
   return (
     <View style={styles.grid}>
       {items.map((item, i) => (
-        <Pressable
+        <PosterCard
           key={`${item.subjectId}-${i}`}
-          style={styles.cell}
+          item={item}
+          width={CELL_W}
           onPress={() => onOpen(item)}
-        >
-          <View>
-            <ImageWithFallback
-              source={{ uri: item.coverSmall || item.cover }}
-              style={styles.cellImg}
-              iconSize={20}
-            />
-            {item.imdbRating ? (
-              <View style={styles.cellBadge}>
-                <Icon name="star" size={10} color={colors.redSoft} />
-                <Text style={styles.cellBadgeTxt}>{item.imdbRating}</Text>
-              </View>
-            ) : null}
-            {item.french ? (
-              <View style={styles.cellVf}>
-                <Text style={styles.cellVfTxt}>V.F.</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text numberOfLines={2} style={styles.cellTitle}>
-            {item.displayTitle || item.title}
-          </Text>
-        </Pressable>
+        />
       ))}
     </View>
   );
 }
 
-function LandCard({ item, onPress }) {
+function PosterRow({ title, items, onOpen }) {
+  if (!items?.length) return null;
   return (
-    <Pressable style={styles.landCard} onPress={onPress}>
-      <View style={styles.landThumbWrap}>
-        <ImageWithFallback
-          source={{ uri: item.coverSmall || item.cover }}
-          style={styles.landThumb}
-          iconSize={18}
-        />
-        {item.imdbRating ? (
-          <View style={styles.cellBadge}>
-            <Icon name="star" size={10} color={colors.redSoft} />
-            <Text style={styles.cellBadgeTxt}>{item.imdbRating}</Text>
-          </View>
-        ) : null}
-      </View>
-      <Text numberOfLines={2} style={styles.landTitle}>
-        {item.displayTitle || item.title}
-      </Text>
-    </Pressable>
+    <View>
+      <SectionTitle>{title}</SectionTitle>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.posterRow}
+      >
+        {items.slice(0, 16).map((item, i) => (
+          <PosterCard
+            key={`${item.subjectId}-${i}`}
+            item={item}
+            width={122}
+            onPress={() => onOpen(item)}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function Top10Row({ items, onOpen }) {
+  if (!items?.length) return null;
+  return (
+    <View>
+      <SectionTitle>Top 10 aujourd'hui</SectionTitle>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.topRow}
+      >
+        {items.slice(0, 10).map((item, i) => (
+          <Pressable
+            key={`${item.subjectId}-${i}`}
+            style={styles.topItem}
+            onPress={() => onOpen(item)}
+          >
+            <Text style={styles.rank}>{i + 1}</Text>
+            <PosterCard item={item} width={118} showTitle={false} onPress={() => onOpen(item)} />
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function fmtDur(sec) {
+  if (!sec) return "";
+  const m = Math.floor(sec / 60);
+  const r = Math.floor(sec % 60);
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
+
+function ContinueRow({ items, onOpen }) {
+  if (!items?.length) return null;
+  return (
+    <View>
+      <SectionTitle>Continuer à regarder</SectionTitle>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.posterRow}
+      >
+        {items.map((item, i) => {
+          const pos = Number(item.positionSeconds) || 0;
+          const dur = Number(item.durationSeconds) || 0;
+          const pct = dur > 0 ? Math.min(100, Math.round((pos / dur) * 100)) : 0;
+          const ep =
+            Number(item.season) > 0 && Number(item.episode) > 0
+              ? `S${String(item.season).padStart(2, "0")} E${String(item.episode).padStart(2, "0")}`
+              : "";
+          return (
+            <Pressable
+              key={`${item.subjectId}-${i}`}
+              style={styles.contCard}
+              onPress={() => onOpen(item)}
+            >
+              <View style={styles.contThumb}>
+                <ImageWithFallback
+                  source={{ uri: item.coverSmall || item.cover }}
+                  style={styles.contImg}
+                  iconSize={18}
+                />
+                <View style={styles.contPlay}>
+                  <Icon name="play" size={14} color="#fff" />
+                </View>
+                {dur ? (
+                  <View style={styles.contDur}>
+                    <Text style={styles.contDurTxt}>{fmtDur(dur)}</Text>
+                  </View>
+                ) : null}
+                {pct > 0 ? (
+                  <View style={styles.contBar}>
+                    <View style={[styles.contFill, { width: `${pct}%` }]} />
+                  </View>
+                ) : null}
+              </View>
+              <Text numberOfLines={1} style={styles.contTitle}>
+                {item.displayTitle || item.title}
+              </Text>
+              {ep ? <Text style={styles.contEp}>{ep}</Text> : null}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+function CategoryTabs({ tab, onPick, overlay }) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={[styles.tabRow, overlay && { paddingTop: 10 }]}
+    >
+      {TABS.map((t) => (
+        <Pressable key={t.id} onPress={() => onPick(t.id)} style={styles.tab}>
+          <Text style={[styles.tabTxt, tab === t.id && styles.tabTxtOn]}>{t.label}</Text>
+          {tab === t.id ? <View style={styles.tabLine} /> : null}
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
+
+function BrandBar({ onOpenSearch, padTop }) {
+  return (
+    <View style={[styles.brandBar, { paddingTop: padTop }]}>
+      <Logo size={22} />
+      <Pressable onPress={onOpenSearch} hitSlop={8} style={styles.searchBtn}>
+        <Icon name="search" size={18} color="#fff" />
+      </Pressable>
+    </View>
   );
 }
 
@@ -154,6 +258,7 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
   const [yearB, setYearB] = useState("Tous");
   const [audio, setAudio] = useState("Tous");
   const [sort, setSort] = useState("rec");
+  const [continueItems, setContinueItems] = useState([]);
   const jobs = useJobs();
   const insets = useSafeAreaInsets();
   const loadedTabs = useRef({});
@@ -203,6 +308,12 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
   }, [load]);
 
   useEffect(() => {
+    loadWatchHistory()
+      .then((list) => setContinueItems(Array.isArray(list) ? list.slice(0, 12) : []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const def = TABS.find((t) => t.id === tab);
     if (def?.tab && !loadedTabs.current[def.id]) {
       setGenre("Tous");
@@ -218,10 +329,13 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
     for (const it of catItems) {
       for (const g of it.genres || []) count.set(g, (count.get(g) || 0) + 1);
     }
-    return ["Tous", ...Array.from(count.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([g]) => g)];
+    return [
+      "Tous",
+      ...Array.from(count.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([g]) => g),
+    ];
   }, [catItems]);
 
   const filtered = useMemo(() => {
@@ -234,7 +348,9 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
     if (sort === "new") out = [...out].sort((a, b) => (b.year || 0) - (a.year || 0));
     if (sort === "hot")
       out = [...out].sort(
-        (a, b) => (b.imdbRating || 0) * (b.seasonCount ? 1.1 : 1) - (a.imdbRating || 0) * (a.seasonCount ? 1.1 : 1)
+        (a, b) =>
+          (b.imdbRating || 0) * (b.seasonCount ? 1.1 : 1) -
+          (a.imdbRating || 0) * (a.seasonCount ? 1.1 : 1)
       );
     return out;
   }, [tab, catItems, genre, yearB, audio, sort]);
@@ -242,79 +358,101 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
   if (loading && !trending.length && !sections.length) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
-        <ActivityIndicator color={colors.red} size="large" />
+        <Logo size={26} />
+        <ActivityIndicator color={colors.red} size="large" style={{ marginTop: 18 }} />
       </View>
     );
   }
 
-  const heroTitle = hero?.displayTitle || hero?.title || "Manden Stream";
+  const heroTitle = hero?.displayTitle || hero?.title || "MANDEN";
+  const heroKind = hero ? (isSeries(hero) ? "Série TV" : "Film") : "";
+  const heroGenres = (hero?.genres || []).slice(0, 3).join(" · ");
   const def = TABS.find((t) => t.id === tab);
   const preview = jobs.slice(0, 2);
+  const popular = (trending.length ? trending : sections.flatMap((s) => s.items || [])).slice(
+    0,
+    16
+  );
+  const popularSeries = popular.filter((it) => isSeries(it));
+  const popularFilms = popular.filter((it) => !isSeries(it));
+
+  function openContinue(h) {
+    onOpenItem({
+      subjectId: h.subjectId,
+      title: h.title,
+      displayTitle: h.title,
+      cover: h.cover,
+      coverSmall: h.cover,
+      season: Number(h.season) > 0 ? Number(h.season) : undefined,
+      episode: Number(h.episode) > 0 ? Number(h.episode) : undefined,
+    });
+  }
 
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
+      contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
-      {/* barre du haut : titre en vedette + mini affiche + recherche */}
-      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <Pressable style={{ flex: 1 }} onPress={() => hero && onOpenItem(hero)}>
-          <Text numberOfLines={2} style={styles.topTitle}>
-            {heroTitle}
-          </Text>
-        </Pressable>
-        <Pressable onPress={() => hero && onOpenItem(hero)} hitSlop={6}>
+      {tab === "trend" ? (
+        <View style={[styles.hero, { height: HERO_H }]}>
           <ImageWithFallback
-            source={{ uri: hero?.coverSmall || hero?.cover }}
-            style={styles.topPoster}
-            iconSize={16}
+            source={{ uri: hero?.cover || hero?.coverSmall }}
+            style={StyleSheet.absoluteFill}
+            iconSize={48}
           />
-        </Pressable>
-        <Pressable onPress={onOpenSearch} hitSlop={8} style={styles.topSearch}>
-          <Icon name="search" size={20} color="#fff" />
-        </Pressable>
-      </View>
-
-      {/* onglets catégorie */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow}>
-        {TABS.map((t) => (
-          <Pressable key={t.id} onPress={() => setTab(t.id)} style={styles.tab}>
-            <Text style={[styles.tabTxt, tab === t.id && styles.tabTxtOn]}>{t.label}</Text>
-            {tab === t.id ? <View style={styles.tabLine} /> : null}
-          </Pressable>
-        ))}
-      </ScrollView>
+          <LinearGradient
+            colors={[
+              "rgba(0,0,0,0.72)",
+              "rgba(0,0,0,0.12)",
+              "rgba(0,0,0,0.28)",
+              "rgba(0,0,0,0.82)",
+              "#000",
+            ]}
+            locations={[0, 0.22, 0.5, 0.78, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+          <BrandBar onOpenSearch={onOpenSearch} padTop={insets.top + 4} />
+          <CategoryTabs tab={tab} onPick={setTab} overlay />
+          <View style={styles.heroContent}>
+            <View style={styles.heroKicker}>
+              {heroKind ? <Text style={styles.heroMeta}>{heroKind}</Text> : null}
+              {hero?.year ? <Text style={styles.heroMeta}> · {hero.year}</Text> : null}
+              {hero?.imdbRating ? (
+                <>
+                  <Text style={styles.heroMeta}> · </Text>
+                  <Icon name="star" size={11} color={colors.gold} />
+                  <Text style={styles.heroMeta}> {hero.imdbRating}</Text>
+                </>
+              ) : null}
+            </View>
+            <Text numberOfLines={2} style={styles.heroTitle}>
+              {heroTitle}
+            </Text>
+            {heroGenres ? (
+              <Text numberOfLines={1} style={styles.heroGenres}>
+                {heroGenres}
+              </Text>
+            ) : null}
+            <View style={styles.heroCtas}>
+              <PlayButton label="Lecture" onPress={() => hero && onPlay(hero)} style={{ minWidth: 132 }} />
+              <GlassButton
+                label="Plus d'infos"
+                icon="information-circle-outline"
+                onPress={() => hero && onOpenItem(hero)}
+              />
+            </View>
+          </View>
+        </View>
+      ) : (
+        <>
+          <BrandBar onOpenSearch={onOpenSearch} padTop={insets.top + 4} />
+          <CategoryTabs tab={tab} onPick={setTab} />
+        </>
+      )}
 
       {tab === "trend" ? (
         <>
-          {/* carrousel avec aper latéraux */}
-          <ScrollView
-            horizontal
-            snapToInterval={CARDS_W + GAP}
-            decelerationRate="fast"
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingLeft: 55, paddingRight: 55, gap: GAP }}
-          >
-            {(trending.length ? trending : sections.flatMap((s) => s.items || [])).slice(0, 10).map((item, i) => (
-              <Pressable key={`${item.subjectId}-${i}`} style={styles.banner} onPress={() => onOpenItem(item)}>
-                <ImageWithFallback source={{ uri: item.cover }} style={StyleSheet.absoluteFill} iconSize={36} />
-                <LinearGradient
-                  colors={["transparent", "rgba(0,0,0,0.85)"]}
-                  style={styles.bannerShade}
-                >
-                  <Text numberOfLines={2} style={styles.bannerTitle}>
-                    {item.displayTitle || item.title}
-                  </Text>
-                  <View style={styles.bannerPill}>
-                    <Icon name="download-outline" size={12} color="#fff" />
-                    <Text style={styles.bannerPillTxt}>Téléchargement gratuit</Text>
-                  </View>
-                </LinearGradient>
-              </Pressable>
-            ))}
-          </ScrollView>
-
           {error ? (
             <View style={styles.errBox}>
               <Text style={styles.err}>{error}</Text>
@@ -324,42 +462,31 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
             </View>
           ) : null}
 
-          {/* Film / Nouveautés : grille 3 col + lien complet */}
-          <View style={styles.secHead}>
-            <View style={styles.secChip}>
-              <Icon name="film-outline" size={14} color="#fff" />
-            </View>
-            <Text style={styles.secTitle}>Film · Nouveautés</Text>
-          </View>
-          <Grid3 items={trending.slice(0, 9)} onOpen={onOpenItem} />
-          <Pressable style={styles.moreLink} onPress={() => setTab("film")}>
-            <Text style={styles.moreLinkTxt}>Vérifier la liste complète</Text>
-          </Pressable>
-
-          {/* sections serveur en rangées paysage */}
-          {sections.slice(0, 3).map((section) => (
-            <View key={section.title}>
-              <SectionTitle>{section.title}</SectionTitle>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.landRow}
-              >
-                {(section.items || []).slice(0, 12).map((item) => (
-                  <LandCard key={String(item.subjectId)} item={item} onPress={() => onOpenItem(item)} />
-                ))}
-              </ScrollView>
-            </View>
+          <ContinueRow items={continueItems} onOpen={openContinue} />
+          <Top10Row items={popular} onOpen={onOpenItem} />
+          <PosterRow
+            title={popularSeries.length ? "Séries populaires" : "Populaires"}
+            items={popularSeries.length ? popularSeries : popular}
+            onOpen={onOpenItem}
+          />
+          {popularFilms.length ? (
+            <PosterRow title="Films populaires" items={popularFilms} onOpen={onOpenItem} />
+          ) : null}
+          {sections.slice(0, 4).map((section) => (
+            <PosterRow
+              key={section.title}
+              title={section.title}
+              items={section.items || []}
+              onOpen={onOpenItem}
+            />
           ))}
         </>
       ) : (
         <>
-          {/* filtres client-side */}
           <ChipRow items={genres} active={genre} onPick={setGenre} />
           <ChipRow items={YEAR_BUCKETS.map((b) => b.label)} active={yearB} onPick={setYearB} />
           <ChipRow items={AUDIO.map((a) => a.label)} active={audio} onPick={setAudio} />
 
-          {/* tri */}
           <View style={styles.sortRow}>
             {SORTS.map((s) => (
               <Pressable key={s.id} onPress={() => setSort(s.id)} style={styles.sortTab}>
@@ -387,7 +514,7 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
                   disabled={catLoading}
                 >
                   <Text style={styles.moreLinkTxt}>
-                    {catLoading ? "Chargement…" : "Vérifier la liste complète"}
+                    {catLoading ? "Chargement…" : "Voir plus"}
                   </Text>
                 </Pressable>
               ) : null}
@@ -396,16 +523,20 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
         </>
       )}
 
-      {/* téléchargements en cours */}
       <Pressable style={styles.dlHead} onPress={() => onOpenFiles?.()}>
-        <SectionTitle icon="download-outline">Téléchargements</SectionTitle>
+        <Text style={styles.dlHeadTitle}>Téléchargements</Text>
         <View style={styles.sectionAll}>
           <Text style={styles.sectionAllTxt}>Tous</Text>
           <Icon name="chevron-forward" size={14} color={colors.dim} />
         </View>
       </Pressable>
       {preview.length === 0 ? (
-        <Text style={styles.empty}>Aucun fichier. Ouvre une fiche puis touche « Télécharger ».</Text>
+        <Pressable style={styles.dlEmpty} onPress={() => onOpenFiles?.()}>
+          <Icon name="arrow-down-circle-outline" size={22} color={colors.dim} />
+          <Text style={styles.dlEmptyTxt}>
+            Aucun fichier. Ouvre une fiche puis touche « Télécharger ».
+          </Text>
+        </Pressable>
       ) : (
         <View style={styles.dlRow}>
           {preview.map((item) => (
@@ -417,7 +548,9 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
                     ? `${item.title}, S${item.season} E${item.episode}`
                     : item.title}
                 </Text>
-                <Text style={styles.dlSub}>{item.quality || "Fichier"}</Text>
+                <Text style={styles.dlSub}>
+                  {item.season && item.episode ? "Épisode" : item.quality || "Fichier"}
+                </Text>
                 {item.status === "done" ? (
                   <View style={styles.doneRow}>
                     <Icon name="checkmark-circle" size={14} color={colors.green} />
@@ -447,88 +580,95 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.bg },
-  center: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", padding: 24 },
-  topBar: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingBottom: 4 },
-  topTitle: { color: colors.text, fontSize: 21, fontWeight: "900", lineHeight: 25, letterSpacing: -0.4 },
-  topPoster: { width: 42, height: 60, borderRadius: 8, backgroundColor: "#1C1C1C" },
-  topSearch: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.card,
+  center: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  hero: { width: "100%", backgroundColor: "#000", overflow: "hidden" },
+  brandBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
+  searchBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.22)",
     alignItems: "center",
     justifyContent: "center",
   },
-  tabRow: { paddingHorizontal: 16, gap: 22, marginTop: 6 },
+  heroContent: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 22,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  heroKicker: { flexDirection: "row", alignItems: "center" },
+  heroMeta: { color: "rgba(255,255,255,0.88)", fontSize: 13, fontWeight: "600" },
+  heroTitle: {
+    color: "#fff",
+    fontSize: 32,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+    lineHeight: 36,
+    textTransform: "uppercase",
+    textShadowColor: "rgba(0,0,0,0.65)",
+    textShadowRadius: 10,
+  },
+  heroGenres: { color: "rgba(255,255,255,0.78)", fontSize: 14, fontWeight: "500" },
+  heroCtas: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: 8 },
+  tabRow: { paddingHorizontal: 16, gap: 20, paddingBottom: 2 },
   tab: { alignItems: "center", paddingBottom: 8 },
-  tabTxt: { color: colors.dim, fontSize: 15.5, fontWeight: "700" },
-  tabTxtOn: { color: colors.text, fontWeight: "900", fontSize: 16.5 },
-  tabLine: { position: "absolute", bottom: 0, width: "60%", height: 3, borderRadius: 2, backgroundColor: colors.red },
-  banner: {
-    width: CARDS_W,
-    aspectRatio: 736 / 430,
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: "#161616",
-  },
-  bannerShade: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, justifyContent: "flex-end", gap: 8 },
-  bannerTitle: { color: "#fff", fontSize: 18, fontWeight: "900", textShadowColor: "#000", textShadowRadius: 6 },
-  bannerPill: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: colors.red,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  bannerPillTxt: { color: "#fff", fontSize: 11, fontWeight: "800" },
-  secHead: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 20, marginHorizontal: 16 },
-  secChip: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: colors.red,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secTitle: { color: colors.text, fontSize: 19, fontWeight: "900" },
-  grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, paddingTop: 12, columnGap: GAP, rowGap: 14 },
-  cell: { width: CELL_W },
-  cellImg: { width: "100%", aspectRatio: 0.7, borderRadius: 10, backgroundColor: "#222" },
-  cellBadge: {
+  tabTxt: { color: "rgba(255,255,255,0.62)", fontSize: 14.5, fontWeight: "600" },
+  tabTxtOn: { color: colors.text, fontWeight: "800" },
+  tabLine: {
     position: "absolute",
-    bottom: 6,
-    right: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: "rgba(0,0,0,0.72)",
-    borderRadius: 8,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  cellBadgeTxt: { color: "#fff", fontSize: 10.5, fontWeight: "700" },
-  cellVf: {
-    position: "absolute",
-    top: 6,
-    left: 6,
+    bottom: 0,
+    width: 28,
+    height: 2,
+    borderRadius: 1,
     backgroundColor: colors.red,
-    borderRadius: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
   },
-  cellVfTxt: { color: "#fff", fontSize: 9.5, fontWeight: "800" },
-  cellTitle: { color: colors.text, fontSize: 12, fontWeight: "600", marginTop: 6, lineHeight: 16 },
+  posterRow: { paddingHorizontal: 16, gap: 8, paddingTop: 12 },
+  topRow: { paddingHorizontal: 10, paddingTop: 8, alignItems: "flex-end" },
+  topItem: { flexDirection: "row", alignItems: "flex-end", marginRight: 4 },
+  rank: {
+    fontSize: 92,
+    fontWeight: "900",
+    color: "#000",
+    letterSpacing: -6,
+    marginRight: -14,
+    marginBottom: -10,
+    textShadowColor: "rgba(180,180,180,0.55)",
+    textShadowOffset: { width: 1, height: 0 },
+    textShadowRadius: 0,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    columnGap: GAP,
+    rowGap: 14,
+  },
   moreLink: { alignItems: "center", paddingVertical: 14, marginTop: 6 },
   moreLinkTxt: { color: colors.dim, fontSize: 13.5, fontWeight: "700" },
   chipRow: { paddingHorizontal: 16, gap: 8, paddingTop: 10 },
   chip: {
-    backgroundColor: "#141414",
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "#2E2E2E",
-    borderRadius: 17,
+    borderColor: "#3A3A3A",
+    borderRadius: 16,
     paddingHorizontal: 13,
     paddingVertical: 7,
   },
@@ -545,41 +685,99 @@ const styles = StyleSheet.create({
   },
   sortTab: { alignItems: "center", paddingBottom: 8 },
   sortTxt: { color: colors.dim, fontSize: 14, fontWeight: "700" },
-  sortTxtOn: { color: colors.text, fontWeight: "900" },
-  sortLine: { position: "absolute", bottom: 0, width: "80%", height: 3, borderRadius: 2, backgroundColor: colors.red },
-  landRow: { paddingHorizontal: 16, gap: 10, paddingTop: 12 },
-  landCard: { width: 150 },
-  landThumbWrap: {
-    width: 150,
-    height: 85,
-    borderRadius: 8,
+  sortTxtOn: { color: colors.text, fontWeight: "800" },
+  sortLine: {
+    position: "absolute",
+    bottom: 0,
+    width: "80%",
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.red,
+  },
+  contCard: { width: 168 },
+  contThumb: {
+    width: 168,
+    height: 94,
+    borderRadius: 4,
     overflow: "hidden",
     backgroundColor: "#161616",
   },
-  landThumb: { width: "100%", height: "100%" },
-  landTitle: { color: colors.text, fontSize: 12, fontWeight: "600", marginTop: 6, lineHeight: 16 },
-  dlHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginHorizontal: 16, marginTop: 6 },
-  sectionAll: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 14 },
+  contImg: { width: "100%", height: "100%" },
+  contPlay: {
+    position: "absolute",
+    alignSelf: "center",
+    top: 34,
+    left: 70,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  contDur: {
+    position: "absolute",
+    right: 6,
+    bottom: 10,
+    backgroundColor: "rgba(0,0,0,0.72)",
+    borderRadius: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  contDurTxt: { color: "#fff", fontSize: 10, fontWeight: "700" },
+  contBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
+  contFill: { height: 3, backgroundColor: colors.red },
+  contTitle: { color: colors.text, fontSize: 12.5, fontWeight: "700", marginTop: 6 },
+  contEp: { color: colors.dim, fontSize: 11.5, marginTop: 2, fontWeight: "600" },
+  dlHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginTop: 26,
+  },
+  dlHeadTitle: { color: colors.text, fontSize: 18, fontWeight: "700" },
+  sectionAll: { flexDirection: "row", alignItems: "center", gap: 2 },
   sectionAllTxt: { color: colors.dim, fontSize: 13, fontWeight: "600" },
   errBox: { marginHorizontal: 16, marginTop: 14, gap: 8 },
   err: { color: "#F87171" },
   retry: { color: colors.redSoft, fontWeight: "800" },
   empty: { color: colors.dim, marginHorizontal: 16, marginTop: 12 },
+  dlEmpty: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    padding: 14,
+  },
+  dlEmptyTxt: { color: colors.dim, flex: 1, fontSize: 13, lineHeight: 18 },
   dlRow: { flexDirection: "row", paddingHorizontal: 16, gap: 10, marginTop: 12 },
   dlCard: {
     flex: 1,
     backgroundColor: colors.card,
-    borderRadius: 14,
+    borderRadius: 8,
     padding: 8,
     flexDirection: "row",
     gap: 8,
   },
-  dlThumb: { width: 40, height: 52, borderRadius: 6 },
+  dlThumb: { width: 42, height: 56, borderRadius: 4, backgroundColor: "#222" },
   dlTitle: { color: colors.text, fontSize: 12, fontWeight: "700" },
   dlSub: { color: colors.dim, fontSize: 11, marginTop: 2 },
   doneRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 },
   done: { color: colors.green, fontSize: 12, fontWeight: "600" },
-  track: { height: 4, backgroundColor: colors.track, borderRadius: 4, marginTop: 8 },
-  fill: { height: 4, backgroundColor: colors.red, borderRadius: 4 },
+  track: { height: 3, backgroundColor: colors.track, borderRadius: 2, marginTop: 8 },
+  fill: { height: 3, backgroundColor: colors.red, borderRadius: 2 },
   size: { color: colors.dim, fontSize: 10, marginTop: 4, textAlign: "right" },
 });

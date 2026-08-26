@@ -122,7 +122,7 @@ function Row({ item, onPlay }) {
           {done ? (
             <>
               <Pressable style={styles.cta} onPress={() => onPlay(item)}>
-                <Icon name="play" size={14} color={colors.onRed} />
+                <Icon name="play" size={14} color={colors.playText} />
                 <Text style={styles.ctaTxt}>Jouer</Text>
               </Pressable>
               <Pressable
@@ -144,7 +144,7 @@ function Row({ item, onPlay }) {
             <>
               {paused ? (
                 <Pressable style={styles.cta} onPress={() => resumeDownload(item.id)}>
-                  <Icon name="play" size={14} color={colors.onRed} />
+                  <Icon name="play" size={14} color={colors.playText} />
                   <Text style={styles.ctaTxt}>Reprendre</Text>
                 </Pressable>
               ) : item.status === "progress" ? (
@@ -308,12 +308,12 @@ function DoneGroup({ group, onPlay }) {
           <View style={styles.rowActions}>
             {multi ? (
               <Pressable style={styles.cta} onPress={() => setOpen((o) => !o)}>
-                <Icon name="list" size={14} color={colors.onRed} />
+                <Icon name="list" size={14} color={colors.playText} />
                 <Text style={styles.ctaTxt}>Épisodes</Text>
               </Pressable>
             ) : (
               <Pressable style={styles.cta} onPress={() => onPlay(head)}>
-                <Icon name="play" size={14} color={colors.onRed} />
+                <Icon name="play" size={14} color={colors.playText} />
                 <Text style={styles.ctaTxt}>Jouer</Text>
               </Pressable>
             )}
@@ -342,7 +342,7 @@ function DoneGroup({ group, onPlay }) {
                 onPress={() => onPlay(ep)}
                 style={({ pressed }) => [styles.epPlay, pressed && { opacity: 0.6 }]}
               >
-                <Icon name="play" size={13} color={colors.onRed} />
+                <Icon name="play" size={13} color={colors.playText} />
               </Pressable>
               <Pressable hitSlop={6} onPress={() => setMenuFor(ep.id)}>
                 <Icon name="trash-outline" size={15} color="#F87171" />
@@ -442,11 +442,9 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
           <Pressable onPress={onBack} hitSlop={10} style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}>
             <Icon name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-        ) : (
-          <View style={styles.backBtn} />
-        )}
-        <Text style={styles.h1}>Téléchargements</Text>
-        <View style={styles.backSpacer} />
+        ) : null}
+        <Text style={[styles.h1, !onBack && styles.h1Tab]}>Téléchargements</Text>
+        {onBack ? <View style={styles.backSpacer} /> : null}
       </View>
 
       {history.length ? (
@@ -576,6 +574,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
   },
+  h1Tab: { textAlign: "left", paddingLeft: 8, fontSize: 22, letterSpacing: -0.4 },
   tabs: {
     flexDirection: "row",
     gap: 26,
@@ -653,12 +652,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: colors.red,
-    borderRadius: 8,
-    paddingHorizontal: 11,
+    backgroundColor: colors.play,
+    borderRadius: 6,
+    paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  ctaTxt: { color: colors.onRed, fontWeight: "800", fontSize: 12 },
+  ctaTxt: { color: colors.playText, fontWeight: "800", fontSize: 12 },
   ctaGhost: {
     flexDirection: "row",
     alignItems: "center",
@@ -699,7 +698,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.red,
+    backgroundColor: colors.play,
     alignItems: "center",
     justifyContent: "center",
   },

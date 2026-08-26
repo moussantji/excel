@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchCategory, searchTitles } from "../api";
 import { colors } from "../theme";
-import { Icon, ImageWithFallback, SearchField } from "../ui";
+import { Icon, ImageWithFallback, Logo, RatingBadge, SearchField, VfBadge } from "../ui";
 
 const CATEGORIES = [
   { label: "Films", params: {} },
@@ -29,7 +29,6 @@ export default function SearchScreen({ onOpenItem }) {
   const lastQueryRef = useRef("");
   const insets = useSafeAreaInsets();
 
-  // Recherche (debounce) avec pagination
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) {
@@ -77,7 +76,6 @@ export default function SearchScreen({ onOpenItem }) {
     }
   }
 
-  // Catégories quand pas de recherche active (fetchCategory enfin branché)
   useEffect(() => {
     if (query.trim().length >= 2) return;
     let live = true;
@@ -101,7 +99,10 @@ export default function SearchScreen({ onOpenItem }) {
   const showingSearch = query.trim().length >= 2;
 
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top + 12 }]}>
+    <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
+      <View style={styles.brandRow}>
+        <Logo size={20} />
+      </View>
       <View style={styles.searchPad}>
         <SearchField autoFocus value={query} onChangeText={setQuery} />
       </View>
@@ -118,7 +119,11 @@ export default function SearchScreen({ onOpenItem }) {
             </Pressable>
           ))}
         </View>
-      ) : null}
+      ) : (
+        <Text style={styles.resultCount}>
+          {loading && !items.length ? "Recherche…" : `${items.length} résultat${items.length > 1 ? "s" : ""}`}
+        </Text>
+      )}
 
       {loading && !items.length && !catItems.length ? (
         <ActivityIndicator color={colors.red} style={{ marginTop: 24 }} />
@@ -130,34 +135,55 @@ export default function SearchScreen({ onOpenItem }) {
         keyExtractor={(item) => String(item.subjectId)}
         onEndReachedThreshold={0.4}
         onEndReached={() => showingSearch && loadMore()}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 120 + insets.bottom }}
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyBox}>
-              <Icon name="search-outline" size={36} color={colors.dim} />
+              <View style={styles.emptyRing}>
+                <Icon name="search-outline" size={28} color={colors.redSoft} />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {showingSearch ? "Aucun résultat" : "Que veux-tu regarder ?"}
+              </Text>
               <Text style={styles.empty}>
-                {showingSearch ? "Aucun résultat" : "Tape au moins 2 lettres pour chercher"}
+                {showingSearch
+                  ? "Essaie un autre titre, un acteur ou un genre."
+                  : "Tape au moins 2 lettres pour chercher un film ou une série."}
               </Text>
             </View>
           ) : null
         }
         renderItem={({ item }) => (
-          <Pressable style={styles.row} onPress={() => onOpenItem(item)}>
-            <ImageWithFallback source={{ uri: item.coverSmall || item.cover }} style={styles.thumb} iconSize={20} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{item.displayTitle || item.title}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.row, pressed && { opacity: 0.86 }]}
+            onPress={() => onOpenItem(item)}
+          >
+            <View style={styles.thumbWrap}>
+              <ImageWithFallback
+                source={{ uri: item.coverSmall || item.cover }}
+                style={styles.thumb}
+                iconSize={20}
+              />
+              {item.french ? <VfBadge style={styles.vf} /> : null}
+            </View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={styles.title} numberOfLines={2}>
+                {item.displayTitle || item.title}
+              </Text>
               <View style={styles.metaRow}>
                 <Text style={styles.meta}>
-                  {item.typeLabel} · {item.year}
+                  {[item.typeLabel, item.year].filter(Boolean).join(" · ")}
                 </Text>
                 {item.imdbRating ? (
-                  <>
-                    <Text style={styles.meta}> · </Text>
-                    <Icon name="star" size={12} color={colors.redSoft} />
-                    <Text style={styles.meta}> {item.imdbRating}</Text>
-                  </>
+                  <RatingBadge value={item.imdbRating} style={{ marginLeft: 6 }} />
                 ) : null}
               </View>
+              {(item.genres || []).length ? (
+                <Text style={styles.genres} numberOfLines={1}>
+                  {(item.genres || []).slice(0, 3).join(" · ")}
+                </Text>
+              ) : null}
             </View>
             <Icon name="chevron-forward" size={18} color={colors.dim} />
           </Pressable>
@@ -169,23 +195,53 @@ export default function SearchScreen({ onOpenItem }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
+  brandRow: { paddingHorizontal: 16, paddingBottom: 10 },
   searchPad: { marginHorizontal: 16 },
-  catRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 12 },
+  catRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 14 },
+  resultCount: {
+    color: colors.dim,
+    fontSize: 12.5,
+    fontWeight: "700",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
   chip: {
     borderWidth: 1,
     borderColor: "#3A3A3A",
     borderRadius: 16,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 7,
+    backgroundColor: "#141414",
   },
   chipOn: { backgroundColor: colors.red, borderColor: colors.red },
   chipTxt: { color: colors.muted, fontWeight: "700", fontSize: 13 },
   chipTxtOn: { color: colors.onRed },
-  row: { flexDirection: "row", gap: 12, alignItems: "center" },
-  thumb: { width: 64, height: 88, borderRadius: 10 },
-  title: { color: colors.text, fontSize: 16, fontWeight: "700" },
-  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
-  meta: { color: colors.muted },
-  emptyBox: { alignItems: "center", marginTop: 48, gap: 10 },
-  empty: { color: colors.muted, textAlign: "center" },
+  row: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    padding: 8,
+  },
+  thumbWrap: { borderRadius: 10, overflow: "hidden", backgroundColor: "#222" },
+  thumb: { width: 68, height: 96 },
+  vf: { position: "absolute", top: 5, left: 5 },
+  title: { color: colors.text, fontSize: 16, fontWeight: "800", letterSpacing: -0.2 },
+  metaRow: { flexDirection: "row", alignItems: "center" },
+  meta: { color: colors.muted, fontSize: 13 },
+  genres: { color: colors.dim, fontSize: 12 },
+  emptyBox: { alignItems: "center", marginTop: 56, gap: 8, paddingHorizontal: 28 },
+  emptyRing: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: "rgba(229,9,20,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  emptyTitle: { color: colors.text, fontSize: 17, fontWeight: "800" },
+  empty: { color: colors.muted, textAlign: "center", lineHeight: 20 },
 });

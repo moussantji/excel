@@ -14,7 +14,7 @@ import { fetchDetail, fetchDownloads, formatBytes } from "../api";
 import { downloadId } from "../downloadManager";
 import { colors } from "../theme";
 import { useJobs } from "../useJobs";
-import { Icon, ImageWithFallback } from "../ui";
+import { GlassButton, Icon, ImageWithFallback, PlayButton } from "../ui";
 
 const SCREEN_W = Dimensions.get("window").width;
 
@@ -176,7 +176,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
     <View style={styles.wrap}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: 96 + insets.bottom }}
+        contentContainerStyle={{ paddingBottom: 36 + insets.bottom }}
         showsVerticalScrollIndicator={false}
       >
         {/* HERO */}
@@ -210,7 +210,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
               </Text>
               {rating ? (
                 <View style={styles.ratingPill}>
-                  <Icon name="star" size={13} color={colors.redSoft} />
+                  <Icon name="star" size={13} color={colors.gold} />
                   <Text style={styles.ratingTxt}>{String(rating).slice(0, 3)}</Text>
                 </View>
               ) : null}
@@ -226,16 +226,19 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
 
         {/* LECTURE principale + ressource */}
         <View style={styles.body}>
-          {/* bouton lecture large */}
-          <Pressable
-            onPress={() => onPlay(payload(bestFile), queue)}
-            style={({ pressed }) => [styles.playBig, pressed && { opacity: 0.85 }]}
-          >
-            <Icon name="play" size={18} color="#fff" />
-            <Text style={styles.playBigTxt}>
-              {isSeriesPack ? `Lecture S${season} E${episode}` : "Lecture"}
-            </Text>
-          </Pressable>
+          <View style={styles.ctaCol}>
+            <PlayButton
+              label={isSeriesPack ? `Lecture S${season} E${episode}` : "Lecture"}
+              onPress={() => onPlay(payload(bestFile), queue)}
+            />
+            {bestFile ? (
+              <GlassButton
+                label="Télécharger"
+                icon="download-outline"
+                onPress={() => onAddDownload(payload(bestFile))}
+              />
+            ) : null}
+          </View>
 
           {/* saison / épisode */}
           {isSeriesPack && seasons.length ? (
@@ -281,7 +284,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
 
           {/* Détecteur de ressources */}
           <View style={styles.resourceHead}>
-            <Text style={styles.sectionTitle}>Détecteur de ressources</Text>
+            <Text style={styles.sectionTitle}>Fichiers disponibles</Text>
             <Text style={styles.resourceSub}>Source: stream.mandenbaoubab.com</Text>
           </View>
 
@@ -312,7 +315,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
                     style={styles.qPlay}
                     hitSlop={6}
                   >
-                    <Icon name="play" size={13} color="#fff" />
+                    <Icon name="play" size={13} color={colors.playText} />
                   </Pressable>
                 </View>
                 <Text style={styles.qSub} numberOfLines={1}>
@@ -342,7 +345,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
                   <Icon
                     name={isDone ? "checkmark" : "download-outline"}
                     size={12}
-                    color={isDone ? colors.dim : "#fff"}
+                    color={isDone ? colors.dim : colors.playText}
                   />
                   <Text style={[styles.qDlTxt, isDone && { color: colors.dim }]}>
                     {isDone ? "Fait" : "Télécharger"}
@@ -431,14 +434,14 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
                     onPress={() => onOpenItem(rec)}
                     style={styles.recoCell}
                   >
-                    <View>
+                    <View style={styles.recoImgWrap}>
                       <ImageWithFallback
                         source={{ uri: rec.coverSmall || rec.cover }}
                         style={styles.recoImg}
                       />
                       {rec.imdbRating ? (
                         <View style={styles.recoBadge}>
-                          <Icon name="star" size={10} color={colors.redSoft} />
+                          <Icon name="star" size={10} color={colors.gold} />
                           <Text style={styles.recoBadgeTxt}>{rec.imdbRating}</Text>
                         </View>
                       ) : null}
@@ -486,21 +489,6 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
         </View>
       </ScrollView>
 
-      {/* bouton flottant Télécharger (centre bas) */}
-      {bestFile ? (
-        <View
-          pointerEvents="box-none"
-          style={[styles.fabWrap, { paddingBottom: 12 + insets.bottom }]}
-        >
-          <Pressable
-            onPress={() => onAddDownload(payload(bestFile))}
-            style={({ pressed }) => [styles.fab, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
-          >
-            <Icon name="download-outline" size={16} color="#fff" />
-            <Text style={styles.fabTxt}>Télécharger</Text>
-          </Pressable>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -508,7 +496,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1, backgroundColor: colors.bg },
-  hero: { height: 380, width: "100%", backgroundColor: "#0F0F0F", overflow: "hidden" },
+  hero: { height: 460, width: "100%", backgroundColor: "#000000", overflow: "hidden" },
   backBtn: {
     width: 36,
     height: 36,
@@ -519,7 +507,7 @@ const styles = StyleSheet.create({
   },
   heroBottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingBottom: 16 },
   titleRow: { flexDirection: "row", alignItems: "flex-end", gap: 10 },
-  heroTitle: { flex: 1, color: "#fff", fontSize: 26, fontWeight: "900", lineHeight: 30, letterSpacing: -0.4 },
+  heroTitle: { flex: 1, color: "#fff", fontSize: 30, fontWeight: "900", lineHeight: 34, letterSpacing: 0.3, textTransform: "uppercase" },
   ratingPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -534,26 +522,16 @@ const styles = StyleSheet.create({
   ratingTxt: { color: "#fff", fontSize: 13, fontWeight: "800" },
   aka: { color: "rgba(255,255,255,0.75)", fontSize: 12, marginTop: 6 },
   heroMeta: { color: "rgba(255,255,255,0.88)", fontSize: 13, marginTop: 6, lineHeight: 18 },
-  body: { paddingHorizontal: 16, paddingTop: 16 },
-  playBig: {
-    backgroundColor: colors.red,
-    borderRadius: 24,
-    paddingVertical: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  playBigTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  body: { paddingHorizontal: 16, paddingTop: 8 },
+  ctaCol: { gap: 10 },
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: "800" },
   chips: { gap: 8, paddingRight: 8, marginTop: 10 },
   chip: {
-    borderWidth: 1,
-    borderColor: "#2E2E2E",
+    borderWidth: 0,
     borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#141414",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    backgroundColor: "#2A2A2A",
   },
   chipOn: { backgroundColor: colors.red, borderColor: colors.red },
   chipTxt: { color: colors.muted, fontWeight: "700", fontSize: 13 },
@@ -588,7 +566,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.red,
+    backgroundColor: colors.play,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -597,14 +575,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    backgroundColor: colors.red,
-    borderRadius: 10,
+    backgroundColor: colors.play,
+    borderRadius: 6,
     paddingVertical: 7,
     marginTop: 10,
-    borderWidth: 1,
-    borderColor: colors.red,
+    borderWidth: 0,
+    borderColor: colors.play,
   },
-  qDlTxt: { color: "#fff", fontWeight: "700", fontSize: 11.5 },
+  qDlTxt: { color: colors.playText, fontWeight: "700", fontSize: 11.5 },
   desc: { color: "#D4D4D4", marginTop: 8, lineHeight: 20, fontSize: 13 },
   moreBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6, alignSelf: "flex-start" },
   moreTxt: { color: colors.redSoft, fontWeight: "700", fontSize: 13 },
@@ -619,7 +597,8 @@ const styles = StyleSheet.create({
   refreshTxt: { color: colors.redSoft, fontSize: 12, fontWeight: "700" },
   recoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   recoCell: { width: (SCREEN_W - 32 - 16) / 3 },
-  recoImg: { width: "100%", height: 148, borderRadius: 12, backgroundColor: "#222" },
+  recoImgWrap: { borderRadius: 12, overflow: "hidden", backgroundColor: "#222" },
+  recoImg: { width: "100%", aspectRatio: 2 / 3 },
   recoBadge: {
     position: "absolute",
     top: 6,
@@ -674,20 +653,4 @@ const styles = StyleSheet.create({
   commentName: { color: colors.text, fontWeight: "700", fontSize: 13 },
   commentDate: { color: colors.dim, fontSize: 12 },
   commentBody: { color: colors.muted, fontSize: 13, marginTop: 8, lineHeight: 18 },
-  fabWrap: { position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", pointerEvents: "box-none" },
-  fab: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: colors.red,
-    borderRadius: 24,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-  },
-  fabTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
 });

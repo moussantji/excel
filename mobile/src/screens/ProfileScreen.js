@@ -2,15 +2,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  fetchHistory,
-  fetchMe,
-  login,
-  logout as apiLogout,
-} from "../api";
+import { fetchHistory, fetchMe, login, logout as apiLogout } from "../api";
 import { colors } from "../theme";
 import { useJobs } from "../useJobs";
-import { Icon, ImageWithFallback } from "../ui";
+import { Icon, Logo, PosterCard } from "../ui";
 
 function Stat({ label, value }) {
   return (
@@ -81,7 +76,7 @@ export default function ProfileScreen({ onOpenItem, onOpenFiles }) {
     setHistory([]);
   }
 
-  const name = me?.name || me?.email || "Touriste";
+  const name = me?.name || me?.email || "Invité";
   const userId = me?.id || me?.subjectId || "—";
   const doneCount = useMemo(() => jobs.filter((j) => j.status === "done").length, [jobs]);
 
@@ -91,26 +86,36 @@ export default function ProfileScreen({ onOpenItem, onOpenFiles }) {
         contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
         showsVerticalScrollIndicator={false}
       >
-        {/* hero */}
         <View style={styles.hero}>
           <LinearGradient
-            colors={["#3A0A0D", "#160506", colors.bg]}
-            locations={[0, 0.6, 1]}
+            colors={["#1A0507", "#0A0000", colors.bg]}
+            locations={[0, 0.55, 1]}
             style={StyleSheet.absoluteFill}
           />
-          <View style={{ paddingTop: insets.top + 26, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", gap: 16 }}>
+          <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 8 }}>
+            <Logo size={18} />
+          </View>
+          <View
+            style={{
+              paddingTop: 10,
+              paddingHorizontal: 20,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 16,
+            }}
+          >
             <View style={styles.avatar}>
               {me ? (
                 <Text style={styles.letter}>{String(name).charAt(0).toUpperCase()}</Text>
               ) : (
-                <Icon name="person" size={38} color={colors.onRed} />
+                <Icon name="person" size={36} color={colors.onRed} />
               )}
             </View>
             <View style={{ flex: 1 }}>
               <Text numberOfLines={1} style={styles.name}>
                 {name}
               </Text>
-              <Text style={styles.idTxt}>ID Manden : {String(userId)}</Text>
+              <Text style={styles.idTxt}>ID Manden · {String(userId)}</Text>
             </View>
           </View>
 
@@ -121,15 +126,16 @@ export default function ProfileScreen({ onOpenItem, onOpenFiles }) {
             </Pressable>
           ) : (
             <Pressable onPress={() => setShowForm((v) => !v)} style={styles.loginRow}>
-              <Text style={styles.loginTxt}>Connexion/Inscription</Text>
+              <Text style={styles.loginTxt}>Connexion</Text>
               <Icon name={showForm ? "chevron-up" : "chevron-forward"} size={18} color={colors.onRed} />
             </Pressable>
           )}
 
-          {/* stats */}
           <View style={styles.statsRow}>
             <Stat label="Vus" value={history.length} />
+            <View style={styles.statDiv} />
             <Stat label="Téléchargements" value={jobs.length} />
+            <View style={styles.statDiv} />
             <Stat label="Hors-ligne" value={doneCount} />
           </View>
         </View>
@@ -168,37 +174,46 @@ export default function ProfileScreen({ onOpenItem, onOpenFiles }) {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Pressable style={styles.filesRow} onPress={() => onOpenFiles?.()}>
-          <Icon name="download-outline" size={18} color={colors.redSoft} />
-          <Text style={styles.filesTxt}>Mes fichiers</Text>
-          <Icon name="chevron-forward" size={16} color={colors.dim} />
-        </Pressable>
+        <View style={styles.menu}>
+          <Pressable style={styles.filesRow} onPress={() => onOpenFiles?.()}>
+            <View style={styles.menuIcon}>
+              <Icon name="download-outline" size={18} color={colors.redSoft} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.filesTxt}>Mes fichiers</Text>
+              <Text style={styles.filesSub}>
+                {doneCount} hors-ligne · {jobs.length} au total
+              </Text>
+            </View>
+            <Icon name="chevron-forward" size={16} color={colors.dim} />
+          </Pressable>
+        </View>
 
         {history.length ? (
           <>
-            <Text style={styles.h2}>Des postes</Text>
-            <View style={styles.histGrid}>
-              {history.slice(0, 9).map((item, idx) => (
-                <Pressable
+            <Text style={styles.h2}>Continuer à regarder</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.histRow}
+            >
+              {history.slice(0, 12).map((item, idx) => (
+                <PosterCard
                   key={`${item.subjectId}-${idx}`}
+                  item={item}
+                  width={118}
                   onPress={() => onOpenItem?.(item)}
-                  style={styles.histCell}
-                >
-                  <ImageWithFallback
-                    source={{ uri: item.coverSmall || item.cover }}
-                    style={styles.histThumb}
-                    iconSize={16}
-                  />
-                  <Text numberOfLines={1} style={styles.histTxt}>
-                    {item.displayTitle || item.title}
-                  </Text>
-                </Pressable>
+                />
               ))}
-            </View>
+            </ScrollView>
           </>
         ) : (
           <View style={styles.emptyBox}>
-            <Text style={styles.empty}>Pas encore de contenu</Text>
+            <View style={styles.emptyRing}>
+              <Icon name="film-outline" size={28} color={colors.dim} />
+            </View>
+            <Text style={styles.emptyTitle}>Pas encore de contenu</Text>
+            <Text style={styles.empty}>Tes films et séries regardés apparaîtront ici.</Text>
           </View>
         )}
       </ScrollView>
@@ -210,17 +225,17 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   hero: { paddingBottom: 8 },
   avatar: {
-    width: 79,
-    height: 79,
-    borderRadius: 40,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: colors.red,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
     borderColor: "rgba(255,255,255,0.18)",
   },
-  letter: { fontSize: 32, fontWeight: "800", color: colors.onRed },
-  name: { color: colors.text, fontSize: 21, fontWeight: "900" },
+  letter: { fontSize: 30, fontWeight: "800", color: colors.onRed },
+  name: { color: colors.text, fontSize: 22, fontWeight: "900", letterSpacing: -0.4 },
   idTxt: { color: "rgba(255,255,255,0.65)", fontSize: 12.5, marginTop: 4 },
   loginRow: {
     flexDirection: "row",
@@ -234,10 +249,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   loginTxt: { color: colors.onRed, fontSize: 16, fontWeight: "900" },
-  statsRow: { flexDirection: "row", marginTop: 20, paddingHorizontal: 20 },
+  statsRow: { flexDirection: "row", marginTop: 22, paddingHorizontal: 12, alignItems: "center" },
   stat: { flex: 1, alignItems: "center", gap: 2 },
   statVal: { color: colors.text, fontSize: 21, fontWeight: "900" },
   statLbl: { color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: "600" },
+  statDiv: { width: 1, height: 28, backgroundColor: "rgba(255,255,255,0.12)" },
   form: { marginTop: 18, gap: 10, paddingHorizontal: 20 },
   inputWrap: {
     backgroundColor: colors.card,
@@ -260,23 +276,48 @@ const styles = StyleSheet.create({
   },
   btnText: { color: colors.onRed, fontWeight: "800" },
   error: { color: "#F87171", marginTop: 12, textAlign: "center", paddingHorizontal: 20 },
+  menu: { marginTop: 8 },
   filesRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     marginHorizontal: 20,
-    marginTop: 20,
+    marginTop: 16,
     backgroundColor: colors.card,
     borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
-  filesTxt: { color: colors.text, fontWeight: "700", flex: 1 },
-  h2: { color: colors.text, fontWeight: "900", fontSize: 17, marginTop: 24, marginBottom: 4, paddingHorizontal: 16 },
-  histGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, gap: 8, marginTop: 8 },
-  histCell: { width: "31.5%" },
-  histThumb: { width: "100%", height: 120, borderRadius: 10, backgroundColor: "#222" },
-  histTxt: { color: colors.text, fontSize: 11.5, fontWeight: "600", marginTop: 5 },
-  emptyBox: { alignItems: "center", marginTop: 60 },
-  empty: { color: colors.dim },
+  menuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(229,9,20,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filesTxt: { color: colors.text, fontWeight: "800", fontSize: 15 },
+  filesSub: { color: colors.dim, fontSize: 12, marginTop: 2 },
+  h2: {
+    color: colors.text,
+    fontWeight: "800",
+    fontSize: 18,
+    marginTop: 26,
+    paddingHorizontal: 16,
+    letterSpacing: -0.3,
+  },
+  histRow: { paddingHorizontal: 16, gap: 10, paddingTop: 12 },
+  emptyBox: { alignItems: "center", marginTop: 48, paddingHorizontal: 32, gap: 8 },
+  emptyRing: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  emptyTitle: { color: colors.text, fontSize: 16, fontWeight: "800" },
+  empty: { color: colors.dim, textAlign: "center", lineHeight: 20 },
 });
