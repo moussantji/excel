@@ -294,7 +294,8 @@ export function initDownloads() {
     // progressive même sans reprise du téléchargement (probe persisté).
     for (const job of jobs.values()) {
       if (!job.probe && (job.written || 0) >= MIN_PLAY_BYTES) {
-        scheduleProbe(job).catch(() => {});
+        console.log("[probe] init scheduling for", job.id, job.written);
+        scheduleProbe(job).catch((e) => console.log("[probe] init error", e?.message));
       }
     }
     snapshotDirty = true;
@@ -752,9 +753,12 @@ async function scheduleProbe(record) {
   if ((record.written || 0) < (record.nextProbeAt || MIN_PLAY_BYTES)) return;
   record.nextProbeAt = (record.written || 0) + PROBE_STEP;
   const verdict = await probeMoovPosition(record.dest, record.written);
+  console.log("[probe]", record.id, "verdict", verdict, "written", record.written);
   if (!record.probe && (verdict === "faststart" || verdict === "tail")) {
     record.probe = verdict;
     touch(record);
+    schedulePersist(record.id);
+    console.log("[probe] set", record.id, verdict);
   }
 }
 
