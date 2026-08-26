@@ -2,7 +2,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLayout } from "../layout";
 import {
   audioLangKey,
   fetchDetail,
@@ -24,8 +24,6 @@ import { downloadId } from "../downloadManager";
 import { colors } from "../theme";
 import { useJobs } from "../useJobs";
 import { GlassButton, Icon, ImageWithFallback, PlayButton, VfBadge } from "../ui";
-
-const SCREEN_W = Dimensions.get("window").width;
 
 function fmtDur(sec) {
   if (!sec && sec !== 0) return "";
@@ -42,6 +40,7 @@ function fmtDur(sec) {
 }
 
 export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, onPlay }) {
+  const layout = useLayout();
   const [pack, setPack] = useState(() => peekCache(`detail:${item.subjectId}`) || null);
   const [files, setFiles] = useState([]);
   const [subtitles, setSubtitles] = useState([]);
@@ -200,6 +199,11 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
   if (year) metaParts.push(String(year));
   if (dur) metaParts.push(fmtDur(dur));
   const metaLine = metaParts.join(" · ");
+  const innerW = layout.width - layout.pad * 2;
+  const qCardW = (innerW - 10 * (layout.fileCols - 1)) / layout.fileCols;
+  const recoW = (innerW - layout.gap * (layout.recoCols - 1)) / layout.recoCols;
+  const castW = (innerW - 10 * (layout.castCols - 1)) / layout.castCols;
+  const heroH = layout.isPhone ? 460 : Math.round(Math.min(layout.heroH, layout.isTv ? 640 : 540));
 
   return (
     <View style={styles.wrap}>
@@ -209,7 +213,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
         showsVerticalScrollIndicator={false}
       >
         {/* HERO */}
-        <View style={styles.hero}>
+        <View style={[styles.hero, { height: heroH }]}>
           {detail.cover ? (
             <ImageWithFallback
               source={{ uri: detail.cover }}
@@ -232,9 +236,15 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
             </Pressable>
           </View>
           {/* hero bottom */}
-          <View style={styles.heroBottom}>
+          <View style={[styles.heroBottom, { paddingHorizontal: layout.pad }]}>
             <View style={styles.titleRow}>
-              <Text style={styles.heroTitle} numberOfLines={2}>
+              <Text
+                style={[
+                  styles.heroTitle,
+                  { fontSize: layout.titleSize, lineHeight: layout.titleSize + 4 },
+                ]}
+                numberOfLines={2}
+              >
                 {displayTitle}
               </Text>
               {showVf ? <VfBadge /> : null}
@@ -255,7 +265,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
         </View>
 
         {/* LECTURE principale + ressource */}
-        <View style={styles.body}>
+        <View style={[styles.body, { paddingHorizontal: layout.pad }]}>
           <View style={styles.ctaCol}>
             <PlayButton
               label={isSeriesPack ? `Lecture S${season} E${episode}` : "Lecture"}
@@ -370,7 +380,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
               ? `S${String(season).padStart(2, "0")} EP${String(episode).padStart(2, "0")}`
               : file.quality;
             return (
-              <View key={file.quality} style={styles.qCard}>
+              <View key={file.quality} style={[styles.qCard, { width: qCardW }]}>
                 <View style={styles.qCardTop}>
                   <Text style={styles.qTitle} numberOfLines={1}>{epLabel}</Text>
                   {fileVf ? <VfBadge /> : null}
@@ -450,7 +460,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
               </Text>
               <View style={styles.castGrid}>
                 {pack.cast.slice(0, 12).map((actor) => (
-                  <View key={`${actor.name}-${actor.character}`} style={styles.castCell}>
+                  <View key={`${actor.name}-${actor.character}`} style={[styles.castCell, { width: castW }]}>
                     {actor.avatar ? (
                       <ImageWithFallback
                         source={{ uri: actor.avatar }}
@@ -497,7 +507,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
                   <Pressable
                     key={String(rec.subjectId)}
                     onPress={() => onOpenItem(rec)}
-                    style={styles.recoCell}
+                    style={[styles.recoCell, { width: recoW }]}
                   >
                     <View style={styles.recoImgWrap}>
                       <ImageWithFallback
@@ -612,7 +622,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   qCard: {
-    width: (SCREEN_W - 32 - 10) / 2,
     backgroundColor: "#171717",
     borderRadius: 14,
     padding: 12,
@@ -652,7 +661,7 @@ const styles = StyleSheet.create({
   moreBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6, alignSelf: "flex-start" },
   moreTxt: { color: colors.redSoft, fontWeight: "700", fontSize: 13 },
   castGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 },
-  castCell: { width: (SCREEN_W - 32 - 30) / 4, alignItems: "center" },
+  castCell: { alignItems: "center" },
   castAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#222" },
   castAvatarPh: { alignItems: "center", justifyContent: "center" },
   castName: { color: colors.text, fontSize: 11, fontWeight: "600", marginTop: 6, textAlign: "center" },
@@ -661,7 +670,7 @@ const styles = StyleSheet.create({
   refreshBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: "#1C1C1C", borderWidth: 1, borderColor: "#2A2A2A" },
   refreshTxt: { color: colors.redSoft, fontSize: 12, fontWeight: "700" },
   recoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
-  recoCell: { width: (SCREEN_W - 32 - 16) / 3 },
+  recoCell: {},
   recoImgWrap: { borderRadius: 12, overflow: "hidden", backgroundColor: "#222" },
   recoImg: { width: "100%", aspectRatio: 2 / 3 },
   recoBadge: {

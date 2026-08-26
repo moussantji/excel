@@ -13,8 +13,9 @@ import ProfileScreen from "./src/screens/ProfileScreen";
 import SearchScreen from "./src/screens/SearchScreen";
 import { initAuth, isSeries } from "./src/api";
 import { initDownloads, startDownload } from "./src/downloadManager";
-import { colors, TAB_BAR_HEIGHT } from "./src/theme";
-import { Icon } from "./src/ui";
+import { useLayout } from "./src/layout";
+import { colors } from "./src/theme";
+import { Icon, Logo } from "./src/ui";
 
 const Stack = createNativeStackNavigator();
 
@@ -28,6 +29,7 @@ const TABS = [
 function Tabs({ navigation }) {
   const [tab, setTab] = useState("home");
   const insets = useSafeAreaInsets();
+  const layout = useLayout();
 
   function openItem(item) {
     navigation.navigate("Detail", { item });
@@ -48,8 +50,51 @@ function Tabs({ navigation }) {
     startDownload(item).catch(() => {});
   }
 
+  const navItems = TABS.map((item) => {
+    const active = tab === item.id;
+    return (
+      <Pressable
+        key={item.id}
+        onPress={() => setTab(item.id)}
+        style={({ pressed }) => [
+          layout.sideNav ? styles.railItem : styles.tab,
+          layout.sideNav && active && styles.railItemOn,
+          pressed && { opacity: 0.75 },
+        ]}
+      >
+        <Icon
+          name={active ? item.iconOn : item.icon}
+          size={layout.isTv ? 26 : 22}
+          color={active ? colors.redSoft : colors.dim}
+        />
+        <Text
+          style={[layout.sideNav ? styles.railLabel : styles.tabLabel, active && styles.active]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {item.label}
+        </Text>
+      </Pressable>
+    );
+  });
+
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, layout.sideNav && styles.rootRow]}>
+      {layout.sideNav ? (
+        <View
+          style={[
+            styles.rail,
+            {
+              width: layout.railW,
+              paddingTop: insets.top + 18,
+              paddingBottom: Math.max(16, insets.bottom),
+            },
+          ]}
+        >
+          <Logo size={layout.isTv ? 22 : 16} />
+          <View style={styles.railList}>{navItems}</View>
+        </View>
+      ) : null}
       <View style={styles.screen}>
         <View
           style={[styles.pane, tab !== "home" && styles.paneOff]}
@@ -84,36 +129,19 @@ function Tabs({ navigation }) {
         </View>
       </View>
 
-      <View
-        style={[
-          styles.tabBar,
-          { paddingBottom: Math.max(8, insets.bottom), height: TAB_BAR_HEIGHT + insets.bottom },
-        ]}
-      >
-        {TABS.map((item) => {
-          const active = tab === item.id;
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() => setTab(item.id)}
-              style={({ pressed }) => [styles.tab, pressed && { opacity: 0.75 }]}
-            >
-              <Icon
-                name={active ? item.iconOn : item.icon}
-                size={22}
-                color={active ? colors.redSoft : colors.dim}
-              />
-              <Text
-                style={[styles.tabLabel, active && styles.active]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {!layout.sideNav ? (
+        <View
+          style={[
+            styles.tabBar,
+            {
+              paddingBottom: Math.max(8, insets.bottom),
+              height: layout.tabBarH + insets.bottom,
+            },
+          ]}
+        >
+          {navItems}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -197,6 +225,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  rootRow: { flexDirection: "row" },
   screen: { flex: 1 },
   pane: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
   paneOff: { opacity: 0, zIndex: 0 },
@@ -214,4 +243,20 @@ const styles = StyleSheet.create({
   tab: { flex: 1, alignItems: "center", gap: 3 },
   tabLabel: { color: colors.dim, fontSize: 10.5, fontWeight: "600" },
   active: { color: colors.redSoft, fontWeight: "800" },
+  rail: {
+    backgroundColor: "rgba(8,8,8,0.98)",
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 10,
+  },
+  railList: { marginTop: 28, gap: 8, flex: 1 },
+  railItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 10,
+  },
+  railItemOn: { backgroundColor: "rgba(229,9,20,0.14)" },
+  railLabel: { color: colors.dim, fontSize: 11, fontWeight: "700", textAlign: "center" },
 });

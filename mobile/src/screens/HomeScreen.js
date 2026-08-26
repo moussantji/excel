@@ -3,7 +3,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLayout } from "../layout";
 import {
   fetchCategory,
   fetchDetail,
@@ -37,11 +37,7 @@ import {
   Skeleton,
 } from "../ui";
 
-const SCREEN_W = Dimensions.get("window").width;
-const SCREEN_H = Dimensions.get("window").height;
 const GAP = 8;
-const CELL_W = (SCREEN_W - 32 - GAP * 2) / 3;
-const HERO_H = Math.round(Math.min(SCREEN_H * 0.86, 720));
 
 const TABS = [
   { id: "trend", label: "Tendance" },
@@ -61,8 +57,8 @@ const YEAR_BUCKETS = [
 
 const AUDIO = [
   { label: "Tous", test: () => true },
-  { label: "Doublage français", test: (it) => Boolean(it.french) },
-  { label: "Doublage anglais", test: (it) => Boolean(it.english) },
+  { label: "Doublage français", test: (it) => hasVf(it) },
+  { label: "Doublage anglais", test: (it) => Boolean(it.english) && !hasVf(it) },
 ];
 
 const SORTS = [
@@ -82,12 +78,12 @@ function Chip({ label, on, onPress }) {
   );
 }
 
-function ChipRow({ items, active, onPick }) {
+function ChipRow({ items, active, onPick, pad = 16 }) {
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.chipRow}
+      contentContainerStyle={[styles.chipRow, { paddingHorizontal: pad }]}
     >
       {items.map((label) => (
         <Chip key={label} label={label} on={active === label} onPress={() => onPick(label)} />
@@ -96,14 +92,14 @@ function ChipRow({ items, active, onPick }) {
   );
 }
 
-function Grid3({ items, onOpen }) {
+function Grid3({ items, onOpen, cellW, gap, pad }) {
   return (
-    <View style={styles.grid}>
+    <View style={[styles.grid, { paddingHorizontal: pad, columnGap: gap }]}>
       {items.map((item, i) => (
         <PosterCard
           key={`${item.subjectId}-${i}`}
           item={item}
-          width={CELL_W}
+          width={cellW}
           onPress={() => onOpen(item)}
         />
       ))}
@@ -111,40 +107,40 @@ function Grid3({ items, onOpen }) {
   );
 }
 
-function PosterRow({ title, items, onOpen, loading }) {
+function PosterRow({ title, items, onOpen, loading, posterW = 122, pad = 16, gap = 8 }) {
   if (!items?.length && !loading) return null;
   return (
     <View>
-      <SectionTitle>{title}</SectionTitle>
+      <SectionTitle style={{ marginHorizontal: pad }}>{title}</SectionTitle>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.posterRow}
+        contentContainerStyle={[styles.posterRow, { paddingHorizontal: pad, gap }]}
       >
         {items?.length
           ? items.slice(0, 16).map((item, i) => (
               <PosterCard
                 key={`${item.subjectId}-${i}`}
                 item={item}
-                width={122}
+                width={posterW}
                 onPress={() => onOpen(item)}
               />
             ))
-          : [0, 1, 2, 3, 4].map((i) => <PosterSkeleton key={i} width={122} />)}
+          : [0, 1, 2, 3, 4].map((i) => <PosterSkeleton key={i} width={posterW} />)}
       </ScrollView>
     </View>
   );
 }
 
-function Top10Row({ items, onOpen }) {
+function Top10Row({ items, onOpen, posterW = 118, pad = 16 }) {
   if (!items?.length) return null;
   return (
     <View>
-      <SectionTitle>Top 10 aujourd'hui</SectionTitle>
+      <SectionTitle style={{ marginHorizontal: pad }}>Top 10 aujourd'hui</SectionTitle>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.topRow}
+        contentContainerStyle={[styles.topRow, { paddingHorizontal: Math.max(8, pad - 6) }]}
       >
         {items.slice(0, 10).map((item, i) => (
           <Pressable
@@ -152,8 +148,8 @@ function Top10Row({ items, onOpen }) {
             style={styles.topItem}
             onPress={() => onOpen(item)}
           >
-            <Text style={styles.rank}>{i + 1}</Text>
-            <PosterCard item={item} width={118} showTitle={false} onPress={() => onOpen(item)} />
+            <Text style={[styles.rank, posterW > 130 && { fontSize: 110 }]}>{i + 1}</Text>
+            <PosterCard item={item} width={posterW} showTitle={false} onPress={() => onOpen(item)} />
           </Pressable>
         ))}
       </ScrollView>
@@ -168,15 +164,16 @@ function fmtDur(sec) {
   return `${m}:${String(r).padStart(2, "0")}`;
 }
 
-function ContinueRow({ items, onOpen }) {
+function ContinueRow({ items, onOpen, width = 168, pad = 16, gap = 8 }) {
   if (!items?.length) return null;
+  const thumbH = Math.round(width * (9 / 16));
   return (
     <View>
-      <SectionTitle>Continuer à regarder</SectionTitle>
+      <SectionTitle style={{ marginHorizontal: pad }}>Continuer à regarder</SectionTitle>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.posterRow}
+        contentContainerStyle={[styles.posterRow, { paddingHorizontal: pad, gap }]}
       >
         {items.map((item, i) => {
           const pos = Number(item.positionSeconds) || 0;
@@ -189,16 +186,16 @@ function ContinueRow({ items, onOpen }) {
           return (
             <Pressable
               key={`${item.subjectId}-${i}`}
-              style={styles.contCard}
+              style={[styles.contCard, { width }]}
               onPress={() => onOpen(item)}
             >
-              <View style={styles.contThumb}>
+              <View style={[styles.contThumb, { width, height: thumbH }]}>
                 <ImageWithFallback
                   source={{ uri: item.coverSmall || item.cover }}
                   style={styles.contImg}
                   iconSize={18}
                 />
-                <View style={styles.contPlay}>
+                <View style={[styles.contPlay, { top: Math.round(thumbH / 2 - 14), left: Math.round(width / 2 - 14) }]}>
                   <Icon name="play" size={14} color="#fff" />
                 </View>
                 {dur ? (
@@ -241,10 +238,10 @@ function CategoryTabs({ tab, onPick, overlay }) {
   );
 }
 
-function BrandBar({ onOpenSearch, padTop }) {
+function BrandBar({ onOpenSearch, padTop, pad = 16, logoSize = 22, showLogo = true }) {
   return (
-    <View style={[styles.brandBar, { paddingTop: padTop }]}>
-      <Logo size={22} />
+    <View style={[styles.brandBar, { paddingTop: padTop, paddingHorizontal: pad }]}>
+      {showLogo ? <Logo size={logoSize} /> : <View />}
       <Pressable onPress={onOpenSearch} hitSlop={8} style={styles.searchBtn}>
         <Icon name="search" size={18} color="#fff" />
       </Pressable>
@@ -253,6 +250,7 @@ function BrandBar({ onOpenSearch, padTop }) {
 }
 
 export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFiles, onOpenSearch }) {
+  const layout = useLayout();
   const seedHome = peekCache("home");
   const seedTrend = peekCache("trending:1");
   const [loading, setLoading] = useState(!seedHome && !seedTrend);
@@ -434,16 +432,16 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}
+      contentContainerStyle={{ paddingBottom: layout.chromeBottom + insets.bottom }}
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={16}
       onScroll={(e) => {
         const y = e.nativeEvent.contentOffset.y;
-        setHeroOffscreen(y > HERO_H * 0.45);
+        setHeroOffscreen(y > layout.heroH * 0.45);
       }}
     >
       {tab === "trend" ? (
-        <View style={[styles.hero, { height: HERO_H }]}>
+        <View style={[styles.hero, { height: layout.heroH }]}>
           <ImageWithFallback
             source={{ uri: hero?.cover || hero?.coverSmall }}
             style={StyleSheet.absoluteFill}
@@ -479,9 +477,15 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
-          <BrandBar onOpenSearch={onOpenSearch} padTop={insets.top + 4} />
-          <CategoryTabs tab={tab} onPick={setTab} overlay />
-          <View style={styles.heroContent}>
+          <BrandBar
+            onOpenSearch={onOpenSearch}
+            padTop={insets.top + 4}
+            pad={layout.pad}
+            logoSize={layout.isTv ? 28 : 22}
+            showLogo={!layout.sideNav}
+          />
+          <CategoryTabs tab={tab} onPick={setTab} overlay pad={layout.pad} />
+          <View style={[styles.heroContent, { paddingHorizontal: layout.pad, maxWidth: layout.isTv ? 720 : undefined }]}>
             {waitingFirst ? (
               <>
                 <Skeleton width={120} height={12} />
@@ -501,7 +505,13 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
                     </>
                   ) : null}
                 </View>
-                <Text numberOfLines={2} style={styles.heroTitle}>
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    styles.heroTitle,
+                    { fontSize: layout.titleSize, lineHeight: layout.titleSize + 6 },
+                  ]}
+                >
                   {heroTitle}
                 </Text>
                 {heroGenres ? (
@@ -535,8 +545,14 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
         </View>
       ) : (
         <>
-          <BrandBar onOpenSearch={onOpenSearch} padTop={insets.top + 4} />
-          <CategoryTabs tab={tab} onPick={setTab} />
+          <BrandBar
+            onOpenSearch={onOpenSearch}
+            padTop={insets.top + 4}
+            pad={layout.pad}
+            logoSize={layout.isTv ? 28 : 22}
+            showLogo={!layout.sideNav}
+          />
+          <CategoryTabs tab={tab} onPick={setTab} pad={layout.pad} />
         </>
       )}
 
@@ -551,16 +567,32 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
             </View>
           ) : null}
 
-          <ContinueRow items={continueItems} onOpen={openContinue} />
-          <Top10Row items={popular} onOpen={onOpenItem} />
+          <ContinueRow
+            items={continueItems}
+            onOpen={openContinue}
+            width={layout.continueW}
+            pad={layout.pad}
+            gap={layout.gap}
+          />
+          <Top10Row items={popular} onOpen={onOpenItem} posterW={layout.posterW} pad={layout.pad} />
           <PosterRow
             title={popularSeries.length ? "Séries populaires" : "Populaires"}
             items={popularSeries.length ? popularSeries : popular}
             onOpen={onOpenItem}
             loading={loading && !popular.length}
+            posterW={layout.posterW}
+            pad={layout.pad}
+            gap={layout.gap}
           />
           {popularFilms.length ? (
-            <PosterRow title="Films populaires" items={popularFilms} onOpen={onOpenItem} />
+            <PosterRow
+              title="Films populaires"
+              items={popularFilms}
+              onOpen={onOpenItem}
+              posterW={layout.posterW}
+              pad={layout.pad}
+              gap={layout.gap}
+            />
           ) : null}
           {sections.slice(0, 4).map((section) => (
             <PosterRow
@@ -568,19 +600,30 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
               title={section.title}
               items={section.items || []}
               onOpen={onOpenItem}
+              posterW={layout.posterW}
+              pad={layout.pad}
+              gap={layout.gap}
             />
           ))}
           {homeLoading && !sections.length ? (
-            <PosterRow title="Pour toi" items={[]} onOpen={onOpenItem} loading />
+            <PosterRow
+              title="Pour toi"
+              items={[]}
+              onOpen={onOpenItem}
+              loading
+              posterW={layout.posterW}
+              pad={layout.pad}
+              gap={layout.gap}
+            />
           ) : null}
         </>
       ) : (
         <>
-          <ChipRow items={genres} active={genre} onPick={setGenre} />
-          <ChipRow items={YEAR_BUCKETS.map((b) => b.label)} active={yearB} onPick={setYearB} />
-          <ChipRow items={AUDIO.map((a) => a.label)} active={audio} onPick={setAudio} />
+          <ChipRow items={genres} active={genre} onPick={setGenre} pad={layout.pad} />
+          <ChipRow items={YEAR_BUCKETS.map((b) => b.label)} active={yearB} onPick={setYearB} pad={layout.pad} />
+          <ChipRow items={AUDIO.map((a) => a.label)} active={audio} onPick={setAudio} pad={layout.pad} />
 
-          <View style={styles.sortRow}>
+          <View style={[styles.sortRow, { paddingHorizontal: layout.pad }]}>
             {SORTS.map((s) => (
               <Pressable key={s.id} onPress={() => setSort(s.id)} style={styles.sortTab}>
                 <Text style={[styles.sortTxt, sort === s.id && styles.sortTxtOn]}>{s.label}</Text>
@@ -596,7 +639,13 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
 
           {!catLoading || catItems.length ? (
             <>
-              <Grid3 items={filtered} onOpen={onOpenItem} />
+              <Grid3
+                items={filtered}
+                onOpen={onOpenItem}
+                cellW={layout.cellW}
+                gap={layout.gap}
+                pad={layout.pad}
+              />
               {!filtered.length && !catLoading ? (
                 <Text style={styles.empty}>Aucun titre avec ces filtres.</Text>
               ) : null}
@@ -616,7 +665,7 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
         </>
       )}
 
-      <Pressable style={styles.dlHead} onPress={() => onOpenFiles?.()}>
+      <Pressable style={[styles.dlHead, { marginHorizontal: layout.pad }]} onPress={() => onOpenFiles?.()}>
         <Text style={styles.dlHeadTitle}>Téléchargements</Text>
         <View style={styles.sectionAll}>
           <Text style={styles.sectionAllTxt}>Tous</Text>
@@ -624,14 +673,14 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
         </View>
       </Pressable>
       {preview.length === 0 ? (
-        <Pressable style={styles.dlEmpty} onPress={() => onOpenFiles?.()}>
+        <Pressable style={[styles.dlEmpty, { marginHorizontal: layout.pad }]} onPress={() => onOpenFiles?.()}>
           <Icon name="arrow-down-circle-outline" size={22} color={colors.dim} />
           <Text style={styles.dlEmptyTxt}>
             Aucun fichier. Ouvre une fiche puis touche « Télécharger ».
           </Text>
         </Pressable>
       ) : (
-        <View style={styles.dlRow}>
+        <View style={[styles.dlRow, { paddingHorizontal: layout.pad }]}>
           {preview.map((item) => (
             <Pressable key={item.id} style={styles.dlCard} onPress={() => onPlay(item)}>
               <ImageWithFallback source={{ uri: item.cover }} style={styles.dlThumb} iconSize={18} />
@@ -873,6 +922,23 @@ const styles = StyleSheet.create({
   doneRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 },
   done: { color: colors.green, fontSize: 12, fontWeight: "600" },
   track: { height: 3, backgroundColor: colors.track, borderRadius: 2, marginTop: 8 },
+  fill: { height: 3, backgroundColor: colors.red, borderRadius: 2 },
+  size: { color: colors.dim, fontSize: 10, marginTop: 4, textAlign: "right" },
+  muteBtn: {
+    position: "absolute",
+    right: 16,
+    bottom: 28,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
+k: { height: 3, backgroundColor: colors.track, borderRadius: 2, marginTop: 8 },
   fill: { height: 3, backgroundColor: colors.red, borderRadius: 2 },
   size: { color: colors.dim, fontSize: 10, marginTop: 4, textAlign: "right" },
   muteBtn: {

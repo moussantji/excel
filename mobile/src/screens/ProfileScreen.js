@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchHistory, fetchMe, login, logout as apiLogout } from "../api";
+import { useLayout } from "../layout";
 import { colors } from "../theme";
 import { useJobs } from "../useJobs";
 import { Icon, Logo, PosterCard } from "../ui";
@@ -26,6 +27,7 @@ export default function ProfileScreen({ onOpenItem, onOpenFiles }) {
   const [busy, setBusy] = useState(false);
   const jobs = useJobs();
   const insets = useSafeAreaInsets();
+  const layout = useLayout();
 
   async function load() {
     setBusy(true);
@@ -83,7 +85,13 @@ export default function ProfileScreen({ onOpenItem, onOpenFiles }) {
   return (
     <View style={styles.wrap}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
+        contentContainerStyle={{
+          paddingBottom: layout.chromeBottom + insets.bottom,
+          paddingHorizontal: layout.isPhone ? 0 : 8,
+          maxWidth: layout.isTv ? 980 : undefined,
+          width: "100%",
+          alignSelf: "center",
+        }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
@@ -191,17 +199,17 @@ export default function ProfileScreen({ onOpenItem, onOpenFiles }) {
 
         {history.length ? (
           <>
-            <Text style={styles.h2}>Continuer à regarder</Text>
+            <Text style={[styles.h2, { paddingHorizontal: layout.pad }]}>Continuer à regarder</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.histRow}
+              contentContainerStyle={[styles.histRow, { paddingHorizontal: layout.pad }]}
             >
               {history.slice(0, 12).map((item, idx) => (
                 <PosterCard
                   key={`${item.subjectId}-${idx}`}
                   item={item}
-                  width={118}
+                  width={layout.posterW}
                   onPress={() => onOpenItem?.(item)}
                 />
               ))}

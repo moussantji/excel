@@ -2,6 +2,7 @@ import { Audio, Video } from "expo-av";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLayout } from "../layout";
 import { fetchDownloads, formatBytes, hasVf, normalizeSubtitles, pickSubtitle, storeHistory } from "../api";
 import { saveWatchEntry } from "../watchHistory";
 import {
@@ -17,6 +18,7 @@ import { Icon, VfBadge } from "../ui";
 export default function PlayerScreen({ item, onBack, onNext }) {
   const video = useRef(null);
   const insets = useSafeAreaInsets();
+  const layout = useLayout();
   const [recId, setRecId] = useState(item.id || null);
   const [playUrl, setPlayUrl] = useState(null);
   const [playMode, setPlayMode] = useState(null); // 'file' | 'range' | 'remote'
@@ -258,7 +260,7 @@ export default function PlayerScreen({ item, onBack, onNext }) {
   const pct = Math.round((rec?.progress || 0) * 100);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
+    <View style={[styles.root, { paddingTop: insets.top + 8, paddingHorizontal: layout.pad }]}>
       <Pressable onPress={onBack} style={styles.back} hitSlop={8}>
         <Icon name="chevron-back" size={22} color={colors.redSoft} />
         <Text style={styles.backText}>Retour</Text>
@@ -269,7 +271,14 @@ export default function PlayerScreen({ item, onBack, onNext }) {
         </Text>
         {hasVf(item) || hasVf(rec) ? <VfBadge /> : null}
       </View>
-      <View style={styles.player}>
+      <View
+        style={[
+          styles.player,
+          layout.playerFill || layout.isTv
+            ? { flex: 1, aspectRatio: undefined, borderRadius: layout.isPhone ? 14 : 8 }
+            : null,
+        ]}
+      >
         {playUrl ? (
           <Video
             ref={video}
@@ -308,7 +317,7 @@ export default function PlayerScreen({ item, onBack, onNext }) {
         ) : null}
         {playUrl && subsOn && cue ? (
           <View style={styles.subBox} pointerEvents="none">
-            <Text style={styles.subTxt}>{cue}</Text>
+            <Text style={[styles.subTxt, layout.isTv && { fontSize: 22, lineHeight: 30 }]}>{cue}</Text>
           </View>
         ) : null}
       </View>

@@ -4,12 +4,13 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Sharing from "expo-sharing";
 import { formatBytes } from "../api";
+import { useLayout } from "../layout";
 import {
   cancelDownload,
   pauseDownload,
   resumeDownload,
 } from "../downloadManager";
-import { colors, TAB_BAR_HEIGHT } from "../theme";
+import { colors } from "../theme";
 import { useJobs } from "../useJobs";
 import { Icon, ImageWithFallback } from "../ui";
 
@@ -380,6 +381,7 @@ function DoneGroup({ group, onPlay }) {
 export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
   const jobs = useJobs();
   const insets = useSafeAreaInsets();
+  const layout = useLayout();
   const [tab, setTab] = useState("dl");
   const [free, setFree] = useState(0);
   const [history, setHistory] = useState([]);
@@ -449,11 +451,11 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
 
       {history.length ? (
         <View style={styles.histWrap}>
-          <View style={styles.histHead}>
+          <View style={[styles.histHead, { paddingHorizontal: layout.pad }]}>
             <Text style={styles.histHeadTxt}>Historique de visionnage</Text>
             <Text style={styles.histCount}>{history.length}</Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.histScroller}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.histScroller, { paddingHorizontal: layout.pad }]}>
             {history.slice(0, 12).map((h, idx) => (
               <HistoryCard
                 key={`${h.subjectId}-${idx}`}
@@ -488,7 +490,7 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 130 + insets.bottom + TAB_BAR_HEIGHT }}
+        contentContainerStyle={{ paddingHorizontal: layout.pad, paddingBottom: layout.chromeBottom + insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
         {list.length ? (
@@ -517,7 +519,7 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
         )}
       </ScrollView>
 
-      <View style={[styles.footBar, { bottom: insets.bottom + TAB_BAR_HEIGHT }]}>
+      <View style={[styles.footBar, { bottom: layout.sideNav ? insets.bottom : insets.bottom + layout.tabBarH }]}>
         <Text style={styles.footTxt}>
           Cache : <Text style={styles.footVal}>{formatBytes(cacheSize) || "0 o"}</Text>
           <Text style={styles.footSep}>   |   </Text>

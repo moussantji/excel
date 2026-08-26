@@ -2,7 +2,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,12 +10,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchCategory, hasVf, isSeries, peekCache, searchTitles } from "../api";
+import { useLayout } from "../layout";
 import { colors } from "../theme";
 import { Icon, ImageWithFallback, Logo, PosterCard, PosterSkeleton, RatingBadge, SearchField, VfBadge } from "../ui";
 
-const SCREEN_W = Dimensions.get("window").width;
 const GAP = 8;
-const CELL_W = (SCREEN_W - 32 - GAP * 2) / 3;
 
 const TYPES = [
   { id: "all", label: "Tous" },
@@ -67,6 +65,7 @@ function matchesType(item, type) {
 }
 
 export default function SearchScreen({ onOpenItem, active = true }) {
+  const layout = useLayout();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
@@ -213,15 +212,15 @@ export default function SearchScreen({ onOpenItem, active = true }) {
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + 6 }]}>
-      <View style={styles.brandRow}>
-        <Logo size={20} />
+      <View style={[styles.brandRow, { paddingHorizontal: layout.pad }]}>
+        <Logo size={layout.isTv ? 26 : 20} />
         {filtersOn ? (
           <Pressable onPress={resetFilters} hitSlop={8}>
             <Text style={styles.reset}>Réinitialiser</Text>
           </Pressable>
         ) : null}
       </View>
-      <View style={styles.searchPad}>
+      <View style={[styles.searchPad, { marginHorizontal: layout.pad }]}>
         <SearchField inputRef={inputRef} autoFocus={false} value={query} onChangeText={setQuery} />
       </View>
 
@@ -236,9 +235,9 @@ export default function SearchScreen({ onOpenItem, active = true }) {
           }
         }}
         scrollEventThrottle={200}
-        contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
+        contentContainerStyle={{ paddingBottom: layout.chromeBottom + insets.bottom }}
       >
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.typeRow, { paddingHorizontal: layout.pad }]}>
           {TYPES.map((t) => (
             <Pressable key={t.id} onPress={() => setType(t.id)} style={styles.typeTab}>
               <Text style={[styles.typeTxt, type === t.id && styles.typeTxtOn]}>{t.label}</Text>
@@ -247,23 +246,23 @@ export default function SearchScreen({ onOpenItem, active = true }) {
           ))}
         </ScrollView>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chipRow, { paddingHorizontal: layout.pad }]}>
           {genres.map((g) => (
             <Chip key={g} label={g} on={genre === g} onPress={() => setGenre(g)} />
           ))}
         </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chipRow, { paddingHorizontal: layout.pad }]}>
           {YEAR_BUCKETS.map((b) => (
             <Chip key={b.label} label={b.label} on={yearB === b.label} onPress={() => setYearB(b.label)} />
           ))}
         </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.chipRow, { paddingHorizontal: layout.pad }]}>
           {AUDIO.map((a) => (
             <Chip key={a.id} label={a.label} on={audio === a.id} onPress={() => setAudio(a.id)} />
           ))}
         </ScrollView>
 
-        <View style={styles.sortRow}>
+        <View style={[styles.sortRow, { paddingHorizontal: layout.pad }]}>
           {SORTS.map((s) => (
             <Pressable key={s.id} onPress={() => setSort(s.id)} style={styles.sortTab}>
               <Text style={[styles.sortTxt, sort === s.id && styles.sortTxtOn]}>{s.label}</Text>
@@ -294,7 +293,7 @@ export default function SearchScreen({ onOpenItem, active = true }) {
         ) : null}
 
         {filtered.length ? (
-          <Text style={styles.count}>
+          <Text style={[styles.count, { paddingHorizontal: layout.pad }]}>
             {filtered.length} résultat{filtered.length > 1 ? "s" : ""}
           </Text>
         ) : null}
@@ -302,7 +301,11 @@ export default function SearchScreen({ onOpenItem, active = true }) {
         {featured ? (
           <Pressable
             onPress={() => onOpenItem(featured)}
-            style={({ pressed }) => [styles.featured, pressed && { opacity: 0.9 }]}
+            style={({ pressed }) => [
+              styles.featured,
+              { height: layout.featuredH, marginHorizontal: layout.pad },
+              pressed && { opacity: 0.9 },
+            ]}
           >
             <ImageWithFallback
               source={{ uri: featured.cover || featured.coverSmall }}
@@ -313,7 +316,7 @@ export default function SearchScreen({ onOpenItem, active = true }) {
               colors={["transparent", "rgba(0,0,0,0.92)"]}
               style={styles.featuredShade}
             />
-            {featured.french ? <VfBadge style={styles.featuredVf} /> : null}
+            {hasVf(featured) ? <VfBadge style={styles.featuredVf} /> : null}
             <View style={styles.featuredBody}>
               <Text numberOfLines={2} style={styles.featuredTitle}>
                 {featured.displayTitle || featured.title}
@@ -330,12 +333,12 @@ export default function SearchScreen({ onOpenItem, active = true }) {
           </Pressable>
         ) : null}
 
-        <View style={styles.grid}>
+        <View style={[styles.grid, { paddingHorizontal: layout.pad, columnGap: layout.gap }]}>
           {gridItems.map((item, i) => (
             <PosterCard
               key={`${item.subjectId}-${i}`}
               item={item}
-              width={CELL_W}
+              width={layout.cellW}
               onPress={() => onOpenItem(item)}
             />
           ))}
