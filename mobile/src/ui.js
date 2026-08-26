@@ -1,9 +1,29 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useState } from "react";
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors } from "./theme";
 
 export function Icon({ name, size = 22, color = colors.text, style }) {
   return <Ionicons name={name} size={size} color={color} style={style} />;
+}
+
+export function ImageWithFallback({ source, style, resizeMode = "cover", iconSize = 28 }) {
+  const [failed, setFailed] = useState(false);
+  if (!source?.uri || failed) {
+    return (
+      <View style={[style, styles.imgFallback]}>
+        <Ionicons name="image-outline" size={iconSize} color="#555" />
+      </View>
+    );
+  }
+  return (
+    <Image
+      source={source}
+      style={style}
+      resizeMode={resizeMode}
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 export function RatingBadge({ value, style }) {
@@ -45,12 +65,13 @@ export function PrimaryButton({ label, icon = "play", onPress, style }) {
   );
 }
 
-export function GhostButton({ label, onPress, style }) {
+export function GhostButton({ label, onPress, style, icon }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.ghost, pressed && styles.pressed, style]}
     >
+      {icon ? <Icon name={icon} size={15} color={colors.redSoft} /> : null}
       <Text style={styles.ghostText}>{label}</Text>
     </Pressable>
   );
@@ -66,6 +87,11 @@ export function SectionTitle({ children, icon }) {
 }
 
 const styles = StyleSheet.create({
+  imgFallback: {
+    backgroundColor: "#1C1C1C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   badge: {
     flexDirection: "row",
     alignItems: "center",

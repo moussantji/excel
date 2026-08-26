@@ -13,3 +13,6 @@ export const colors = {
   border: "#2A2A2A",
   onRed: "#FFFFFF",
 };
+
+// Hauteur de la barre d'onglets (App.js), hors safe-area
+export const TAB_BAR_HEIGHT = 86;

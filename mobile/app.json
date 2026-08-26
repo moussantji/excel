@@ -2,13 +2,37 @@
   "expo": {
     "name": "Stream",
     "slug": "manden-stream",
-    "version": "1.0.0",
+    "scheme": "mandenstream",
+    "version": "1.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#050505",
-    "plugins": ["expo-av"],
-    "ios": { "supportsTablet": false, "infoPlist": { "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true } } },
-    "android": { "adaptiveIcon": { "backgroundColor": "#050505" } },
-    "splash": { "backgroundColor": "#050505" }
+    "plugins": [
+      "expo-av"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#050505"
+      },
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "package": "com.moussantji.mandenstream"
+    },
+    "splash": {
+      "backgroundColor": "#050505"
+    }
   }
 }

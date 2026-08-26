@@ -1,156 +1,204 @@
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { cancelDownload, downloadId } from "./src/downloadManager";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRoute } from "@react-navigation/native";
 import DetailScreen from "./src/screens/DetailScreen";
-import DownloadsScreen from "./src/screens/DownloadsScreen";
+import FilesScreen from "./src/screens/DownloadsScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import PlayerScreen from "./src/screens/PlayerScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import SearchScreen from "./src/screens/SearchScreen";
-import { colors } from "./src/theme";
+import { initAuth, isSeries } from "./src/api";
+import { initDownloads, startDownload } from "./src/downloadManager";
+import { colors, TAB_BAR_HEIGHT } from "./src/theme";
 import { Icon } from "./src/ui";
+
+const Stack = createNativeStackNavigator();
 
 const TABS = [
   { id: "home", label: "Accueil", icon: "home-outline", iconOn: "home" },
   { id: "search", label: "Recherche", icon: "search-outline", iconOn: "search" },
-  { id: "downloads", label: "Téléchargements", icon: "download-outline", iconOn: "download" },
+  { id: "downloads", label: "Fichiers", icon: "download-outline", iconOn: "download" },
   { id: "profile", label: "Profil", icon: "person-outline", iconOn: "person" },
 ];
 
-export default function App() {
+function Tabs({ navigation }) {
   const [tab, setTab] = useState("home");
-  const [query, setQuery] = useState("");
-  const [detail, setDetail] = useState(null);
-  const [player, setPlayer] = useState(null);
-  const [downloads, setDownloads] = useState([]);
+  const insets = useSafeAreaInsets();
 
-  function upsertDownload(partial) {
-    setDownloads((list) => {
-      const idx = list.findIndex((d) => d.id === partial.id);
-      if (idx === -1) {
-        return [
-          {
-            progress: 0,
-            status: "progress",
-            title: partial.title,
-            cover: partial.cover,
-            ...partial,
-          },
-          ...list,
-        ];
+  function openItem(item) {
+    navigation.navigate("Detail", { item });
+  }
+
+  // Lecture : une série passe toujours par sa fiche (choix saison/épisode),
+  // un film joue directement.
+  function playItem(item) {
+    if (isSeries(item)) {
+      navigation.navigate("Detail", { item });
+      return;
+    }
+    navigation.navigate("Player", { item });
+  }
+
+  // Téléchargement en fond : reste sur l'écran courant.
+  function addDownload(item) {
+    startDownload(item).catch(() => {});
+  }
+
+  return (
+    <View style={styles.root}>
+      <View style={styles.screen}>
+        {tab === "home" && (
+          <HomeScreen
+            onOpenItem={openItem}
+            onAddDownload={addDownload}
+            onPlay={playItem}
+            onOpenFiles={() => setTab("downloads")}
+            onOpenSearch={() => setTab("search")}
+          />
+        )}
+        {tab === "search" && <SearchScreen onOpenItem={openItem} />}
+        {tab === "downloads" && (
+          <FilesScreen onPlay={playItem} onOpenItem={openItem} />
+        )}
+        {tab === "profile" && (
+          <ProfileScreen onOpenItem={openItem} onOpenFiles={() => setTab("downloads")} />
+        )}
+      </View>
+
+      <View
+        style={[
+          styles.tabBar,
+          { paddingBottom: 18 + insets.bottom, height: TAB_BAR_HEIGHT + insets.bottom },
+        ]}
+      >
+        {TABS.map((item) => {
+          const active = tab === item.id;
+          return (
+            <Pressable
+              key={item.id}
+              onPress={() => setTab(item.id)}
+              style={({ pressed }) => [styles.tab, pressed && { opacity: 0.75 }]}
+            >
+              <View style={[styles.tabIcon, active && styles.tabIconOn]}>
+                <Icon
+                  name={active ? item.iconOn : item.icon}
+                  size={20}
+                  color={active ? colors.redSoft : colors.dim}
+                />
+              </View>
+              <Text style={[styles.tabLabel, active && styles.active]}>{item.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function DetailScreenWrapper({ navigation }) {
+  const params = useRoute().params || {};
+  if (!params.item) {
+    // deep link sans payload : on ne peut rien afficher
+    return null;
+  }
+  return (
+    <DetailScreen
+      item={params.item}
+      onBack={() => navigation.goBack()}
+      // reco → push sur le stack : Retour remonte l'historique complet
+      onOpenItem={(rec) => navigation.push("Detail", { item: rec })}
+      onPlay={(payload, queue) =>
+        isSeries(payload)
+          ? navigation.navigate("Player", { item: payload, queue })
+          : navigation.navigate("Player", { item: payload })
       }
-      const next = [...list];
-      next[idx] = { ...next[idx], ...partial };
-      return next;
+      onAddDownload={(payload) => startDownload(payload).catch(() => {})}
+    />
+  );
+}
+
+function PlayerScreenWrapper({ navigation }) {
+  const params = useRoute().params || {};
+  const { item, queue } = params;
+
+  function goNext() {
+    if (!queue?.length) {
+      navigation.goBack();
+      return;
+    }
+    const idx = queue.findIndex(
+      (e) => e.season === item.season && e.episode === item.episode
+    );
+    const next = queue[idx + 1];
+    if (!next) {
+      navigation.goBack();
+      return;
+    }
+    navigation.replace("Player", {
+      item: { ...item, season: next.season, episode: next.episode },
+      queue,
     });
   }
 
-  function playItem(item) {
-    const id = item.id || downloadId(item);
-    setPlayer({ ...item, id });
-  }
+  return <PlayerScreen item={item} queue={queue} onBack={() => navigation.goBack()} onNext={goNext} />;
+}
 
-  async function addDownload(item) {
-    playItem(item);
-  }
-
-  const showTabs = !player && !detail;
+export default function App() {
+  useEffect(() => {
+    initAuth();
+    initDownloads();
+  }, []);
 
   return (
-    <SafeAreaProvider>
-      <View style={styles.root}>
-        <StatusBar style="light" />
-        {player ? (
-          <PlayerScreen
-            item={player}
-            onBack={() => setPlayer(null)}
-            onDownloadUpdate={upsertDownload}
-          />
-        ) : detail ? (
-          <DetailScreen
-            item={detail}
-            onBack={() => setDetail(null)}
-            onAddDownload={addDownload}
-            onOpenItem={setDetail}
-            onPlay={playItem}
-          />
-        ) : (
-          <>
-            {tab === "home" && (
-              <HomeScreen
-                query={query}
-                setQuery={setQuery}
-                onSearchFocus={() => setTab("search")}
-                downloads={downloads}
-                onOpenItem={setDetail}
-                onAddDownload={addDownload}
-                onPlay={playItem}
-              />
-            )}
-            {tab === "search" && (
-              <SearchScreen query={query} setQuery={setQuery} onOpenItem={setDetail} />
-            )}
-            {tab === "downloads" && (
-              <DownloadsScreen
-                downloads={downloads}
-                onPlay={playItem}
-                onRemove={(id) => {
-                  cancelDownload(id);
-                  setDownloads((list) => list.filter((d) => d.id !== id));
-                }}
-              />
-            )}
-            {tab === "profile" && <ProfileScreen onOpenItem={setDetail} />}
-          </>
-        )}
-
-        {showTabs ? (
-          <View style={styles.tabBar}>
-            {TABS.map((item) => {
-              const active = tab === item.id;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => {
-                    setDetail(null);
-                    setTab(item.id);
-                  }}
-                  style={({ pressed }) => [styles.tab, pressed && { opacity: 0.75 }]}
-                >
-                  <Icon
-                    name={active ? item.iconOn : item.icon}
-                    size={22}
-                    color={active ? colors.redSoft : colors.dim}
-                  />
-                  <Text style={[styles.tabLabel, active && styles.active]}>{item.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-      </View>
-    </SafeAreaProvider>
+    <NavigationContainer
+      linking={{
+        prefixes: ["mandenstream://"],
+        config: {
+          screens: {
+            Tabs: "",
+            Detail: "detail/:subjectId",
+            Player: "play",
+          },
+        },
+      }}
+    >
+      <StatusBar style="light" />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Tabs" component={Tabs} />
+        <Stack.Screen name="Detail" component={DetailScreenWrapper} />
+        <Stack.Screen name="Player" component={PlayerScreenWrapper} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  screen: { flex: 1 },
   tabBar: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: 86,
     backgroundColor: colors.bar,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(229,9,20,0.28)",
     flexDirection: "row",
-    paddingBottom: 18,
     paddingTop: 8,
   },
   tab: { flex: 1, alignItems: "center", gap: 4 },
+  tabIcon: {
+    width: 46,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabIconOn: { backgroundColor: "rgba(229,9,20,0.18)" },
   tabLabel: { color: colors.dim, fontSize: 11 },
   active: { color: colors.redSoft },
 });

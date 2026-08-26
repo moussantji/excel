@@ -1,17 +1,50 @@
+// Mini serveur HTTP local (127.0.0.1) qui sert en Range les octets DÉJÀ
+// écrits sur disque d'un téléchargement en cours. Le player lit ce fichier
+// local en croissance — il n'y a jamais de second flux HTTP distant.
+//
+// Politique de taille (choix documenté dans le README) :
+//  - fichier complet → Content-Range: bytes s-e/<totalSize> (vrai total) ;
+//  - fichier partiel → Content-Range: bytes s-e/<écrit>, i.e. un fichier
+//    valide qui grandit. On ne ment que si c'est auto-cohérent : le player
+//    n'ouvre l'URL Range QUE quand la sonde mp4 a prouvé un moov complet
+//    (faststart), donc la durée vient du moov, pas de cette taille.
+//    Un seek au-delà des octets écrits est borné au disponible (jamais de
+//    503 en lecture séquentielle) ; un start non disponible renvoie 503
+//    après un temps d'attente borné.
+//
+// Écriture réseau : chunks lus en base64 depuis expo-file-system puis
+// écrits avec socket.write(b64, "base64") → zéro décodage Uint8Array/Buffer
+// côté JS (rapide, faible RAM).
+
 const PORT = 18765;
+const CHUNK = 256 * 1024;
+const START_WAIT_MS = 8000;
+const STREAM_STALL_MS = 15000;
+
 let server = null;
 let TcpSocket = null;
+let FileSystem = null;
 
 try {
   TcpSocket = require("react-native-tcp-socket");
 } catch {
   TcpSocket = null;
 }
+try {
+  FileSystem = require("expo-file-system");
+} catch {
+  FileSystem = null;
+}
 
+/** id -> { path, totalSize, getWritten, isComplete } */
 const files = new Map();
 
-export function registerLocalFile(id, { path, totalSize, getWritten }) {
-  files.set(id, { path, totalSize: totalSize || 0, getWritten });
+export function registerLocalFile(id, { path, totalSize, getWritten, isComplete }) {
+  files.set(id, { path, totalSize: totalSize || 0, getWritten, isComplete });
+}
+
+export function unregisterLocalFile(id) {
+  files.delete(id);
 }
 
 export function getPlayUrl(id) {
@@ -19,20 +52,38 @@ export function getPlayUrl(id) {
 }
 
 export function isRangeServerAvailable() {
-  return Boolean(TcpSocket);
+  return Boolean(TcpSocket && FileSystem);
 }
 
 function wait(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function waitWritten(entry, need, timeoutMs = 20000) {
-  const start = Date.now();
-  let written = (await entry.getWritten()) || 0;
-  while (written < need && Date.now() - start < timeoutMs) {
-    await wait(200);
-    written = (await entry.getWritten()) || 0;
-    if (entry.totalSize && written >= entry.totalSize) break;
+async function writtenOf(entry) {
+  try {
+    return (await entry.getWritten()) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function isComplete(entry) {
+  if (!entry.isComplete) return false;
+  try {
+    return Boolean(await entry.isComplete());
+  } catch {
+    return false;
+  }
+}
+
+async function waitWritten(entry, need, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let written = await writtenOf(entry);
+  while (written < need) {
+    if (await isComplete(entry)) break;
+    if (Date.now() >= deadline) break;
+    await wait(150);
+    written = await writtenOf(entry);
   }
   return written;
 }
@@ -49,105 +100,136 @@ function parseRequest(raw) {
   return { method, path, headers };
 }
 
-function decodeBase64(b64) {
-  const atobFn = global.atob;
-  if (!atobFn) return new Uint8Array();
-  const bin = atobFn(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
-  return out;
+function respond(socket, status, extraHeaders = {}) {
+  const lines = [`HTTP/1.1 ${status}`, "Content-Type: video/mp4", "Accept-Ranges: bytes"];
+  for (const [k, v] of Object.entries(extraHeaders)) lines.push(`${k}: ${v}`);
+  lines.push("Connection: close", "\r\n");
+  socket.write(lines.join("\r\n"));
 }
 
-async function readSlice(path, start, length) {
-  const FileSystem = require("expo-file-system");
-  const b64 = await FileSystem.readAsStringAsync(path, {
+function fail(socket, status, text, retryAfter) {
+  const body = `${text}\n`;
+  const extra = { "Content-Length": String(body.length) };
+  if (retryAfter) extra["Retry-After"] = String(retryAfter);
+  respond(socket, status, extra);
+  socket.write(body);
+  socket.destroy();
+}
+
+async function readSliceBase64(path, start, length) {
+  return FileSystem.readAsStringAsync(path, {
     encoding: FileSystem.EncodingType.Base64,
     position: start,
     length,
-  });
-  return decodeBase64(b64);
-}
-
-async function handleSocket(socket) {
-  let buf = "";
-  socket.on("data", async (data) => {
-    buf += data.toString();
-    if (!buf.includes("\r\n\r\n")) return;
-    const req = parseRequest(buf);
-    buf = "";
-    try {
-      await serve(socket, req);
-    } catch {
-      try {
-        socket.write("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
-      } catch {
-        /* ignore */
-      }
-      socket.destroy();
-    }
   });
 }
 
 async function serve(socket, req) {
   const id = decodeURIComponent((req.path || "/").replace(/^\//, "").split("?")[0]);
   const entry = files.get(id);
-  if (!entry) {
-    socket.write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
-    socket.destroy();
+  if (!entry || !FileSystem) {
+    fail(socket, "404 Not Found", "no such download");
     return;
   }
 
-  const total = entry.totalSize || (await entry.getWritten()) || 0;
+  const complete = await isComplete(entry);
+  let written = await writtenOf(entry);
+
   const range = req.headers.range;
   let start = 0;
-  let end = total > 0 ? total - 1 : 0;
+  let end = null; // inclusif ; null = jusqu'à dispo
 
   if (range) {
     const m = /bytes=(\d*)-(\d*)/.exec(range);
-    if (m) {
+    if (m && (m[1] || m[2])) {
       if (m[1]) start = parseInt(m[1], 10);
       if (m[2]) end = parseInt(m[2], 10);
     }
   }
 
-  let written = await waitWritten(entry, start + 1);
-  if (written <= start) {
-    socket.write("HTTP/1.1 503 Service Unavailable\r\nRetry-After: 1\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+  if (!complete && start > 0) {
+    // Seek vers une zone pas encore écrite : attente bornée puis 503.
+    written = await waitWritten(entry, start + 1, START_WAIT_MS);
+    if (written <= start) {
+      fail(socket, "503 Service Unavailable", "bytes not ready yet", 1);
+      return;
+    }
+  }
+
+  if (end === null) {
+    end = complete ? (entry.totalSize || written) - 1 : written - 1;
+  } else if (end > written - 1) {
+    // borne la fin aux octets disponibles (attente courte pour laisser le
+    // téléchargement avancer pendant la requête)
+    const need = Math.min(end + 1, start + 4 * CHUNK);
+    written = await waitWritten(entry, need, STREAM_STALL_MS);
+    end = Math.min(end, written - 1);
+  }
+
+  const length = end - start + 1;
+  if (length <= 0) {
+    fail(socket, "503 Service Unavailable", "bytes not ready yet", 1);
+    return;
+  }
+
+  // Taille annoncée : vraie totale si complet, sinon « écrit » (fichier qui
+  // grandit — voir note d'en-tête).
+  const advertisedTotal = complete ? entry.totalSize || written : Math.max(written, end + 1);
+  respond(socket, req.method === "HEAD" ? "200 OK" : "206 Partial Content", {
+    "Content-Range": `bytes ${start}-${end}/${advertisedTotal}`,
+    "Content-Length": req.method === "HEAD" ? String(Math.max(0, advertisedTotal - start)) : String(length),
+  });
+  if (req.method === "HEAD") {
     socket.destroy();
     return;
   }
 
-  if (end >= written) {
-    written = await waitWritten(entry, Math.min(end + 1, start + 512 * 1024));
-    end = Math.min(end, written - 1);
-  }
-
-  const length = Math.max(0, end - start + 1);
-  const knownTotal = entry.totalSize || written;
-  const head =
-    `HTTP/1.1 206 Partial Content\r\n` +
-    `Content-Type: video/mp4\r\n` +
-    `Accept-Ranges: bytes\r\n` +
-    `Content-Range: bytes ${start}-${end}/${knownTotal}\r\n` +
-    `Content-Length: ${length}\r\n` +
-    `Connection: close\r\n\r\n`;
-  socket.write(head);
-
-  const chunk = 64 * 1024;
   let offset = start;
   while (offset <= end) {
-    const avail = await waitWritten(entry, offset + 1);
-    if (avail <= offset) break;
-    const take = Math.min(chunk, end - offset + 1, avail - offset);
-    const bytes = await readSlice(entry.path, offset, take);
-    socket.write(bytes);
+    const avail = await waitWritten(entry, offset + 1, complete ? 1000 : STREAM_STALL_MS);
+    if (avail <= offset) break; // stall ou fin
+    const take = Math.min(CHUNK, end - offset + 1, avail - offset);
+    let b64;
+    try {
+      b64 = await readSliceBase64(entry.path, offset, take);
+    } catch {
+      break;
+    }
+    const flushed = socket.write(b64, "base64");
+    if (!flushed) await wait(10); // back-pressure légère
     offset += take;
   }
-  socket.destroy();
+  socket.end();
+}
+
+function handleSocket(socket) {
+  let buf = "";
+  let busy = false;
+  socket.on("data", async (data) => {
+    if (busy) return;
+    buf += data.toString();
+    if (!buf.includes("\r\n\r\n")) {
+      if (buf.length > 32 * 1024) socket.destroy();
+      return;
+    }
+    busy = true;
+    const req = parseRequest(buf);
+    buf = "";
+    try {
+      await serve(socket, req);
+    } catch {
+      try {
+        socket.destroy();
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+  socket.on("error", () => {});
 }
 
 export async function ensureRangeServer() {
-  if (!TcpSocket) return false;
+  if (!TcpSocket || !FileSystem) return false;
   if (server) return true;
   return new Promise((resolve) => {
     try {
