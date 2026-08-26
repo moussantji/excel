@@ -660,7 +660,7 @@ export async function startDownload(item, onProgress) {
   console.log("[DL] startDownload", JSON.stringify({
     subjectId: item.subjectId, season: item.season, episode: item.episode, quality: item.quality,
   }));
-  const { url, quality, size } = await resolveSource(item);
+  const { url, quality, size, subtitles } = await resolveSource(item);
   const id = downloadId({
     subjectId: item.subjectId, season: item.season, episode: item.episode, quality,
   });
