@@ -37,7 +37,7 @@ const SCREEN_W = Dimensions.get("window").width;
 const SCREEN_H = Dimensions.get("window").height;
 const GAP = 8;
 const CELL_W = (SCREEN_W - 32 - GAP * 2) / 3;
-const HERO_H = Math.round(Math.min(SCREEN_H * 0.74, 640));
+const HERO_H = Math.round(Math.min(SCREEN_H * 0.86, 720));
 
 const TABS = [
   { id: "trend", label: "Tendance" },
@@ -437,12 +437,12 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
             iconSize={48}
           />
           {trailerUrl ? (
-            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <View style={styles.heroBg} pointerEvents="none">
               <Video
                 source={{ uri: trailerUrl }}
-                style={StyleSheet.absoluteFill}
+                style={styles.heroVideo}
                 resizeMode="cover"
-                shouldPlay={trailerOn && !heroOffscreen}
+                shouldPlay={Boolean(trailerUrl) && !heroOffscreen}
                 isLooping
                 isMuted={trailerMuted}
                 onReadyForDisplay={() => setTrailerOn(true)}
@@ -455,25 +455,20 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
           ) : null}
           <LinearGradient
             colors={[
-              "rgba(0,0,0,0.72)",
-              "rgba(0,0,0,0.12)",
-              "rgba(0,0,0,0.28)",
-              "rgba(0,0,0,0.82)",
+              "rgba(0,0,0,0.58)",
+              "rgba(0,0,0,0.04)",
+              "transparent",
+              "rgba(0,0,0,0.45)",
+              "rgba(0,0,0,0.92)",
               "#000",
             ]}
-            locations={[0, 0.22, 0.5, 0.78, 1]}
+            locations={[0, 0.16, 0.38, 0.62, 0.86, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
           <BrandBar onOpenSearch={onOpenSearch} padTop={insets.top + 4} />
           <CategoryTabs tab={tab} onPick={setTab} overlay />
           <View style={styles.heroContent}>
-            {trailerOn ? (
-              <View style={styles.trailerPill}>
-                <Icon name="film-outline" size={11} color="#fff" />
-                <Text style={styles.trailerPillTxt}>Bande-annonce</Text>
-              </View>
-            ) : null}
             <View style={styles.heroKicker}>
               {heroKind ? <Text style={styles.heroMeta}>{heroKind}</Text> : null}
               {hero?.year ? <Text style={styles.heroMeta}> · {hero.year}</Text> : null}
@@ -494,17 +489,7 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
               </Text>
             ) : null}
             <View style={styles.heroCtas}>
-              <PlayButton label="Lecture" onPress={() => hero && onPlay(hero)} style={{ minWidth: 120 }} />
-              {trailerUrl ? (
-                <GlassButton
-                  label="Bande-annonce"
-                  icon="film-outline"
-                  onPress={() => {
-                    setTrailerOn(true);
-                    setTrailerMuted(false);
-                  }}
-                />
-              ) : null}
+              <PlayButton label="Lecture" onPress={() => hero && onPlay(hero)} style={{ minWidth: 132 }} />
               <GlassButton
                 label="Plus d'infos"
                 icon="information-circle-outline"
@@ -669,6 +654,8 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   hero: { width: "100%", backgroundColor: "#000", overflow: "hidden" },
+  heroBg: { ...StyleSheet.absoluteFillObject },
+  heroVideo: { width: "100%", height: "100%" },
   brandBar: {
     flexDirection: "row",
     alignItems: "center",

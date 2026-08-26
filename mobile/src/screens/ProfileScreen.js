@@ -93,7 +93,7 @@ export default function ProfileScreen({ onOpenItem, onOpenFiles }) {
             style={StyleSheet.absoluteFill}
           />
           <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 8 }}>
-            <Logo size={18} />
+            <Text style={styles.pageTitle}>Compte</Text>
           </View>
           <View
             style={{
@@ -224,6 +224,7 @@ export default function ProfileScreen({ onOpenItem, onOpenFiles }) {
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   hero: { paddingBottom: 8 },
+  pageTitle: { color: colors.text, fontSize: 22, fontWeight: "800", letterSpacing: -0.4 },
   avatar: {
     width: 76,
     height: 76,

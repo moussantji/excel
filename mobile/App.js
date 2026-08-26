@@ -22,7 +22,7 @@ const TABS = [
   { id: "home", label: "Accueil", icon: "home-outline", iconOn: "home" },
   { id: "search", label: "Recherche", icon: "search-outline", iconOn: "search" },
   { id: "downloads", label: "Téléchargements", icon: "download-outline", iconOn: "download" },
-  { id: "profile", label: "Profil", icon: "person-outline", iconOn: "person" },
+  { id: "profile", label: "Compte", icon: "person-outline", iconOn: "person" },
 ];
 
 function Tabs({ navigation }) {
