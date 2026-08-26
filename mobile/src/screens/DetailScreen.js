@@ -1,4 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { Video } from "expo-av";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,6 +19,7 @@ import {
   hasVf,
   listAudioLangs,
   peekCache,
+  pickTrailer,
   preferredAudioKey,
 } from "../api";
 import { downloadId } from "../downloadManager";
@@ -51,6 +53,9 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
   const [error, setError] = useState("");
   const [descOpen, setDescOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [trailerUrl, setTrailerUrl] = useState("");
+  const [trailerMuted, setTrailerMuted] = useState(true);
+  const [trailerOn, setTrailerOn] = useState(false);
   const jobs = useJobs();
   const insets = useSafeAreaInsets();
 
@@ -141,11 +146,21 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
           setSubtitles([]);
         }
       }
-    })();
+})();
     return () => {
       live = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.subjectId, season, episode, isSeriesPack]);
+
+  useEffect(() => {
+    setTrailerUrl("");
+    setTrailerOn(false);
+    setTrailerMuted(true);
+    const url = pickTrailer(pack, detail, item);
+    if (url) setTrailerUrl(url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail?.subjectId, pack]);
 
   function payload(file) {
     return {
@@ -190,6 +205,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
   if (!langs.length && hasVf(detail)) langs = [{ key: "vf", label: "VF" }];
   const visibleFiles = filesTagged ? files.filter((f) => audioLangKey(f) === audioKey) : files;
   const bestFile = visibleFiles[0] || files[0] || null;
+  const bestJob = bestFile ? jobFor(bestFile.quality) : null;
   const showVf = hasVf(detail) || hasVf(bestFile) || audioKey === "vf" || langs.some((l) => l.key === "vf");
 
   // méta ligne compacte type MovieBox
@@ -209,7 +225,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
     <View style={styles.wrap}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: 36 + insets.bottom }}
+        contentContainerStyle={{ paddingBottom: layout.tabBarH + 36 + insets.bottom }}
         showsVerticalScrollIndicator={false}
       >
         {/* HERO */}
@@ -224,6 +240,23 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
           ) : (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: "#111" }]} />
           )}
+          {trailerUrl ? (
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Video
+                source={{ uri: trailerUrl }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+                shouldPlay={Boolean(trailerUrl)}
+                isLooping
+                isMuted={trailerMuted}
+                onReadyForDisplay={() => setTrailerOn(true)}
+                onError={() => {
+                  setTrailerUrl("");
+                  setTrailerOn(false);
+                }}
+              />
+            </View>
+          ) : null}
           <LinearGradient
             colors={["rgba(0,0,0,0.28)", "rgba(0,0,0,0.55)", "rgba(5,5,5,0.92)", colors.bg]}
             locations={[0, 0.45, 0.78, 1]}
@@ -235,6 +268,22 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
               <Icon name="chevron-back" size={24} color="#fff" />
             </Pressable>
           </View>
+          {trailerUrl ? (
+            <Pressable
+              onPress={() => {
+                setTrailerOn(true);
+                setTrailerMuted((m) => !m);
+              }}
+              style={[styles.muteBtn, { bottom: insets.bottom + 8 }]}
+              hitSlop={8}
+            >
+              <Icon
+                name={trailerMuted ? "volume-mute" : "volume-high"}
+                size={16}
+                color="#fff"
+              />
+            </Pressable>
+          ) : null}
           {/* hero bottom */}
           <View style={[styles.heroBottom, { paddingHorizontal: layout.pad }]}>
             <View style={styles.titleRow}>
@@ -273,9 +322,24 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
             />
             {bestFile ? (
               <GlassButton
-                label="Télécharger"
-                icon="download-outline"
-                onPress={() => onAddDownload(payload(bestFile))}
+                label={
+                  bestJob?.status === "done"
+                    ? "Téléchargé"
+                    : bestJob && bestJob.status !== "error"
+                      ? `${Math.round((bestJob.progress || 0) * 100)}%`
+                      : "Télécharger"
+                }
+                icon={
+                  bestJob?.status === "done"
+                    ? "checkmark-circle"
+                    : bestJob && bestJob.status !== "error"
+                      ? "cloud-download-outline"
+                      : "download-outline"
+                }
+                style={bestJob?.status === "done" && { opacity: 0.6 }}
+                onPress={
+                  bestJob?.status === "done" ? undefined : () => onAddDownload(payload(bestFile))
+                }
               />
             ) : null}
           </View>
@@ -577,6 +641,19 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  muteBtn: {
+    position: "absolute",
+    right: 14,
+    bottom: 24,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.28)",
     alignItems: "center",
     justifyContent: "center",
   },

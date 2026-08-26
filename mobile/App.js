@@ -28,18 +28,19 @@ const TABS = [
 
 function Tabs({ navigation }) {
   const [tab, setTab] = useState("home");
+  const [detailItem, setDetailItem] = useState(null);
   const insets = useSafeAreaInsets();
   const layout = useLayout();
 
   function openItem(item) {
-    navigation.navigate("Detail", { item });
+    setDetailItem(item);
   }
 
   // Lecture : une série passe toujours par sa fiche (choix saison/épisode),
   // un film joue directement.
   function playItem(item) {
     if (isSeries(item)) {
-      navigation.navigate("Detail", { item });
+      setDetailItem(item);
       return;
     }
     navigation.navigate("Player", { item });
@@ -50,12 +51,20 @@ function Tabs({ navigation }) {
     startDownload(item).catch(() => {});
   }
 
+  // Lecture depuis la fiche : choisit le lecteur plein écran.
+  function playDetail(payload, queue) {
+    navigation.navigate("Player", { item: payload, queue });
+  }
+
   const navItems = TABS.map((item) => {
     const active = tab === item.id;
     return (
       <Pressable
         key={item.id}
-        onPress={() => setTab(item.id)}
+        onPress={() => {
+          setDetailItem(null);
+          setTab(item.id);
+        }}
         style={({ pressed }) => [
           layout.sideNav ? styles.railItem : styles.tab,
           layout.sideNav && active && styles.railItemOn,
@@ -78,6 +87,8 @@ function Tabs({ navigation }) {
     );
   });
 
+  const homeActive = tab === "home" && !detailItem;
+
   return (
     <View style={[styles.root, layout.sideNav && styles.rootRow]}>
       {layout.sideNav ? (
@@ -97,11 +108,11 @@ function Tabs({ navigation }) {
       ) : null}
       <View style={styles.screen}>
         <View
-          style={[styles.pane, tab !== "home" && styles.paneOff]}
-          pointerEvents={tab === "home" ? "auto" : "none"}
+          style={[styles.pane, homeActive ? null : styles.paneOff]}
+          pointerEvents={homeActive ? "auto" : "none"}
         >
           <HomeScreen
-            active={tab === "home"}
+            active={homeActive}
             onOpenItem={openItem}
             onAddDownload={addDownload}
             onPlay={playItem}
@@ -127,6 +138,19 @@ function Tabs({ navigation }) {
         >
           <ProfileScreen onOpenItem={openItem} onOpenFiles={() => setTab("downloads")} />
         </View>
+
+        {/* fiche affichée en overlay : la barre basse reste visible */}
+        {detailItem ? (
+          <View style={[styles.pane, styles.detailPane]}>
+            <DetailScreen
+              item={detailItem}
+              onBack={() => setDetailItem(null)}
+              onAddDownload={addDownload}
+              onOpenItem={setDetailItem}
+              onPlay={playDetail}
+            />
+          </View>
+        ) : null}
       </View>
 
       {!layout.sideNav ? (
@@ -229,11 +253,14 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   pane: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
   paneOff: { opacity: 0, zIndex: 0 },
+  detailPane: { zIndex: 5, backgroundColor: colors.bg },
   tabBar: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
+    zIndex: 10,
+    elevation: 10,
     backgroundColor: "rgba(8,8,8,0.96)",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(255,255,255,0.08)",
@@ -248,6 +275,8 @@ const styles = StyleSheet.create({
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: 10,
+    zIndex: 10,
+    elevation: 10,
   },
   railList: { marginTop: 28, gap: 8, flex: 1 },
   railItem: {

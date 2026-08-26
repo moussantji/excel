@@ -938,20 +938,3 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
-k: { height: 3, backgroundColor: colors.track, borderRadius: 2, marginTop: 8 },
-  fill: { height: 3, backgroundColor: colors.red, borderRadius: 2 },
-  size: { color: colors.dim, fontSize: 10, marginTop: 4, textAlign: "right" },
-  muteBtn: {
-    position: "absolute",
-    right: 16,
-    bottom: 28,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.28)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
