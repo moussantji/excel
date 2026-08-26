@@ -1,3 +1,4 @@
+import { Video } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -12,10 +13,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   fetchCategory,
+  fetchDetail,
   fetchHome,
   fetchTrending,
   formatBytes,
   isSeries,
+  pickTrailer,
 } from "../api";
 import { colors } from "../theme";
 import { useJobs } from "../useJobs";
@@ -259,6 +262,10 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
   const [audio, setAudio] = useState("Tous");
   const [sort, setSort] = useState("rec");
   const [continueItems, setContinueItems] = useState([]);
+  const [trailerUrl, setTrailerUrl] = useState("");
+  const [trailerOn, setTrailerOn] = useState(false);
+  const [trailerMuted, setTrailerMuted] = useState(true);
+  const [heroOffscreen, setHeroOffscreen] = useState(false);
   const jobs = useJobs();
   const insets = useSafeAreaInsets();
   const loadedTabs = useRef({});
@@ -312,6 +319,29 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
       .then((list) => setContinueItems(Array.isArray(list) ? list.slice(0, 12) : []))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setTrailerUrl("");
+    setTrailerOn(false);
+    setTrailerMuted(true);
+    if (!hero?.subjectId) return;
+    const local = pickTrailer(hero);
+    if (local) {
+      setTrailerUrl(local);
+      return;
+    }
+    let live = true;
+    fetchDetail(hero.subjectId)
+      .then((data) => {
+        if (!live) return;
+        const url = pickTrailer(data?.item, data, hero);
+        if (url) setTrailerUrl(url);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [hero?.subjectId]);
 
   useEffect(() => {
     const def = TABS.find((t) => t.id === tab);
@@ -393,6 +423,11 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
       style={styles.scroll}
       contentContainerStyle={{ paddingBottom: 110 + insets.bottom }}
       showsVerticalScrollIndicator={false}
+      scrollEventThrottle={16}
+      onScroll={(e) => {
+        const y = e.nativeEvent.contentOffset.y;
+        setHeroOffscreen(y > HERO_H * 0.45);
+      }}
     >
       {tab === "trend" ? (
         <View style={[styles.hero, { height: HERO_H }]}>
@@ -401,6 +436,23 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
             style={StyleSheet.absoluteFill}
             iconSize={48}
           />
+          {trailerUrl ? (
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Video
+                source={{ uri: trailerUrl }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+                shouldPlay={trailerOn && !heroOffscreen}
+                isLooping
+                isMuted={trailerMuted}
+                onReadyForDisplay={() => setTrailerOn(true)}
+                onError={() => {
+                  setTrailerUrl("");
+                  setTrailerOn(false);
+                }}
+              />
+            </View>
+          ) : null}
           <LinearGradient
             colors={[
               "rgba(0,0,0,0.72)",
@@ -411,10 +463,17 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
             ]}
             locations={[0, 0.22, 0.5, 0.78, 1]}
             style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
           <BrandBar onOpenSearch={onOpenSearch} padTop={insets.top + 4} />
           <CategoryTabs tab={tab} onPick={setTab} overlay />
           <View style={styles.heroContent}>
+            {trailerOn ? (
+              <View style={styles.trailerPill}>
+                <Icon name="film-outline" size={11} color="#fff" />
+                <Text style={styles.trailerPillTxt}>Bande-annonce</Text>
+              </View>
+            ) : null}
             <View style={styles.heroKicker}>
               {heroKind ? <Text style={styles.heroMeta}>{heroKind}</Text> : null}
               {hero?.year ? <Text style={styles.heroMeta}> · {hero.year}</Text> : null}
@@ -435,7 +494,17 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
               </Text>
             ) : null}
             <View style={styles.heroCtas}>
-              <PlayButton label="Lecture" onPress={() => hero && onPlay(hero)} style={{ minWidth: 132 }} />
+              <PlayButton label="Lecture" onPress={() => hero && onPlay(hero)} style={{ minWidth: 120 }} />
+              {trailerUrl ? (
+                <GlassButton
+                  label="Bande-annonce"
+                  icon="film-outline"
+                  onPress={() => {
+                    setTrailerOn(true);
+                    setTrailerMuted(false);
+                  }}
+                />
+              ) : null}
               <GlassButton
                 label="Plus d'infos"
                 icon="information-circle-outline"
@@ -443,6 +512,18 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
               />
             </View>
           </View>
+          {trailerUrl ? (
+            <Pressable
+              onPress={() => {
+                setTrailerOn(true);
+                setTrailerMuted((m) => !m);
+              }}
+              style={styles.muteBtn}
+              hitSlop={8}
+            >
+              <Icon name={trailerMuted ? "volume-mute" : "volume-high"} size={16} color="#fff" />
+            </Pressable>
+          ) : null}
         </View>
       ) : (
         <>

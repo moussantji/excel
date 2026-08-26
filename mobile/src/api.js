@@ -138,3 +138,48 @@ export function isSeries(item) {
   if (!item) return false;
   return item.subjectType === 2 || item.isSeries === true || Number(item.seasonCount) > 0;
 }
+
+function asHttp(v) {
+  if (typeof v !== "string") return "";
+  const s = v.trim();
+  return /^https?:\/\//i.test(s) ? s : "";
+}
+
+/** Première URL vidéo de bande-annonce trouvée (mp4/m3u8), pas YouTube. */
+export function pickTrailer(...objs) {
+  const keys = [
+    "trailerUrl",
+    "trailer_url",
+    "trailer",
+    "previewUrl",
+    "preview_url",
+    "teaserUrl",
+    "teaser_url",
+    "teaser",
+    "promoUrl",
+    "promo_url",
+    "bannerTrailer",
+    "heroTrailer",
+  ];
+  for (const o of objs) {
+    if (!o || typeof o !== "object") continue;
+    for (const k of keys) {
+      const raw = o[k];
+      const url = asHttp(typeof raw === "string" ? raw : raw?.url || raw?.src || "");
+      if (url && !/youtube\.com|youtu\.be|vimeo\.com/i.test(url)) return url;
+    }
+    const nested = o.trailer || o.preview || o.teaser;
+    const nestedUrl = asHttp(nested?.url || nested?.src || "");
+    if (nestedUrl && !/youtube\.com|youtu\.be/i.test(nestedUrl)) return nestedUrl;
+    const list = o.trailers || o.videos || o.previews;
+    if (Array.isArray(list)) {
+      for (const t of list) {
+        const kind = String(t?.type || t?.kind || t?.name || "").toLowerCase();
+        const url = asHttp(typeof t === "string" ? t : t?.url || t?.src || "");
+        if (!url || /youtube\.com|youtu\.be/i.test(url)) continue;
+        if (!kind || /trail|teaser|preview|promo/i.test(kind)) return url;
+      }
+    }
+  }
+  return "";
+}
