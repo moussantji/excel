@@ -294,10 +294,8 @@ export function initDownloads() {
     // progressive même sans reprise du téléchargement (probe persisté).
     for (const job of jobs.values()) {
       if (!job.probe && (job.written || 0) >= MIN_PLAY_BYTES) {
-        // Force la sonde au prochain tour même si nextProbeAt est déjà loin
         job.nextProbeAt = MIN_PLAY_BYTES;
-        console.log("[probe] init scheduling for", job.id, job.written);
-        scheduleProbe(job).catch((e) => console.log("[probe] init error", e?.message));
+        scheduleProbe(job).catch(() => {});
       }
     }
     snapshotDirty = true;
@@ -751,30 +749,14 @@ export async function startDownload(item, onProgress) {
 /* ---------------------------------- sonde ---------------------------------- */
 
 async function scheduleProbe(record) {
-  console.log("[probe] scheduleProbe called", record.id, "written", record.written, "probe", record.probe, "nextProbeAt", record.nextProbeAt);
-  if (record.probe) {
-    console.log("[probe] already probed", record.id);
-    return;
-  }
-  if ((record.written || 0) < (record.nextProbeAt || MIN_PLAY_BYTES)) {
-    console.log("[probe] not enough written", record.id);
-    return;
-  }
+  if (record.probe) return;
+  if ((record.written || 0) < (record.nextProbeAt || MIN_PLAY_BYTES)) return;
   record.nextProbeAt = (record.written || 0) + PROBE_STEP;
-  console.log("[probe] calling probeMoovPosition", record.dest?.slice(-40), record.written);
-  let verdict = "undetermined";
-  try {
-    verdict = await probeMoovPosition(record.dest, record.written);
-  } catch (e) {
-    console.log("[probe] probeMoovPosition threw", e?.message);
-    verdict = "undetermined";
-  }
-  console.log("[probe]", record.id, "verdict", verdict, "written", record.written);
+  const verdict = await probeMoovPosition(record.dest, record.written);
   if (!record.probe && (verdict === "faststart" || verdict === "tail")) {
     record.probe = verdict;
     touch(record);
     schedulePersist(record.id);
-    console.log("[probe] set", record.id, verdict);
   }
 }
 
