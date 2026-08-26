@@ -704,12 +704,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
   menuBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "flex-end",
   },
   sheet: {
+    width: "100%",
     backgroundColor: "#1A1A1C",
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
