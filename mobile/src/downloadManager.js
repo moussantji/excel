@@ -749,10 +749,24 @@ export async function startDownload(item, onProgress) {
 /* ---------------------------------- sonde ---------------------------------- */
 
 async function scheduleProbe(record) {
-  if (record.probe) return;
-  if ((record.written || 0) < (record.nextProbeAt || MIN_PLAY_BYTES)) return;
+  console.log("[probe] scheduleProbe called", record.id, "written", record.written, "probe", record.probe, "nextProbeAt", record.nextProbeAt);
+  if (record.probe) {
+    console.log("[probe] already probed", record.id);
+    return;
+  }
+  if ((record.written || 0) < (record.nextProbeAt || MIN_PLAY_BYTES)) {
+    console.log("[probe] not enough written", record.id);
+    return;
+  }
   record.nextProbeAt = (record.written || 0) + PROBE_STEP;
-  const verdict = await probeMoovPosition(record.dest, record.written);
+  console.log("[probe] calling probeMoovPosition", record.dest?.slice(-40), record.written);
+  let verdict = "undetermined";
+  try {
+    verdict = await probeMoovPosition(record.dest, record.written);
+  } catch (e) {
+    console.log("[probe] probeMoovPosition threw", e?.message);
+    verdict = "undetermined";
+  }
   console.log("[probe]", record.id, "verdict", verdict, "written", record.written);
   if (!record.probe && (verdict === "faststart" || verdict === "tail")) {
     record.probe = verdict;
