@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { hasVf } from "./api";
 import { colors } from "./theme";
@@ -10,7 +10,11 @@ export function Icon({ name, size = 22, color = colors.text, style }) {
 
 export function ImageWithFallback({ source, style, resizeMode = "cover", iconSize = 28 }) {
   const [failed, setFailed] = useState(false);
-  if (!source?.uri || failed) {
+  const uri = source?.uri || "";
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+  if (!uri || failed) {
     return (
       <View style={[style, styles.imgFallback]}>
         <Ionicons name="image-outline" size={iconSize} color="#444" />
