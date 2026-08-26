@@ -37,11 +37,16 @@ async function readWindow(FileSystem, path, start, length) {
  * @returns {"faststart" | "tail" | "undetermined"}
  */
 export async function probeMoovPosition(path, writtenBytes) {
-  if (!path || !writtenBytes || writtenBytes < HEADER + 8) return "undetermined";
+  console.log("[probe] probeMoovPosition start", path?.slice(-30), writtenBytes);
+  if (!path || !writtenBytes || writtenBytes < HEADER + 8) {
+    console.log("[probe] undetermined early", writtenBytes);
+    return "undetermined";
+  }
   let FileSystem;
   try {
     FileSystem = await FileSystemMod();
-  } catch {
+  } catch (e) {
+    console.log("[probe] FileSystemMod fail", e?.message);
     return "undetermined";
   }
 
