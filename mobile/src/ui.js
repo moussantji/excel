@@ -35,10 +35,7 @@ export function ImageWithFallback({ source, style, resizeMode = "cover", iconSiz
       resizeMode={resizeMode}
       resizeMethod="resize"
       fadeDuration={0}
-      onError={(e) => {
-        console.log("[IMG] failed", uri.slice(-80), e?.nativeEvent?.error || "");
-        setFailed(true);
-      }}
+      onError={() => setFailed(true)}
     />
   );
 }
