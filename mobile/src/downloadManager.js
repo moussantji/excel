@@ -290,6 +290,13 @@ export function initDownloads() {
       }
     }
     await recoverOrphans(known);
+    // Sonde les fichiers partiels déjà présents pour permettre la lecture
+    // progressive même sans reprise du téléchargement (probe persisté).
+    for (const job of jobs.values()) {
+      if (!job.probe && (job.written || 0) >= MIN_PLAY_BYTES) {
+        scheduleProbe(job).catch(() => {});
+      }
+    }
     snapshotDirty = true;
     notify();
     persistAll().catch(() => {});
