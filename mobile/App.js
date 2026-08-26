@@ -51,22 +51,37 @@ function Tabs({ navigation }) {
   return (
     <View style={styles.root}>
       <View style={styles.screen}>
-        {tab === "home" && (
+        <View
+          style={[styles.pane, tab !== "home" && styles.paneOff]}
+          pointerEvents={tab === "home" ? "auto" : "none"}
+        >
           <HomeScreen
+            active={tab === "home"}
             onOpenItem={openItem}
             onAddDownload={addDownload}
             onPlay={playItem}
             onOpenFiles={() => setTab("downloads")}
             onOpenSearch={() => setTab("search")}
           />
-        )}
-        {tab === "search" && <SearchScreen onOpenItem={openItem} />}
-        {tab === "downloads" && (
+        </View>
+        <View
+          style={[styles.pane, tab !== "search" && styles.paneOff]}
+          pointerEvents={tab === "search" ? "auto" : "none"}
+        >
+          <SearchScreen active={tab === "search"} onOpenItem={openItem} />
+        </View>
+        <View
+          style={[styles.pane, tab !== "downloads" && styles.paneOff]}
+          pointerEvents={tab === "downloads" ? "auto" : "none"}
+        >
           <FilesScreen onPlay={playItem} onOpenItem={openItem} />
-        )}
-        {tab === "profile" && (
+        </View>
+        <View
+          style={[styles.pane, tab !== "profile" && styles.paneOff]}
+          pointerEvents={tab === "profile" ? "auto" : "none"}
+        >
           <ProfileScreen onOpenItem={openItem} onOpenFiles={() => setTab("downloads")} />
-        )}
+        </View>
       </View>
 
       <View
@@ -183,6 +198,8 @@ export default function App() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   screen: { flex: 1 },
+  pane: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+  paneOff: { opacity: 0, zIndex: 0 },
   tabBar: {
     position: "absolute",
     left: 0,

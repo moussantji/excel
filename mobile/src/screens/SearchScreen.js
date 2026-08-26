@@ -10,9 +10,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchCategory, isSeries, searchTitles } from "../api";
+import { fetchCategory, isSeries, peekCache, searchTitles } from "../api";
 import { colors } from "../theme";
-import { Icon, ImageWithFallback, Logo, PosterCard, RatingBadge, SearchField, VfBadge } from "../ui";
+import { Icon, ImageWithFallback, Logo, PosterCard, PosterSkeleton, RatingBadge, SearchField, VfBadge } from "../ui";
 
 const SCREEN_W = Dimensions.get("window").width;
 const GAP = 8;
@@ -66,21 +66,31 @@ function matchesType(item, type) {
   return true;
 }
 
-export default function SearchScreen({ onOpenItem }) {
+export default function SearchScreen({ onOpenItem, active = true }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const [catItems, setCatItems] = useState([]);
+  const [catItems, setCatItems] = useState(() => peekCache("category:{}")?.items || []);
+  const [catLoading, setCatLoading] = useState(!peekCache("category:{}"));
   const [type, setType] = useState("all");
   const [genre, setGenre] = useState("Tous");
   const [yearB, setYearB] = useState("Tous");
   const [audio, setAudio] = useState("all");
   const [sort, setSort] = useState("rec");
   const lastQueryRef = useRef("");
+  const inputRef = useRef(null);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (active) {
+      const t = setTimeout(() => inputRef.current?.focus?.(), 40);
+      return () => clearTimeout(t);
+    }
+    inputRef.current?.blur?.();
+  }, [active]);
 
   const showingSearch = query.trim().length >= 2;
 
@@ -133,14 +143,24 @@ export default function SearchScreen({ onOpenItem }) {
   useEffect(() => {
     if (showingSearch) return;
     let live = true;
+    const tab =
+      type === "series" ? "series" : type === "film" ? "film" : type === "anim" ? "animation" : undefined;
+    const params = tab ? { tab } : {};
+    const seed = peekCache(`category:${JSON.stringify(params)}`);
+    if (seed?.items) {
+      setCatItems(seed.items);
+      setCatLoading(false);
+    } else {
+      setCatLoading(true);
+    }
     (async () => {
       try {
-        const tab =
-          type === "series" ? "series" : type === "film" ? "film" : type === "anim" ? "animation" : undefined;
-        const data = await fetchCategory(tab ? { tab } : {});
+        const data = await fetchCategory(params);
         if (live) setCatItems(data.items || []);
       } catch {
-        if (live) setCatItems([]);
+        if (live && !seed?.items) setCatItems([]);
+      } finally {
+        if (live) setCatLoading(false);
       }
     })();
     return () => {
@@ -202,7 +222,7 @@ export default function SearchScreen({ onOpenItem }) {
         ) : null}
       </View>
       <View style={styles.searchPad}>
-        <SearchField autoFocus value={query} onChangeText={setQuery} />
+        <SearchField inputRef={inputRef} autoFocus={false} value={query} onChangeText={setQuery} />
       </View>
 
       <ScrollView

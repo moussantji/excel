@@ -33,11 +33,11 @@ function fmtDur(sec) {
 }
 
 export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, onPlay }) {
-  const [pack, setPack] = useState(null);
+  const [pack, setPack] = useState(() => peekCache(`detail:${item.subjectId}`) || null);
   const [files, setFiles] = useState([]);
   const [season, setSeason] = useState(item.season || 1);
   const [episode, setEpisode] = useState(item.episode || 1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!item?.title && !item?.cover);
   const [error, setError] = useState("");
   const [descOpen, setDescOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -288,7 +288,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
             <Text style={styles.resourceSub}>Source: stream.mandenbaoubab.com</Text>
           </View>
 
-          {loading ? (
+          {loading && !files.length ? (
             <ActivityIndicator color={colors.red} style={{ marginTop: 18 }} />
           ) : null}
           {error ? <Text style={styles.err}>{error}</Text> : null}

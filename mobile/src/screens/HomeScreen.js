@@ -18,6 +18,7 @@ import {
   fetchTrending,
   formatBytes,
   isSeries,
+  peekCache,
   pickTrailer,
 } from "../api";
 import { colors } from "../theme";
@@ -30,7 +31,9 @@ import {
   Logo,
   PlayButton,
   PosterCard,
+  PosterSkeleton,
   SectionTitle,
+  Skeleton,
 } from "../ui";
 
 const SCREEN_W = Dimensions.get("window").width;
@@ -107,8 +110,8 @@ function Grid3({ items, onOpen }) {
   );
 }
 
-function PosterRow({ title, items, onOpen }) {
-  if (!items?.length) return null;
+function PosterRow({ title, items, onOpen, loading }) {
+  if (!items?.length && !loading) return null;
   return (
     <View>
       <SectionTitle>{title}</SectionTitle>
@@ -117,14 +120,16 @@ function PosterRow({ title, items, onOpen }) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.posterRow}
       >
-        {items.slice(0, 16).map((item, i) => (
-          <PosterCard
-            key={`${item.subjectId}-${i}`}
-            item={item}
-            width={122}
-            onPress={() => onOpen(item)}
-          />
-        ))}
+        {items?.length
+          ? items.slice(0, 16).map((item, i) => (
+              <PosterCard
+                key={`${item.subjectId}-${i}`}
+                item={item}
+                width={122}
+                onPress={() => onOpen(item)}
+              />
+            ))
+          : [0, 1, 2, 3, 4].map((i) => <PosterSkeleton key={i} width={122} />)}
       </ScrollView>
     </View>
   );
@@ -246,13 +251,16 @@ function BrandBar({ onOpenSearch, padTop }) {
   );
 }
 
-export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSearch }) {
-  const [loading, setLoading] = useState(true);
+export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFiles, onOpenSearch }) {
+  const seedHome = peekCache("home");
+  const seedTrend = peekCache("trending:1");
+  const [loading, setLoading] = useState(!seedHome && !seedTrend);
+  const [homeLoading, setHomeLoading] = useState(!seedHome);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("trend");
-  const [hero, setHero] = useState(null);
-  const [sections, setSections] = useState([]);
-  const [trending, setTrending] = useState([]);
+  const [hero, setHero] = useState(seedHome?.sections?.[0]?.items?.[0] || seedTrend?.items?.[0] || null);
+  const [sections, setSections] = useState(seedHome?.sections || []);
+  const [trending, setTrending] = useState(seedTrend?.items || []);
   const [catItems, setCatItems] = useState([]);
   const [catPage, setCatPage] = useState(1);
   const [catMore, setCatMore] = useState(false);
@@ -270,23 +278,34 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
   const insets = useSafeAreaInsets();
   const loadedTabs = useRef({});
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(() => {
     setError("");
-    const [homeRes, trendRes] = await Promise.allSettled([fetchHome(), fetchTrending(1)]);
-    if (homeRes.status === "fulfilled") {
-      const list = homeRes.value.sections || [];
-      setSections(list);
-      setHero(list[0]?.items?.[0] || null);
-    } else {
-      setError(homeRes.reason?.message || "Accueil indisponible");
-    }
-    if (trendRes.status === "fulfilled") {
-      const items = trendRes.value.items || [];
-      setTrending(items);
-      setHero((h) => h || items[0] || null);
-    }
-    setLoading(false);
+    if (peekCache("home") || peekCache("trending:1")) setLoading(false);
+
+    fetchTrending(1)
+      .then((data) => {
+        const items = data.items || [];
+        setTrending(items);
+        setHero((h) => h || items[0] || null);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
+
+    fetchHome()
+      .then((data) => {
+        const list = data.sections || [];
+        setSections(list);
+        setHero((h) => h || list[0]?.items?.[0] || null);
+        setLoading(false);
+        setHomeLoading(false);
+      })
+      .catch((e) => {
+        setError(e.message || "Accueil indisponible");
+        setLoading(false);
+        setHomeLoading(false);
+      });
   }, []);
 
   const loadCat = useCallback(async (tabDef, page = 1, append = false) => {
@@ -385,14 +404,7 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
     return out;
   }, [tab, catItems, genre, yearB, audio, sort]);
 
-  if (loading && !trending.length && !sections.length) {
-    return (
-      <View style={[styles.center, { paddingTop: insets.top }]}>
-        <Logo size={26} />
-        <ActivityIndicator color={colors.red} size="large" style={{ marginTop: 18 }} />
-      </View>
-    );
-  }
+  const waitingFirst = loading && !hero && !trending.length && !sections.length;
 
   const heroTitle = hero?.displayTitle || hero?.title || "MANDEN";
   const heroKind = hero ? (isSeries(hero) ? "Série TV" : "Film") : "";
@@ -442,7 +454,7 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
                 source={{ uri: trailerUrl }}
                 style={styles.heroVideo}
                 resizeMode="cover"
-                shouldPlay={Boolean(trailerUrl) && !heroOffscreen}
+                shouldPlay={Boolean(trailerUrl) && !heroOffscreen && active}
                 isLooping
                 isMuted={trailerMuted}
                 onReadyForDisplay={() => setTrailerOn(true)}
@@ -469,33 +481,43 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
           <BrandBar onOpenSearch={onOpenSearch} padTop={insets.top + 4} />
           <CategoryTabs tab={tab} onPick={setTab} overlay />
           <View style={styles.heroContent}>
-            <View style={styles.heroKicker}>
-              {heroKind ? <Text style={styles.heroMeta}>{heroKind}</Text> : null}
-              {hero?.year ? <Text style={styles.heroMeta}> · {hero.year}</Text> : null}
-              {hero?.imdbRating ? (
-                <>
-                  <Text style={styles.heroMeta}> · </Text>
-                  <Icon name="star" size={11} color={colors.gold} />
-                  <Text style={styles.heroMeta}> {hero.imdbRating}</Text>
-                </>
-              ) : null}
-            </View>
-            <Text numberOfLines={2} style={styles.heroTitle}>
-              {heroTitle}
-            </Text>
-            {heroGenres ? (
-              <Text numberOfLines={1} style={styles.heroGenres}>
-                {heroGenres}
-              </Text>
-            ) : null}
-            <View style={styles.heroCtas}>
-              <PlayButton label="Lecture" onPress={() => hero && onPlay(hero)} style={{ minWidth: 132 }} />
-              <GlassButton
-                label="Plus d'infos"
-                icon="information-circle-outline"
-                onPress={() => hero && onOpenItem(hero)}
-              />
-            </View>
+            {waitingFirst ? (
+              <>
+                <Skeleton width={120} height={12} />
+                <Skeleton width={240} height={28} style={{ marginTop: 8 }} />
+                <Skeleton width={180} height={12} style={{ marginTop: 8 }} />
+              </>
+            ) : (
+              <>
+                <View style={styles.heroKicker}>
+                  {heroKind ? <Text style={styles.heroMeta}>{heroKind}</Text> : null}
+                  {hero?.year ? <Text style={styles.heroMeta}> · {hero.year}</Text> : null}
+                  {hero?.imdbRating ? (
+                    <>
+                      <Text style={styles.heroMeta}> · </Text>
+                      <Icon name="star" size={11} color={colors.gold} />
+                      <Text style={styles.heroMeta}> {hero.imdbRating}</Text>
+                    </>
+                  ) : null}
+                </View>
+                <Text numberOfLines={2} style={styles.heroTitle}>
+                  {heroTitle}
+                </Text>
+                {heroGenres ? (
+                  <Text numberOfLines={1} style={styles.heroGenres}>
+                    {heroGenres}
+                  </Text>
+                ) : null}
+                <View style={styles.heroCtas}>
+                  <PlayButton label="Lecture" onPress={() => hero && onPlay(hero)} style={{ minWidth: 132 }} />
+                  <GlassButton
+                    label="Plus d'infos"
+                    icon="information-circle-outline"
+                    onPress={() => hero && onOpenItem(hero)}
+                  />
+                </View>
+              </>
+            )}
           </View>
           {trailerUrl ? (
             <Pressable
@@ -534,6 +556,7 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
             title={popularSeries.length ? "Séries populaires" : "Populaires"}
             items={popularSeries.length ? popularSeries : popular}
             onOpen={onOpenItem}
+            loading={loading && !popular.length}
           />
           {popularFilms.length ? (
             <PosterRow title="Films populaires" items={popularFilms} onOpen={onOpenItem} />
@@ -546,6 +569,9 @@ export default function HomeScreen({ onOpenItem, onPlay, onOpenFiles, onOpenSear
               onOpen={onOpenItem}
             />
           ))}
+          {homeLoading && !sections.length ? (
+            <PosterRow title="Pour toi" items={[]} onOpen={onOpenItem} loading />
+          ) : null}
         </>
       ) : (
         <>
@@ -848,4 +874,17 @@ const styles = StyleSheet.create({
   track: { height: 3, backgroundColor: colors.track, borderRadius: 2, marginTop: 8 },
   fill: { height: 3, backgroundColor: colors.red, borderRadius: 2 },
   size: { color: colors.dim, fontSize: 10, marginTop: 4, textAlign: "right" },
+  muteBtn: {
+    position: "absolute",
+    right: 16,
+    bottom: 28,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

@@ -89,11 +89,28 @@ async function request(path, { method = "GET", body } = {}) {
   return json.data ?? json;
 }
 
-export const fetchHome = () => request("/home");
-export const fetchTrending = (page = 1) => request(`/trending${qs({ page })}`);
+const mem = new Map();
+
+export function peekCache(key) {
+  return mem.get(key)?.data ?? null;
+}
+
+function remember(key, data) {
+  mem.set(key, { t: Date.now(), data });
+  return data;
+}
+
+async function cached(key, path) {
+  const data = await request(path);
+  return remember(key, data);
+}
+
+export const fetchHome = () => cached("home", "/home");
+export const fetchTrending = (page = 1) => cached(`trending:${page}`, `/trending${qs({ page })}`);
 export const fetchHistory = () => request("/history");
-export const fetchCategory = (params = {}) => request(`/category${qs(params)}`);
-export const fetchDetail = (subjectId) => request(`/detail${qs({ subjectId })}`);
+export const fetchCategory = (params = {}) =>
+  cached(`category:${JSON.stringify(params)}`, `/category${qs(params)}`);
+export const fetchDetail = (subjectId) => cached(`detail:${subjectId}`, `/detail${qs({ subjectId })}`);
 export const fetchItem = (subjectId) => request(`/item${qs({ subjectId })}`);
 export const searchTitles = (q, page = 1) => request(`/search${qs({ q, page })}`);
 

@@ -52,11 +52,12 @@ export function VfBadge({ style }) {
   );
 }
 
-export function SearchField({ value, onChangeText, onFocus, autoFocus, placeholder }) {
+export function SearchField({ value, onChangeText, onFocus, autoFocus, placeholder, inputRef }) {
   return (
     <View style={styles.searchWrap}>
       <Icon name="search" size={18} color="#C8C8C8" style={{ marginRight: 8 }} />
       <TextInput
+        ref={inputRef}
         value={value}
         onChangeText={onChangeText}
         onFocus={onFocus}
@@ -132,6 +133,26 @@ export function SectionTitle({ children, icon, style, right }) {
       <Text style={styles.section}>{children}</Text>
       {icon ? <Icon name={icon} size={18} color={colors.text} /> : null}
       {right ? <View style={styles.sectionRight}>{right}</View> : null}
+    </View>
+  );
+}
+
+export function Skeleton({ width, height, radius = 6, style }) {
+  return (
+    <View
+      style={[
+        { width, height, borderRadius: radius, backgroundColor: "#1C1C1C" },
+        style,
+      ]}
+    />
+  );
+}
+
+export function PosterSkeleton({ width = 122, showTitle = true }) {
+  return (
+    <View style={{ width }}>
+      <Skeleton width={width} height={Math.round(width * 1.5)} />
+      {showTitle ? <Skeleton width={width * 0.78} height={10} style={{ marginTop: 8 }} /> : null}
     </View>
   );
 }
