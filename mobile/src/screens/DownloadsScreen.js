@@ -431,6 +431,7 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
           (a.season || 0) - (b.season || 0) || (a.episode || 0) - (b.episode || 0)
       )
     );
+    console.log("[DL UI] jobs", jobs.length, "actives", actives.length, "dones", dones.length, "doneGroups", doneGroups.length, "cache", cacheSize);
     return { actives, doneGroups, cacheSize };
   }, [jobs]);
 
