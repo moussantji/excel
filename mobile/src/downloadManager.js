@@ -168,6 +168,8 @@ function serializeJob(j) {
     status: j.status === "progress" ? "paused" : j.status,
     progress: j.progress || 0,
     written: j.written,
+    probe: j.probe || null,
+    nextProbeAt: j.nextProbeAt || MIN_PLAY_BYTES,
     appendedIdx: j.appendedIdx || 0,
     resumeData: j.resumeData || null,
     positionMs: j.positionMs || 0,
