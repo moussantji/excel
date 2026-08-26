@@ -12,7 +12,7 @@ import {
 } from "../downloadManager";
 import { colors } from "../theme";
 import { useJobs } from "../useJobs";
-import { Icon, ImageWithFallback } from "../ui";
+import { Icon, ImageWithFallback, toThumbUrl } from "../ui";
 
 let FileSystem = null;
 try {
@@ -48,7 +48,7 @@ function Thumb({ item }) {
   return (
     <View>
       <View style={styles.thumbWrap}>
-        <ImageWithFallback source={{ uri: item.cover }} style={styles.thumb} iconSize={22} />
+        <ImageWithFallback source={{ uri: toThumbUrl(item.cover, 280) }} style={styles.thumb} iconSize={22} />
         {!done ? (
           <View style={styles.thumbBar}>
             <View style={[styles.thumbBarFill, { width: `${Math.max(2, pct)}%` }]} />
@@ -215,7 +215,7 @@ function HistoryCard({ item, onPress }) {
       <View>
         <View style={styles.histThumbWrap}>
           <ImageWithFallback
-            source={{ uri: item.coverSmall || item.cover }}
+            source={{ uri: toThumbUrl(item.coverSmall || item.cover, 280) }}
             style={styles.histThumb}
             iconSize={20}
           />

@@ -8,6 +8,13 @@ export function Icon({ name, size = 22, color = colors.text, style }) {
   return <Ionicons name={name} size={size} color={color} style={style} />;
 }
 
+export function toThumbUrl(url, targetW = 240) {
+  if (!url || typeof url !== "string") return url;
+  // remplace w_480 / w_1200 par une largeur adaptée à la vignette (économie mémoire Fresco)
+  if (/w_\d+/.test(url)) return url.replace(/w_\d+/, `w_${targetW}`);
+  return url;
+}
+
 export function ImageWithFallback({ source, style, resizeMode = "cover", iconSize = 28 }) {
   const [failed, setFailed] = useState(false);
   const uri = source?.uri || "";
@@ -26,6 +33,8 @@ export function ImageWithFallback({ source, style, resizeMode = "cover", iconSiz
       source={source}
       style={style}
       resizeMode={resizeMode}
+      resizeMethod="resize"
+      fadeDuration={0}
       onError={(e) => {
         console.log("[IMG] failed", uri.slice(-80), e?.nativeEvent?.error || "");
         setFailed(true);
@@ -167,6 +176,9 @@ export function PosterSkeleton({ width = 122, showTitle = true }) {
 
 export function PosterCard({ item, onPress, width = 128, showTitle = true }) {
   const title = item?.displayTitle || item?.title || "";
+  // vignette 2/3 : largeur max 152 (TV) → w_280 suffit (mémoire Fresco /4 vs w_480)
+  const thumbW = width <= 100 ? 200 : width <= 128 ? 240 : 280;
+  const uri = toThumbUrl(item?.coverSmall || item?.cover, thumbW);
   return (
     <Pressable
       onPress={onPress}
@@ -174,7 +186,7 @@ export function PosterCard({ item, onPress, width = 128, showTitle = true }) {
     >
       <View style={[styles.posterWrap, { width, aspectRatio: 2 / 3 }]}>
         <ImageWithFallback
-          source={{ uri: item?.coverSmall || item?.cover }}
+          source={{ uri }}
           style={styles.posterImg}
           iconSize={22}
         />

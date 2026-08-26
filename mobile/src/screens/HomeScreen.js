@@ -35,6 +35,7 @@ import {
   PosterSkeleton,
   SectionTitle,
   Skeleton,
+  toThumbUrl,
 } from "../ui";
 
 const GAP = 8;
@@ -191,7 +192,7 @@ function ContinueRow({ items, onOpen, width = 168, pad = 16, gap = 8 }) {
             >
               <View style={[styles.contThumb, { width, height: thumbH }]}>
                 <ImageWithFallback
-                  source={{ uri: item.coverSmall || item.cover }}
+                  source={{ uri: toThumbUrl(item.coverSmall || item.cover, 320) }}
                   style={styles.contImg}
                   iconSize={18}
                 />
@@ -683,7 +684,7 @@ export default function HomeScreen({ active = true, onOpenItem, onPlay, onOpenFi
         <View style={[styles.dlRow, { paddingHorizontal: layout.pad }]}>
           {preview.map((item) => (
             <Pressable key={item.id} style={styles.dlCard} onPress={() => onPlay(item)}>
-              <ImageWithFallback source={{ uri: item.cover }} style={styles.dlThumb} iconSize={18} />
+              <ImageWithFallback source={{ uri: toThumbUrl(item.cover, 120) }} style={styles.dlThumb} iconSize={18} />
               <View style={{ flex: 1 }}>
                 <Text numberOfLines={1} style={styles.dlTitle}>
                   {item.season && item.episode
