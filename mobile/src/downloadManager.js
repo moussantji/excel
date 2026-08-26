@@ -294,6 +294,8 @@ export function initDownloads() {
     // progressive même sans reprise du téléchargement (probe persisté).
     for (const job of jobs.values()) {
       if (!job.probe && (job.written || 0) >= MIN_PLAY_BYTES) {
+        // Force la sonde au prochain tour même si nextProbeAt est déjà loin
+        job.nextProbeAt = MIN_PLAY_BYTES;
         console.log("[probe] init scheduling for", job.id, job.written);
         scheduleProbe(job).catch((e) => console.log("[probe] init error", e?.message));
       }
