@@ -17,6 +17,7 @@ import {
   fetchHome,
   fetchTrending,
   formatBytes,
+  hasVf,
   isSeries,
   peekCache,
   pickTrailer,

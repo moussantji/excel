@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { hasVf } from "./api";
 import { colors } from "./theme";
 
 export function Icon({ name, size = 22, color = colors.text, style }) {
@@ -171,7 +172,7 @@ export function PosterCard({ item, onPress, width = 128, showTitle = true }) {
           iconSize={22}
         />
         <RatingBadge value={item?.imdbRating} style={styles.posterRating} />
-        {item?.french ? <VfBadge style={styles.posterVf} /> : null}
+        {hasVf(item) ? <VfBadge style={styles.posterVf} /> : null}
       </View>
       {showTitle ? (
         <Text numberOfLines={2} style={styles.posterTitle}>

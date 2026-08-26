@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchCategory, isSeries, peekCache, searchTitles } from "../api";
+import { fetchCategory, hasVf, isSeries, peekCache, searchTitles } from "../api";
 import { colors } from "../theme";
 import { Icon, ImageWithFallback, Logo, PosterCard, PosterSkeleton, RatingBadge, SearchField, VfBadge } from "../ui";
 
@@ -190,8 +190,8 @@ export default function SearchScreen({ onOpenItem, active = true }) {
       if (!matchesType(it, type)) return false;
       if (genre !== "Tous" && !(it.genres || []).includes(genre)) return false;
       if (!yTest(it)) return false;
-      if (audio === "vf" && !it.french) return false;
-      if (audio === "vo" && it.french) return false;
+      if (audio === "vf" && !hasVf(it)) return false;
+      if (audio === "vo" && hasVf(it)) return false;
       return true;
     });
     if (sort === "rate") out = [...out].sort((a, b) => (b.imdbRating || 0) - (a.imdbRating || 0));

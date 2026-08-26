@@ -10,11 +10,20 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchDetail, fetchDownloads, formatBytes } from "../api";
+import {
+  audioLangKey,
+  fetchDetail,
+  fetchDownloads,
+  formatBytes,
+  hasVf,
+  listAudioLangs,
+  peekCache,
+  preferredAudioKey,
+} from "../api";
 import { downloadId } from "../downloadManager";
 import { colors } from "../theme";
 import { useJobs } from "../useJobs";
-import { GlassButton, Icon, ImageWithFallback, PlayButton } from "../ui";
+import { GlassButton, Icon, ImageWithFallback, PlayButton, VfBadge } from "../ui";
 
 const SCREEN_W = Dimensions.get("window").width;
 
@@ -35,6 +44,8 @@ function fmtDur(sec) {
 export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, onPlay }) {
   const [pack, setPack] = useState(() => peekCache(`detail:${item.subjectId}`) || null);
   const [files, setFiles] = useState([]);
+  const [subtitles, setSubtitles] = useState([]);
+  const [audioKey, setAudioKey] = useState("vf");
   const [season, setSeason] = useState(item.season || 1);
   const [episode, setEpisode] = useState(item.episode || 1);
   const [loading, setLoading] = useState(!item?.title && !item?.cover);
@@ -120,9 +131,16 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
           season: isSeriesPack ? season : undefined,
           episode: isSeriesPack ? episode : undefined,
         });
-        if (live) setFiles(data.downloads || []);
+        if (!live) return;
+        const list = data.downloads || [];
+        setFiles(list);
+        setSubtitles(data.subtitles || data.captions || []);
+        setAudioKey(preferredAudioKey(list, data));
       } catch {
-        if (live) setFiles([]);
+        if (live) {
+          setFiles([]);
+          setSubtitles([]);
+        }
       }
     })();
     return () => {
@@ -137,6 +155,9 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
       quality: file?.quality,
       size: file?.size,
       url: file?.url,
+      french: hasVf(file) || hasVf(detail) || audioKey === "vf",
+      language: audioLangKey(file) === "vf" ? "fr" : file?.language || file?.lang,
+      subtitles,
       season: isSeriesPack ? season : undefined,
       episode: isSeriesPack ? episode : undefined,
     };
@@ -162,7 +183,15 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
   }
 
   const queue = buildQueue();
-  const bestFile = files[0] || null;
+  const filesTagged = files.some(
+    (f) => f?.language || f?.lang || f?.audio || f?.audioLanguage || f?.dub || f?.french === true
+  );
+  let langs = listAudioLangs(files, pack);
+  if (!filesTagged && hasVf(detail)) langs = langs.filter((l) => l.key === "vf");
+  if (!langs.length && hasVf(detail)) langs = [{ key: "vf", label: "VF" }];
+  const visibleFiles = filesTagged ? files.filter((f) => audioLangKey(f) === audioKey) : files;
+  const bestFile = visibleFiles[0] || files[0] || null;
+  const showVf = hasVf(detail) || hasVf(bestFile) || audioKey === "vf" || langs.some((l) => l.key === "vf");
 
   // méta ligne compacte type MovieBox
   const metaParts = [];
@@ -208,6 +237,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
               <Text style={styles.heroTitle} numberOfLines={2}>
                 {displayTitle}
               </Text>
+              {showVf ? <VfBadge /> : null}
               {rating ? (
                 <View style={styles.ratingPill}>
                   <Icon name="star" size={13} color={colors.gold} />
@@ -282,10 +312,42 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
             </View>
           ) : null}
 
+          {langs.length ? (
+            <View style={{ marginTop: 18 }}>
+              <Text style={styles.sectionTitle}>Langue</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chips}
+              >
+                {langs.map((l) => (
+                  <Pressable
+                    key={l.key}
+                    onPress={() => setAudioKey(l.key)}
+                    style={[styles.chip, audioKey === l.key && styles.chipOn]}
+                  >
+                    <Text style={[styles.chipTxt, audioKey === l.key && styles.chipTxtOn]}>{l.label}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          ) : showVf ? (
+            <View style={{ marginTop: 18 }}>
+              <Text style={styles.sectionTitle}>Langue</Text>
+              <View style={styles.chips}>
+                <View style={[styles.chip, styles.chipOn]}>
+                  <Text style={[styles.chipTxt, styles.chipTxtOn]}>VF</Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
           {/* Détecteur de ressources */}
           <View style={styles.resourceHead}>
             <Text style={styles.sectionTitle}>Fichiers disponibles</Text>
-            <Text style={styles.resourceSub}>Source: stream.mandenbaoubab.com</Text>
+            <Text style={styles.resourceSub}>
+              {audioKey === "vf" || showVf ? "Audio VF prioritaire" : "Source: stream.mandenbaoubab.com"}
+            </Text>
           </View>
 
           {loading && !files.length ? (
@@ -298,11 +360,12 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
           ) : null}
 
           <View style={styles.qGrid}>
-          {files.map((file) => {
+          {(visibleFiles.length ? visibleFiles : files).map((file) => {
             const job = jobFor(file.quality);
             const isDone = job?.status === "done";
             const isActive = job && job.status !== "done" && job.status !== "error";
             const pct = Math.max(3, (job?.progress || 0) * 100);
+            const fileVf = hasVf(file) || audioKey === "vf" || hasVf(detail);
             const epLabel = isSeriesPack
               ? `S${String(season).padStart(2, "0")} EP${String(episode).padStart(2, "0")}`
               : file.quality;
@@ -310,6 +373,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
               <View key={file.quality} style={styles.qCard}>
                 <View style={styles.qCardTop}>
                   <Text style={styles.qTitle} numberOfLines={1}>{epLabel}</Text>
+                  {fileVf ? <VfBadge /> : null}
                   <Pressable
                     onPress={() => onPlay(payload(file), queue)}
                     style={styles.qPlay}
@@ -320,6 +384,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
                 </View>
                 <Text style={styles.qSub} numberOfLines={1}>
                   {file.quality}
+                  {fileVf ? " · VF" : ""}
                   {formatBytes(file.size) ? ` · ${formatBytes(file.size)}` : ""}
                   {dur ? ` · ${fmtDur(dur)}` : ""}
                 </Text>
@@ -445,9 +510,9 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
                           <Text style={styles.recoBadgeTxt}>{rec.imdbRating}</Text>
                         </View>
                       ) : null}
-                      {rec.french ? (
+                      {hasVf(rec) ? (
                         <View style={styles.vfBadge}>
-                          <Text style={styles.vfTxt}>V.F.</Text>
+                          <Text style={styles.vfTxt}>VF</Text>
                         </View>
                       ) : null}
                       <View style={styles.recoDlIcon}>

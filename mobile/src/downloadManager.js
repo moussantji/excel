@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { fetchDetail, fetchDownloads } from "./api";
+import { fetchDetail, fetchDownloads, hasVf, normalizeSubtitles } from "./api";
 import { probeMoovPosition } from "./mp4Probe";
 import {
   ensureRangeServer,
@@ -145,6 +145,7 @@ function publicJob(j) {
     playable: playableState(j),
     localUri: j.status === "done" ? j.dest : null,
     remoteUrl: j.playUrlRemote || null, // web uniquement
+    subtitles: j.subtitles || null,
   };
 }
 
@@ -217,13 +218,17 @@ export function downloadId({ subjectId, season, episode, quality }) {
 
 function pickQuality(downloads, wanted) {
   const list = downloads || [];
+  const ranked = [...list].sort((a, b) => {
+    const fa = hasVf(a) ? 1 : 0;
+    const fb = hasVf(b) ? 1 : 0;
+    if (fa !== fb) return fb - fa;
+    return (b.resolution || 0) - (a.resolution || 0);
+  });
   if (wanted) {
-    const exact = list.find((f) => f.quality === wanted);
+    const exact = ranked.find((f) => f.quality === wanted);
     if (exact) return exact;
   }
-  // défaut : la meilleure résolution raisonnable (<= 1080p)
-  const sorted = [...list].sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
-  return sorted.find((f) => (f.resolution || 0) <= 1080) || sorted[0] || null;
+  return ranked.find((f) => (f.resolution || 0) <= 1080) || ranked[0] || null;
 }
 
 async function resolveSource(item) {
@@ -693,6 +698,7 @@ export async function startDownload(item, onProgress) {
   record.url = url;
   record.size = size || record.size;
   record.quality = quality;
+  record.subtitles = normalizeSubtitles(subtitles || item.subtitles);
 
   if (!NATIVE) {
     record.playUrlRemote = url;
