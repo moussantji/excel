@@ -2,7 +2,8 @@ import { Audio, Video } from "expo-av";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { formatBytes, storeHistory } from "../api";
+import { useLayout } from "../layout";
+import { fetchDownloads, formatBytes, hasVf, normalizeSubtitles, pickSubtitle, storeHistory } from "../api";
 import { saveWatchEntry } from "../watchHistory";
 import {
   getJobsSnapshot,
@@ -12,11 +13,12 @@ import {
 } from "../downloadManager";
 import { ensureRangeServer } from "../localRangeServer";
 import { colors } from "../theme";
-import { Icon } from "../ui";
+import { Icon, VfBadge } from "../ui";
 
 export default function PlayerScreen({ item, onBack, onNext }) {
   const video = useRef(null);
   const insets = useSafeAreaInsets();
+  const layout = useLayout();
   const [recId, setRecId] = useState(item.id || null);
   const [playUrl, setPlayUrl] = useState(null);
   const [playMode, setPlayMode] = useState(null); // 'file' | 'range' | 'remote'
@@ -26,6 +28,12 @@ export default function PlayerScreen({ item, onBack, onNext }) {
   const pendingSeekRef = useRef(0);
   const lastSavedRef = useRef(0);
   const lastHistRef = useRef(0);
+  const cuesRef = useRef([]);
+  const lastCueRef = useRef("");
+  const [tracks, setTracks] = useState([]);
+  const [trackUrl, setTrackUrl] = useState("");
+  const [cue, setCue] = useState("");
+  const [subsOn, setSubsOn] = useState(true);
 
   const jobsSnapshot = useSyncExternalStore(subscribeJobs, getJobsSnapshot);
   const rec = recId ? jobsSnapshot.find((j) => j.id === recId) || null : null;
@@ -116,6 +124,57 @@ export default function PlayerScreen({ item, onBack, onNext }) {
     return null;
   }
 
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      let raw = rec?.subtitles || item.subtitles;
+      if (!raw?.length && item.subjectId) {
+        try {
+          const pack = await fetchDownloads(item.subjectId, {
+            season: item.season,
+            episode: item.episode,
+          });
+          if (!live) return;
+          raw = pack.subtitles || pack.captions || [];
+        } catch {
+          raw = [];
+        }
+      }
+      if (!live) return;
+      const list = normalizeSubtitles(raw);
+      setTracks(list);
+      const preferred = pickSubtitle(list);
+      setTrackUrl(preferred?.url || "");
+      setSubsOn(Boolean(preferred));
+    })();
+    return () => {
+      live = false;
+    };
+  }, [rec?.id, rec?.subtitles, item.subjectId, item.season, item.episode, item.subtitles]);
+
+  useEffect(() => {
+    let live = true;
+    if (!trackUrl || !subsOn) {
+      cuesRef.current = [];
+      setCue("");
+      lastCueRef.current = "";
+      return undefined;
+    }
+    (async () => {
+      try {
+        const inline = tracks.find((t) => t.url === trackUrl)?.content;
+        const text = inline || (await (await fetch(trackUrl)).text());
+        if (!live) return;
+        cuesRef.current = parseCues(text);
+      } catch {
+        if (live) cuesRef.current = [];
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [trackUrl, subsOn, tracks]);
+
   /* ------------------------------ position & fin d'épisode ------------------------------ */
 
   const handleStatus = useCallback(
@@ -123,6 +182,16 @@ export default function PlayerScreen({ item, onBack, onNext }) {
       if (!st.isLoaded) {
         if (st.error) setError(String(st.error));
         return;
+      }
+      if (subsOn) {
+        const next = findCue(cuesRef.current, (st.positionMillis || 0) / 1000);
+        if (next !== lastCueRef.current) {
+          lastCueRef.current = next;
+          setCue(next);
+        }
+      } else if (lastCueRef.current) {
+        lastCueRef.current = "";
+        setCue("");
       }
       if (st.didJustFinish) {
         if (recId) savePosition(recId, 0);
@@ -163,7 +232,7 @@ export default function PlayerScreen({ item, onBack, onNext }) {
         }
       }
     },
-    [onNext, recId, item]
+    [onNext, recId, item, subsOn]
   );
 
   const handleError = (e) => {
@@ -188,17 +257,28 @@ export default function PlayerScreen({ item, onBack, onNext }) {
       : rec?.displayTitle || rec?.title || item.displayTitle || item.title;
 
   const waitingReason = !playUrl ? waitingMessage(rec, error) : null;
+  const pct = Math.round((rec?.progress || 0) * 100);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
+    <View style={[styles.root, { paddingTop: insets.top + 8, paddingHorizontal: layout.pad }]}>
       <Pressable onPress={onBack} style={styles.back} hitSlop={8}>
         <Icon name="chevron-back" size={22} color={colors.redSoft} />
         <Text style={styles.backText}>Retour</Text>
       </Pressable>
-      <Text style={styles.title} numberOfLines={2}>
-        {label}
-      </Text>
-      <View style={styles.player}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title} numberOfLines={2}>
+          {label}
+        </Text>
+        {hasVf(item) || hasVf(rec) ? <VfBadge /> : null}
+      </View>
+      <View
+        style={[
+          styles.player,
+          layout.playerFill || layout.isTv
+            ? { flex: 1, aspectRatio: undefined, borderRadius: layout.isPhone ? 14 : 8 }
+            : null,
+        ]}
+      >
         {playUrl ? (
           <Video
             ref={video}
@@ -220,7 +300,12 @@ export default function PlayerScreen({ item, onBack, onNext }) {
           />
         ) : (
           <View style={styles.waitBox}>
-            {!error ? <ActivityIndicator color={colors.red} size="small" /> : null}
+            {!error ? (
+              <>
+                <ActivityIndicator color={colors.red} size="small" />
+                {pct > 0 ? <Text style={styles.waitPct}>{pct} %</Text> : null}
+              </>
+            ) : null}
             <Text style={styles.hint}>{waitingReason}</Text>
           </View>
         )}
@@ -228,6 +313,11 @@ export default function PlayerScreen({ item, onBack, onNext }) {
           <View style={styles.overlay}>
             <ActivityIndicator color={colors.red} size="small" />
             <Text style={styles.hint}>Mise en place de la lecture…</Text>
+          </View>
+        ) : null}
+        {playUrl && subsOn && cue ? (
+          <View style={styles.subBox} pointerEvents="none">
+            <Text style={[styles.subTxt, layout.isTv && { fontSize: 22, lineHeight: 30 }]}>{cue}</Text>
           </View>
         ) : null}
       </View>
@@ -247,6 +337,33 @@ export default function PlayerScreen({ item, onBack, onNext }) {
               color={rec.status === "done" ? colors.green : colors.redSoft}
             />
             <Text style={styles.dlLabel}>{downloadLabel(rec)}</Text>
+            {tracks.length ? (
+              <Pressable
+                onPress={() => {
+                  if (!subsOn) {
+                    const preferred = pickSubtitle(tracks);
+                    setTrackUrl(preferred?.url || tracks[0].url);
+                    setSubsOn(true);
+                    return;
+                  }
+                  const idx = Math.max(0, tracks.findIndex((t) => t.url === trackUrl));
+                  const next = tracks[idx + 1];
+                  if (!next) {
+                    setSubsOn(false);
+                    setCue("");
+                    return;
+                  }
+                  setTrackUrl(next.url);
+                }}
+                style={styles.ccBtn}
+                hitSlop={6}
+              >
+                <Icon name="text" size={16} color={subsOn ? colors.redSoft : colors.dim} />
+                <Text style={[styles.ccTxt, subsOn && { color: colors.redSoft }]}>
+                  {subsOn ? tracks.find((t) => t.url === trackUrl)?.label || "ST" : "ST off"}
+                </Text>
+              </Pressable>
+            ) : null}
             {playUrl ? (
               <Pressable onPress={goFullscreen} style={styles.fsBtn} hitSlop={6}>
                 <Icon name="expand" size={18} color={colors.redSoft} />
@@ -275,7 +392,7 @@ export default function PlayerScreen({ item, onBack, onNext }) {
 
       {onNext ? (
         <Pressable onPress={onNext} style={styles.nextBtn}>
-          <Icon name="play-skip-forward" size={16} color={colors.onRed} />
+          <Icon name="play-skip-forward" size={16} color={colors.playText} />
           <Text style={styles.nextText}>Épisode suivant</Text>
         </Pressable>
       ) : null}
@@ -288,6 +405,73 @@ export default function PlayerScreen({ item, onBack, onNext }) {
       ) : null}
     </View>
   );
+}
+
+function parseTime(raw) {
+  const m = String(raw || "")
+    .trim()
+    .replace(",", ".")
+    .match(/(?:(\d+):)?(\d+):(\d+(?:\.\d+)?)/);
+  if (!m) return 0;
+  return Number(m[1] || 0) * 3600 + Number(m[2] || 0) * 60 + Number(m[3] || 0);
+}
+
+function parseCues(text) {
+  if (!text) return [];
+  const trimmed = String(text).replace(/^\uFEFF/, "").trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const json = JSON.parse(trimmed);
+      const list = Array.isArray(json) ? json : json.cues || json.subtitles || json.captions || [];
+      const cues = list
+        .map((c) => {
+          const startRaw = c.start ?? c.startTime ?? c.from ?? 0;
+          const endRaw = c.end ?? c.endTime ?? c.to ?? 0;
+          const start = typeof startRaw === "string" ? parseTime(startRaw) : Number(startRaw) || 0;
+          const end = typeof endRaw === "string" ? parseTime(endRaw) : Number(endRaw) || 0;
+          return {
+            start,
+            end,
+            text: String(c.text || c.content || c.line || "").replace(/<[^>]+>/g, "").trim(),
+          };
+        })
+        .filter((c) => c.text && c.end >= c.start);
+      const max = cues.reduce((m, c) => Math.max(m, c.end), 0);
+      if (max > 100000) return cues.map((c) => ({ ...c, start: c.start / 1000, end: c.end / 1000 }));
+      return cues;
+    } catch {
+      /* SRT / VTT */
+    }
+  }
+  const clean = trimmed.replace(/\r/g, "");
+  const blocks = clean.split(/\n\n+/);
+  const cues = [];
+  for (const block of blocks) {
+    const lines = block
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l && !/^WEBVTT/i.test(l) && !/^NOTE\b/.test(l) && !/^STYLE\b/.test(l));
+    const timeIdx = lines.findIndex((l) => /-->/.test(l));
+    if (timeIdx < 0) continue;
+    const [startRaw, endRaw] = lines[timeIdx].split(/-->/);
+    const body = lines
+      .slice(timeIdx + 1)
+      .join("\n")
+      .replace(/<[^>]+>/g, "")
+      .trim();
+    if (!body) continue;
+    cues.push({ start: parseTime(startRaw), end: parseTime(endRaw), text: body });
+  }
+  return cues;
+}
+
+function findCue(cues, t) {
+  if (!cues?.length) return "";
+  for (let i = 0; i < cues.length; i += 1) {
+    const c = cues[i];
+    if (t >= c.start && t <= c.end) return c.text;
+  }
+  return "";
 }
 
 function waitingMessage(rec, error) {
@@ -317,18 +501,45 @@ function downloadLabel(rec) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#000", paddingHorizontal: 12 },  back: { marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 2 },
-  backText: { color: colors.redSoft, fontSize: 16 },
-  title: { color: colors.text, fontSize: 18, fontWeight: "800", marginBottom: 12 },
+  root: { flex: 1, backgroundColor: "#000", paddingHorizontal: 12 },
+  back: { marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 2 },
+  backText: { color: colors.redSoft, fontSize: 16, fontWeight: "700" },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  title: { color: colors.text, fontSize: 18, fontWeight: "800", letterSpacing: -0.3, flex: 1 },
+  subBox: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 14,
+    alignItems: "center",
+  },
+  subTxt: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 22,
+    textShadowColor: "rgba(0,0,0,0.9)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  ccBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 6 },
+  ccTxt: { color: colors.dim, fontSize: 12, fontWeight: "800" },
   player: {
     width: "100%",
     aspectRatio: 16 / 9,
     backgroundColor: "#111",
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
+  waitPct: { color: colors.text, fontSize: 22, fontWeight: "900", letterSpacing: -0.4 },
   video: { width: "100%", height: "100%" },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -356,7 +567,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  nextText: { color: colors.onRed, fontWeight: "700" },
+  nextText: { color: colors.playText, fontWeight: "800" },
   errRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12 },
   error: { color: "#F87171", flex: 1 },
 });

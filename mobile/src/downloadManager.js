@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { fetchDetail, fetchDownloads } from "./api";
+import { fetchDetail, fetchDownloads, hasVf, normalizeSubtitles } from "./api";
 import { probeMoovPosition } from "./mp4Probe";
 import {
   ensureRangeServer,
@@ -145,6 +145,7 @@ function publicJob(j) {
     playable: playableState(j),
     localUri: j.status === "done" ? j.dest : null,
     remoteUrl: j.playUrlRemote || null, // web uniquement
+    subtitles: j.subtitles || null,
   };
 }
 
@@ -167,6 +168,8 @@ function serializeJob(j) {
     status: j.status === "progress" ? "paused" : j.status,
     progress: j.progress || 0,
     written: j.written,
+    probe: j.probe || null,
+    nextProbeAt: j.nextProbeAt || MIN_PLAY_BYTES,
     appendedIdx: j.appendedIdx || 0,
     resumeData: j.resumeData || null,
     positionMs: j.positionMs || 0,
@@ -217,13 +220,17 @@ export function downloadId({ subjectId, season, episode, quality }) {
 
 function pickQuality(downloads, wanted) {
   const list = downloads || [];
+  const ranked = [...list].sort((a, b) => {
+    const fa = hasVf(a) ? 1 : 0;
+    const fb = hasVf(b) ? 1 : 0;
+    if (fa !== fb) return fb - fa;
+    return (b.resolution || 0) - (a.resolution || 0);
+  });
   if (wanted) {
-    const exact = list.find((f) => f.quality === wanted);
+    const exact = ranked.find((f) => f.quality === wanted);
     if (exact) return exact;
   }
-  // défaut : la meilleure résolution raisonnable (<= 1080p)
-  const sorted = [...list].sort((a, b) => (b.resolution || 0) - (a.resolution || 0));
-  return sorted.find((f) => (f.resolution || 0) <= 1080) || sorted[0] || null;
+  return ranked.find((f) => (f.resolution || 0) <= 1080) || ranked[0] || null;
 }
 
 async function resolveSource(item) {
@@ -283,6 +290,14 @@ export function initDownloads() {
       }
     }
     await recoverOrphans(known);
+    // Sonde les fichiers partiels déjà présents pour permettre la lecture
+    // progressive même sans reprise du téléchargement (probe persisté).
+    for (const job of jobs.values()) {
+      if (!job.probe && (job.written || 0) >= MIN_PLAY_BYTES) {
+        job.nextProbeAt = MIN_PLAY_BYTES;
+        scheduleProbe(job).catch(() => {});
+      }
+    }
     snapshotDirty = true;
     notify();
     persistAll().catch(() => {});
@@ -655,7 +670,7 @@ export async function startDownload(item, onProgress) {
   console.log("[DL] startDownload", JSON.stringify({
     subjectId: item.subjectId, season: item.season, episode: item.episode, quality: item.quality,
   }));
-  const { url, quality, size } = await resolveSource(item);
+  const { url, quality, size, subtitles } = await resolveSource(item);
   const id = downloadId({
     subjectId: item.subjectId, season: item.season, episode: item.episode, quality,
   });
@@ -693,6 +708,7 @@ export async function startDownload(item, onProgress) {
   record.url = url;
   record.size = size || record.size;
   record.quality = quality;
+  record.subtitles = normalizeSubtitles(subtitles || item.subtitles);
 
   if (!NATIVE) {
     record.playUrlRemote = url;
@@ -740,6 +756,7 @@ async function scheduleProbe(record) {
   if (!record.probe && (verdict === "faststart" || verdict === "tail")) {
     record.probe = verdict;
     touch(record);
+    schedulePersist(record.id);
   }
 }
 

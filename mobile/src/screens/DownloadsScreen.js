@@ -4,14 +4,15 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Sharing from "expo-sharing";
 import { formatBytes } from "../api";
+import { useLayout } from "../layout";
 import {
   cancelDownload,
   pauseDownload,
   resumeDownload,
 } from "../downloadManager";
-import { colors, TAB_BAR_HEIGHT } from "../theme";
+import { colors } from "../theme";
 import { useJobs } from "../useJobs";
-import { Icon, ImageWithFallback } from "../ui";
+import { Icon, ImageWithFallback, toThumbUrl } from "../ui";
 
 let FileSystem = null;
 try {
@@ -47,7 +48,7 @@ function Thumb({ item }) {
   return (
     <View>
       <View style={styles.thumbWrap}>
-        <ImageWithFallback source={{ uri: item.cover }} style={styles.thumb} iconSize={22} />
+        <ImageWithFallback source={{ uri: toThumbUrl(item.cover, 280) }} style={styles.thumb} iconSize={22} />
         {!done ? (
           <View style={styles.thumbBar}>
             <View style={[styles.thumbBarFill, { width: `${Math.max(2, pct)}%` }]} />
@@ -122,7 +123,7 @@ function Row({ item, onPlay }) {
           {done ? (
             <>
               <Pressable style={styles.cta} onPress={() => onPlay(item)}>
-                <Icon name="play" size={14} color={colors.onRed} />
+                <Icon name="play" size={14} color={colors.playText} />
                 <Text style={styles.ctaTxt}>Jouer</Text>
               </Pressable>
               <Pressable
@@ -144,7 +145,7 @@ function Row({ item, onPlay }) {
             <>
               {paused ? (
                 <Pressable style={styles.cta} onPress={() => resumeDownload(item.id)}>
-                  <Icon name="play" size={14} color={colors.onRed} />
+                  <Icon name="play" size={14} color={colors.playText} />
                   <Text style={styles.ctaTxt}>Reprendre</Text>
                 </Pressable>
               ) : item.status === "progress" ? (
@@ -214,7 +215,7 @@ function HistoryCard({ item, onPress }) {
       <View>
         <View style={styles.histThumbWrap}>
           <ImageWithFallback
-            source={{ uri: item.coverSmall || item.cover }}
+            source={{ uri: toThumbUrl(item.coverSmall || item.cover, 280) }}
             style={styles.histThumb}
             iconSize={20}
           />
@@ -308,12 +309,12 @@ function DoneGroup({ group, onPlay }) {
           <View style={styles.rowActions}>
             {multi ? (
               <Pressable style={styles.cta} onPress={() => setOpen((o) => !o)}>
-                <Icon name="list" size={14} color={colors.onRed} />
+                <Icon name="list" size={14} color={colors.playText} />
                 <Text style={styles.ctaTxt}>Épisodes</Text>
               </Pressable>
             ) : (
               <Pressable style={styles.cta} onPress={() => onPlay(head)}>
-                <Icon name="play" size={14} color={colors.onRed} />
+                <Icon name="play" size={14} color={colors.playText} />
                 <Text style={styles.ctaTxt}>Jouer</Text>
               </Pressable>
             )}
@@ -342,7 +343,7 @@ function DoneGroup({ group, onPlay }) {
                 onPress={() => onPlay(ep)}
                 style={({ pressed }) => [styles.epPlay, pressed && { opacity: 0.6 }]}
               >
-                <Icon name="play" size={13} color={colors.onRed} />
+                <Icon name="play" size={13} color={colors.playText} />
               </Pressable>
               <Pressable hitSlop={6} onPress={() => setMenuFor(ep.id)}>
                 <Icon name="trash-outline" size={15} color="#F87171" />
@@ -380,6 +381,7 @@ function DoneGroup({ group, onPlay }) {
 export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
   const jobs = useJobs();
   const insets = useSafeAreaInsets();
+  const layout = useLayout();
   const [tab, setTab] = useState("dl");
   const [free, setFree] = useState(0);
   const [history, setHistory] = useState([]);
@@ -432,8 +434,9 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
     return { actives, doneGroups, cacheSize };
   }, [jobs]);
 
+  const doneCount = doneGroups.reduce((s, g) => s + g.length, 0);
   const list = tab === "dl" ? actives : doneGroups;
-  const listCount = tab === "dl" ? actives.length : doneGroups.reduce((s, g) => s + g.length, 0);
+  const listCount = tab === "dl" ? actives.length : doneCount;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + 4 }]}>
@@ -442,20 +445,18 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
           <Pressable onPress={onBack} hitSlop={10} style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}>
             <Icon name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-        ) : (
-          <View style={styles.backBtn} />
-        )}
-        <Text style={styles.h1}>Téléchargements</Text>
-        <View style={styles.backSpacer} />
+        ) : null}
+        <Text style={[styles.h1, !onBack && styles.h1Tab]}>Téléchargements</Text>
+        {onBack ? <View style={styles.backSpacer} /> : null}
       </View>
 
       {history.length ? (
         <View style={styles.histWrap}>
-          <View style={styles.histHead}>
+          <View style={[styles.histHead, { paddingHorizontal: layout.pad }]}>
             <Text style={styles.histHeadTxt}>Historique de visionnage</Text>
             <Text style={styles.histCount}>{history.length}</Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.histScroller}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.histScroller, { paddingHorizontal: layout.pad }]}>
             {history.slice(0, 12).map((h, idx) => (
               <HistoryCard
                 key={`${h.subjectId}-${idx}`}
@@ -480,7 +481,7 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
       <View style={styles.tabs}>
         {[
           { id: "dl", label: `Téléchargements (${actives.length})` },
-          { id: "done", label: `Vidéos locales (${listCount})` },
+          { id: "done", label: `Vidéos locales (${doneCount})` },
         ].map((t) => (
           <Pressable key={t.id} style={styles.tab} onPress={() => setTab(t.id)}>
             <Text style={[styles.tabTxt, tab === t.id && styles.tabTxtOn]}>{t.label}</Text>
@@ -490,7 +491,7 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 130 + insets.bottom + TAB_BAR_HEIGHT }}
+        contentContainerStyle={{ paddingHorizontal: layout.pad, paddingBottom: layout.chromeBottom + insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
         {list.length ? (
@@ -519,7 +520,7 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
         )}
       </ScrollView>
 
-      <View style={[styles.footBar, { bottom: insets.bottom + TAB_BAR_HEIGHT }]}>
+      <View style={[styles.footBar, { bottom: layout.sideNav ? insets.bottom : insets.bottom + layout.tabBarH }]}>
         <Text style={styles.footTxt}>
           Cache : <Text style={styles.footVal}>{formatBytes(cacheSize) || "0 o"}</Text>
           <Text style={styles.footSep}>   |   </Text>
@@ -576,6 +577,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
   },
+  h1Tab: { textAlign: "left", paddingLeft: 8, fontSize: 22, letterSpacing: -0.4 },
   tabs: {
     flexDirection: "row",
     gap: 26,
@@ -653,12 +655,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: colors.red,
-    borderRadius: 8,
-    paddingHorizontal: 11,
+    backgroundColor: colors.play,
+    borderRadius: 6,
+    paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  ctaTxt: { color: colors.onRed, fontWeight: "800", fontSize: 12 },
+  ctaTxt: { color: colors.playText, fontWeight: "800", fontSize: 12 },
   ctaGhost: {
     flexDirection: "row",
     alignItems: "center",
@@ -699,9 +701,14 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.red,
+    backgroundColor: colors.play,
     alignItems: "center",
     justifyContent: "center",
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
   },
   menuBackdrop: {
     flex: 1,
@@ -709,6 +716,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
+    width: "100%",
     backgroundColor: "#1A1A1C",
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,

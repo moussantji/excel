@@ -13,31 +13,34 @@ import ProfileScreen from "./src/screens/ProfileScreen";
 import SearchScreen from "./src/screens/SearchScreen";
 import { initAuth, isSeries } from "./src/api";
 import { initDownloads, startDownload } from "./src/downloadManager";
-import { colors, TAB_BAR_HEIGHT } from "./src/theme";
-import { Icon } from "./src/ui";
+import { useLayout } from "./src/layout";
+import { colors } from "./src/theme";
+import { Icon, Logo } from "./src/ui";
 
 const Stack = createNativeStackNavigator();
 
 const TABS = [
   { id: "home", label: "Accueil", icon: "home-outline", iconOn: "home" },
   { id: "search", label: "Recherche", icon: "search-outline", iconOn: "search" },
-  { id: "downloads", label: "Fichiers", icon: "download-outline", iconOn: "download" },
-  { id: "profile", label: "Profil", icon: "person-outline", iconOn: "person" },
+  { id: "downloads", label: "Téléchargements", icon: "download-outline", iconOn: "download" },
+  { id: "profile", label: "Compte", icon: "person-outline", iconOn: "person" },
 ];
 
 function Tabs({ navigation }) {
   const [tab, setTab] = useState("home");
+  const [detailItem, setDetailItem] = useState(null);
   const insets = useSafeAreaInsets();
+  const layout = useLayout();
 
   function openItem(item) {
-    navigation.navigate("Detail", { item });
+    setDetailItem(item);
   }
 
   // Lecture : une série passe toujours par sa fiche (choix saison/épisode),
   // un film joue directement.
   function playItem(item) {
     if (isSeries(item)) {
-      navigation.navigate("Detail", { item });
+      setDetailItem(item);
       return;
     }
     navigation.navigate("Player", { item });
@@ -48,53 +51,121 @@ function Tabs({ navigation }) {
     startDownload(item).catch(() => {});
   }
 
+  // Lecture depuis la fiche : choisit le lecteur plein écran.
+  function playDetail(payload, queue) {
+    navigation.navigate("Player", { item: payload, queue });
+  }
+
+  const navItems = TABS.map((item) => {
+    const active = tab === item.id;
+    return (
+      <Pressable
+        key={item.id}
+        onPress={() => {
+          setDetailItem(null);
+          setTab(item.id);
+        }}
+        style={({ pressed }) => [
+          layout.sideNav ? styles.railItem : styles.tab,
+          layout.sideNav && active && styles.railItemOn,
+          pressed && { opacity: 0.75 },
+        ]}
+      >
+        <Icon
+          name={active ? item.iconOn : item.icon}
+          size={layout.isTv ? 26 : 22}
+          color={active ? colors.redSoft : colors.dim}
+        />
+        <Text
+          style={[layout.sideNav ? styles.railLabel : styles.tabLabel, active && styles.active]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {item.label}
+        </Text>
+      </Pressable>
+    );
+  });
+
+  const homeActive = tab === "home" && !detailItem;
+
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, layout.sideNav && styles.rootRow]}>
+      {layout.sideNav ? (
+        <View
+          style={[
+            styles.rail,
+            {
+              width: layout.railW,
+              paddingTop: insets.top + 18,
+              paddingBottom: Math.max(16, insets.bottom),
+            },
+          ]}
+        >
+          <Logo size={layout.isTv ? 22 : 16} />
+          <View style={styles.railList}>{navItems}</View>
+        </View>
+      ) : null}
       <View style={styles.screen}>
-        {tab === "home" && (
+        <View
+          style={[styles.pane, homeActive ? null : styles.paneOff]}
+          pointerEvents={homeActive ? "auto" : "none"}
+        >
           <HomeScreen
+            active={homeActive}
             onOpenItem={openItem}
             onAddDownload={addDownload}
             onPlay={playItem}
             onOpenFiles={() => setTab("downloads")}
             onOpenSearch={() => setTab("search")}
           />
-        )}
-        {tab === "search" && <SearchScreen onOpenItem={openItem} />}
-        {tab === "downloads" && (
+        </View>
+        <View
+          style={[styles.pane, tab !== "search" && styles.paneOff]}
+          pointerEvents={tab === "search" ? "auto" : "none"}
+        >
+          <SearchScreen active={tab === "search"} onOpenItem={openItem} />
+        </View>
+        <View
+          style={[styles.pane, tab !== "downloads" && styles.paneOff]}
+          pointerEvents={tab === "downloads" ? "auto" : "none"}
+        >
           <FilesScreen onPlay={playItem} onOpenItem={openItem} />
-        )}
-        {tab === "profile" && (
+        </View>
+        <View
+          style={[styles.pane, tab !== "profile" && styles.paneOff]}
+          pointerEvents={tab === "profile" ? "auto" : "none"}
+        >
           <ProfileScreen onOpenItem={openItem} onOpenFiles={() => setTab("downloads")} />
-        )}
+        </View>
+
+        {/* fiche affichée en overlay : la barre basse reste visible */}
+        {detailItem ? (
+          <View style={[styles.pane, styles.detailPane]}>
+            <DetailScreen
+              item={detailItem}
+              onBack={() => setDetailItem(null)}
+              onAddDownload={addDownload}
+              onOpenItem={setDetailItem}
+              onPlay={playDetail}
+            />
+          </View>
+        ) : null}
       </View>
 
-      <View
-        style={[
-          styles.tabBar,
-          { paddingBottom: 18 + insets.bottom, height: TAB_BAR_HEIGHT + insets.bottom },
-        ]}
-      >
-        {TABS.map((item) => {
-          const active = tab === item.id;
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() => setTab(item.id)}
-              style={({ pressed }) => [styles.tab, pressed && { opacity: 0.75 }]}
-            >
-              <View style={[styles.tabIcon, active && styles.tabIconOn]}>
-                <Icon
-                  name={active ? item.iconOn : item.icon}
-                  size={20}
-                  color={active ? colors.redSoft : colors.dim}
-                />
-              </View>
-              <Text style={[styles.tabLabel, active && styles.active]}>{item.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {!layout.sideNav ? (
+        <View
+          style={[
+            styles.tabBar,
+            {
+              paddingBottom: Math.max(8, insets.bottom),
+              height: layout.tabBarH + insets.bottom,
+            },
+          ]}
+        >
+          {navItems}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -178,27 +249,43 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  rootRow: { flexDirection: "row" },
   screen: { flex: 1 },
+  pane: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+  paneOff: { opacity: 0, zIndex: 0 },
+  detailPane: { zIndex: 5, backgroundColor: colors.bg },
   tabBar: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.bar,
+    zIndex: 10,
+    elevation: 10,
+    backgroundColor: "rgba(8,8,8,0.96)",
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(229,9,20,0.28)",
+    borderTopColor: "rgba(255,255,255,0.08)",
     flexDirection: "row",
     paddingTop: 8,
   },
-  tab: { flex: 1, alignItems: "center", gap: 4 },
-  tabIcon: {
-    width: 46,
-    height: 28,
-    borderRadius: 14,
+  tab: { flex: 1, alignItems: "center", gap: 3 },
+  tabLabel: { color: colors.dim, fontSize: 10.5, fontWeight: "600" },
+  active: { color: colors.redSoft, fontWeight: "800" },
+  rail: {
+    backgroundColor: "rgba(8,8,8,0.98)",
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 10,
+    zIndex: 10,
+    elevation: 10,
+  },
+  railList: { marginTop: 28, gap: 8, flex: 1 },
+  railItem: {
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 10,
   },
-  tabIconOn: { backgroundColor: "rgba(229,9,20,0.18)" },
-  tabLabel: { color: colors.dim, fontSize: 11 },
-  active: { color: colors.redSoft },
+  railItemOn: { backgroundColor: "rgba(229,9,20,0.14)" },
+  railLabel: { color: colors.dim, fontSize: 11, fontWeight: "700", textAlign: "center" },
 });

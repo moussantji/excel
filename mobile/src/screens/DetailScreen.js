@@ -1,8 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { Video } from "expo-av";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,13 +10,22 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchDetail, fetchDownloads, formatBytes } from "../api";
+import { useLayout } from "../layout";
+import {
+  audioLangKey,
+  fetchDetail,
+  fetchDownloads,
+  formatBytes,
+  hasVf,
+  listAudioLangs,
+  peekCache,
+  pickTrailer,
+  preferredAudioKey,
+} from "../api";
 import { downloadId } from "../downloadManager";
 import { colors } from "../theme";
 import { useJobs } from "../useJobs";
-import { Icon, ImageWithFallback } from "../ui";
-
-const SCREEN_W = Dimensions.get("window").width;
+import { GlassButton, Icon, ImageWithFallback, PlayButton, VfBadge } from "../ui";
 
 function fmtDur(sec) {
   if (!sec && sec !== 0) return "";
@@ -33,14 +42,20 @@ function fmtDur(sec) {
 }
 
 export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, onPlay }) {
-  const [pack, setPack] = useState(null);
+  const layout = useLayout();
+  const [pack, setPack] = useState(() => peekCache(`detail:${item.subjectId}`) || null);
   const [files, setFiles] = useState([]);
+  const [subtitles, setSubtitles] = useState([]);
+  const [audioKey, setAudioKey] = useState("vf");
   const [season, setSeason] = useState(item.season || 1);
   const [episode, setEpisode] = useState(item.episode || 1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!item?.title && !item?.cover);
   const [error, setError] = useState("");
   const [descOpen, setDescOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [trailerUrl, setTrailerUrl] = useState("");
+  const [trailerMuted, setTrailerMuted] = useState(true);
+  const [trailerOn, setTrailerOn] = useState(false);
   const jobs = useJobs();
   const insets = useSafeAreaInsets();
 
@@ -120,15 +135,32 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
           season: isSeriesPack ? season : undefined,
           episode: isSeriesPack ? episode : undefined,
         });
-        if (live) setFiles(data.downloads || []);
+        if (!live) return;
+        const list = data.downloads || [];
+        setFiles(list);
+        setSubtitles(data.subtitles || data.captions || []);
+        setAudioKey(preferredAudioKey(list, data));
       } catch {
-        if (live) setFiles([]);
+        if (live) {
+          setFiles([]);
+          setSubtitles([]);
+        }
       }
-    })();
+})();
     return () => {
       live = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.subjectId, season, episode, isSeriesPack]);
+
+  useEffect(() => {
+    setTrailerUrl("");
+    setTrailerOn(false);
+    setTrailerMuted(true);
+    const url = pickTrailer(pack, detail, item);
+    if (url) setTrailerUrl(url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail?.subjectId, pack]);
 
   function payload(file) {
     return {
@@ -137,6 +169,9 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
       quality: file?.quality,
       size: file?.size,
       url: file?.url,
+      french: hasVf(file) || hasVf(detail) || audioKey === "vf",
+      language: audioLangKey(file) === "vf" ? "fr" : file?.language || file?.lang,
+      subtitles,
       season: isSeriesPack ? season : undefined,
       episode: isSeriesPack ? episode : undefined,
     };
@@ -162,7 +197,16 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
   }
 
   const queue = buildQueue();
-  const bestFile = files[0] || null;
+  const filesTagged = files.some(
+    (f) => f?.language || f?.lang || f?.audio || f?.audioLanguage || f?.dub || f?.french === true
+  );
+  let langs = listAudioLangs(files, pack);
+  if (!filesTagged && hasVf(detail)) langs = langs.filter((l) => l.key === "vf");
+  if (!langs.length && hasVf(detail)) langs = [{ key: "vf", label: "VF" }];
+  const visibleFiles = filesTagged ? files.filter((f) => audioLangKey(f) === audioKey) : files;
+  const bestFile = visibleFiles[0] || files[0] || null;
+  const bestJob = bestFile ? jobFor(bestFile.quality) : null;
+  const showVf = hasVf(detail) || hasVf(bestFile) || audioKey === "vf" || langs.some((l) => l.key === "vf");
 
   // méta ligne compacte type MovieBox
   const metaParts = [];
@@ -171,16 +215,21 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
   if (year) metaParts.push(String(year));
   if (dur) metaParts.push(fmtDur(dur));
   const metaLine = metaParts.join(" · ");
+  const innerW = layout.width - layout.pad * 2;
+  const qCardW = (innerW - 10 * (layout.fileCols - 1)) / layout.fileCols;
+  const recoW = (innerW - layout.gap * (layout.recoCols - 1)) / layout.recoCols;
+  const castW = (innerW - 10 * (layout.castCols - 1)) / layout.castCols;
+  const heroH = layout.isPhone ? 460 : Math.round(Math.min(layout.heroH, layout.isTv ? 640 : 540));
 
   return (
     <View style={styles.wrap}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: 96 + insets.bottom }}
+        contentContainerStyle={{ paddingBottom: layout.tabBarH + 36 + insets.bottom }}
         showsVerticalScrollIndicator={false}
       >
         {/* HERO */}
-        <View style={styles.hero}>
+        <View style={[styles.hero, { height: heroH }]}>
           {detail.cover ? (
             <ImageWithFallback
               source={{ uri: detail.cover }}
@@ -191,6 +240,23 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
           ) : (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: "#111" }]} />
           )}
+          {trailerUrl ? (
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Video
+                source={{ uri: trailerUrl }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+                shouldPlay={Boolean(trailerUrl)}
+                isLooping
+                isMuted={trailerMuted}
+                onReadyForDisplay={() => setTrailerOn(true)}
+                onError={() => {
+                  setTrailerUrl("");
+                  setTrailerOn(false);
+                }}
+              />
+            </View>
+          ) : null}
           <LinearGradient
             colors={["rgba(0,0,0,0.28)", "rgba(0,0,0,0.55)", "rgba(5,5,5,0.92)", colors.bg]}
             locations={[0, 0.45, 0.78, 1]}
@@ -202,15 +268,38 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
               <Icon name="chevron-back" size={24} color="#fff" />
             </Pressable>
           </View>
+          {trailerUrl ? (
+            <Pressable
+              onPress={() => {
+                setTrailerOn(true);
+                setTrailerMuted((m) => !m);
+              }}
+              style={[styles.muteBtn, { bottom: insets.bottom + 8 }]}
+              hitSlop={8}
+            >
+              <Icon
+                name={trailerMuted ? "volume-mute" : "volume-high"}
+                size={16}
+                color="#fff"
+              />
+            </Pressable>
+          ) : null}
           {/* hero bottom */}
-          <View style={styles.heroBottom}>
+          <View style={[styles.heroBottom, { paddingHorizontal: layout.pad }]}>
             <View style={styles.titleRow}>
-              <Text style={styles.heroTitle} numberOfLines={2}>
+              <Text
+                style={[
+                  styles.heroTitle,
+                  { fontSize: layout.titleSize, lineHeight: layout.titleSize + 4 },
+                ]}
+                numberOfLines={2}
+              >
                 {displayTitle}
               </Text>
+              {showVf ? <VfBadge /> : null}
               {rating ? (
                 <View style={styles.ratingPill}>
-                  <Icon name="star" size={13} color={colors.redSoft} />
+                  <Icon name="star" size={13} color={colors.gold} />
                   <Text style={styles.ratingTxt}>{String(rating).slice(0, 3)}</Text>
                 </View>
               ) : null}
@@ -225,17 +314,35 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
         </View>
 
         {/* LECTURE principale + ressource */}
-        <View style={styles.body}>
-          {/* bouton lecture large */}
-          <Pressable
-            onPress={() => onPlay(payload(bestFile), queue)}
-            style={({ pressed }) => [styles.playBig, pressed && { opacity: 0.85 }]}
-          >
-            <Icon name="play" size={18} color="#fff" />
-            <Text style={styles.playBigTxt}>
-              {isSeriesPack ? `Lecture S${season} E${episode}` : "Lecture"}
-            </Text>
-          </Pressable>
+        <View style={[styles.body, { paddingHorizontal: layout.pad }]}>
+          <View style={styles.ctaCol}>
+            <PlayButton
+              label={isSeriesPack ? `Lecture S${season} E${episode}` : "Lecture"}
+              onPress={() => onPlay(payload(bestFile), queue)}
+            />
+            {bestFile ? (
+              <GlassButton
+                label={
+                  bestJob?.status === "done"
+                    ? "Téléchargé"
+                    : bestJob && bestJob.status !== "error"
+                      ? `${Math.round((bestJob.progress || 0) * 100)}%`
+                      : "Télécharger"
+                }
+                icon={
+                  bestJob?.status === "done"
+                    ? "checkmark-circle"
+                    : bestJob && bestJob.status !== "error"
+                      ? "cloud-download-outline"
+                      : "download-outline"
+                }
+                style={bestJob?.status === "done" && { opacity: 0.6 }}
+                onPress={
+                  bestJob?.status === "done" ? undefined : () => onAddDownload(payload(bestFile))
+                }
+              />
+            ) : null}
+          </View>
 
           {/* saison / épisode */}
           {isSeriesPack && seasons.length ? (
@@ -279,13 +386,45 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
             </View>
           ) : null}
 
+          {langs.length ? (
+            <View style={{ marginTop: 18 }}>
+              <Text style={styles.sectionTitle}>Langue</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chips}
+              >
+                {langs.map((l) => (
+                  <Pressable
+                    key={l.key}
+                    onPress={() => setAudioKey(l.key)}
+                    style={[styles.chip, audioKey === l.key && styles.chipOn]}
+                  >
+                    <Text style={[styles.chipTxt, audioKey === l.key && styles.chipTxtOn]}>{l.label}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          ) : showVf ? (
+            <View style={{ marginTop: 18 }}>
+              <Text style={styles.sectionTitle}>Langue</Text>
+              <View style={styles.chips}>
+                <View style={[styles.chip, styles.chipOn]}>
+                  <Text style={[styles.chipTxt, styles.chipTxtOn]}>VF</Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
           {/* Détecteur de ressources */}
           <View style={styles.resourceHead}>
-            <Text style={styles.sectionTitle}>Détecteur de ressources</Text>
-            <Text style={styles.resourceSub}>Source: stream.mandenbaoubab.com</Text>
+            <Text style={styles.sectionTitle}>Fichiers disponibles</Text>
+            <Text style={styles.resourceSub}>
+              {audioKey === "vf" || showVf ? "Audio VF prioritaire" : "Source: stream.mandenbaoubab.com"}
+            </Text>
           </View>
 
-          {loading ? (
+          {loading && !files.length ? (
             <ActivityIndicator color={colors.red} style={{ marginTop: 18 }} />
           ) : null}
           {error ? <Text style={styles.err}>{error}</Text> : null}
@@ -295,28 +434,31 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
           ) : null}
 
           <View style={styles.qGrid}>
-          {files.map((file) => {
+          {(visibleFiles.length ? visibleFiles : files).map((file) => {
             const job = jobFor(file.quality);
             const isDone = job?.status === "done";
             const isActive = job && job.status !== "done" && job.status !== "error";
             const pct = Math.max(3, (job?.progress || 0) * 100);
+            const fileVf = hasVf(file) || audioKey === "vf" || hasVf(detail);
             const epLabel = isSeriesPack
               ? `S${String(season).padStart(2, "0")} EP${String(episode).padStart(2, "0")}`
               : file.quality;
             return (
-              <View key={file.quality} style={styles.qCard}>
+              <View key={file.quality} style={[styles.qCard, { width: qCardW }]}>
                 <View style={styles.qCardTop}>
                   <Text style={styles.qTitle} numberOfLines={1}>{epLabel}</Text>
+                  {fileVf ? <VfBadge /> : null}
                   <Pressable
                     onPress={() => onPlay(payload(file), queue)}
                     style={styles.qPlay}
                     hitSlop={6}
                   >
-                    <Icon name="play" size={13} color="#fff" />
+                    <Icon name="play" size={13} color={colors.playText} />
                   </Pressable>
                 </View>
                 <Text style={styles.qSub} numberOfLines={1}>
                   {file.quality}
+                  {fileVf ? " · VF" : ""}
                   {formatBytes(file.size) ? ` · ${formatBytes(file.size)}` : ""}
                   {dur ? ` · ${fmtDur(dur)}` : ""}
                 </Text>
@@ -342,7 +484,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
                   <Icon
                     name={isDone ? "checkmark" : "download-outline"}
                     size={12}
-                    color={isDone ? colors.dim : "#fff"}
+                    color={isDone ? colors.dim : colors.playText}
                   />
                   <Text style={[styles.qDlTxt, isDone && { color: colors.dim }]}>
                     {isDone ? "Fait" : "Télécharger"}
@@ -382,7 +524,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
               </Text>
               <View style={styles.castGrid}>
                 {pack.cast.slice(0, 12).map((actor) => (
-                  <View key={`${actor.name}-${actor.character}`} style={styles.castCell}>
+                  <View key={`${actor.name}-${actor.character}`} style={[styles.castCell, { width: castW }]}>
                     {actor.avatar ? (
                       <ImageWithFallback
                         source={{ uri: actor.avatar }}
@@ -429,22 +571,22 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
                   <Pressable
                     key={String(rec.subjectId)}
                     onPress={() => onOpenItem(rec)}
-                    style={styles.recoCell}
+                    style={[styles.recoCell, { width: recoW }]}
                   >
-                    <View>
+                    <View style={styles.recoImgWrap}>
                       <ImageWithFallback
                         source={{ uri: rec.coverSmall || rec.cover }}
                         style={styles.recoImg}
                       />
                       {rec.imdbRating ? (
                         <View style={styles.recoBadge}>
-                          <Icon name="star" size={10} color={colors.redSoft} />
+                          <Icon name="star" size={10} color={colors.gold} />
                           <Text style={styles.recoBadgeTxt}>{rec.imdbRating}</Text>
                         </View>
                       ) : null}
-                      {rec.french ? (
+                      {hasVf(rec) ? (
                         <View style={styles.vfBadge}>
-                          <Text style={styles.vfTxt}>V.F.</Text>
+                          <Text style={styles.vfTxt}>VF</Text>
                         </View>
                       ) : null}
                       <View style={styles.recoDlIcon}>
@@ -486,21 +628,6 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
         </View>
       </ScrollView>
 
-      {/* bouton flottant Télécharger (centre bas) */}
-      {bestFile ? (
-        <View
-          pointerEvents="box-none"
-          style={[styles.fabWrap, { paddingBottom: 12 + insets.bottom }]}
-        >
-          <Pressable
-            onPress={() => onAddDownload(payload(bestFile))}
-            style={({ pressed }) => [styles.fab, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
-          >
-            <Icon name="download-outline" size={16} color="#fff" />
-            <Text style={styles.fabTxt}>Télécharger</Text>
-          </Pressable>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -508,7 +635,7 @@ export default function DetailScreen({ item, onBack, onAddDownload, onOpenItem, 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1, backgroundColor: colors.bg },
-  hero: { height: 380, width: "100%", backgroundColor: "#0F0F0F", overflow: "hidden" },
+  hero: { height: 460, width: "100%", backgroundColor: "#000000", overflow: "hidden" },
   backBtn: {
     width: 36,
     height: 36,
@@ -517,9 +644,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  muteBtn: {
+    position: "absolute",
+    right: 14,
+    bottom: 24,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   heroBottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingBottom: 16 },
   titleRow: { flexDirection: "row", alignItems: "flex-end", gap: 10 },
-  heroTitle: { flex: 1, color: "#fff", fontSize: 26, fontWeight: "900", lineHeight: 30, letterSpacing: -0.4 },
+  heroTitle: { flex: 1, color: "#fff", fontSize: 30, fontWeight: "900", lineHeight: 34, letterSpacing: 0.3, textTransform: "uppercase" },
   ratingPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -534,26 +674,16 @@ const styles = StyleSheet.create({
   ratingTxt: { color: "#fff", fontSize: 13, fontWeight: "800" },
   aka: { color: "rgba(255,255,255,0.75)", fontSize: 12, marginTop: 6 },
   heroMeta: { color: "rgba(255,255,255,0.88)", fontSize: 13, marginTop: 6, lineHeight: 18 },
-  body: { paddingHorizontal: 16, paddingTop: 16 },
-  playBig: {
-    backgroundColor: colors.red,
-    borderRadius: 24,
-    paddingVertical: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  playBigTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  body: { paddingHorizontal: 16, paddingTop: 8 },
+  ctaCol: { gap: 10 },
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: "800" },
   chips: { gap: 8, paddingRight: 8, marginTop: 10 },
   chip: {
-    borderWidth: 1,
-    borderColor: "#2E2E2E",
+    borderWidth: 0,
     borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#141414",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    backgroundColor: "#2A2A2A",
   },
   chipOn: { backgroundColor: colors.red, borderColor: colors.red },
   chipTxt: { color: colors.muted, fontWeight: "700", fontSize: 13 },
@@ -569,7 +699,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   qCard: {
-    width: (SCREEN_W - 32 - 10) / 2,
     backgroundColor: "#171717",
     borderRadius: 14,
     padding: 12,
@@ -588,7 +717,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.red,
+    backgroundColor: colors.play,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -597,19 +726,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    backgroundColor: colors.red,
-    borderRadius: 10,
+    backgroundColor: colors.play,
+    borderRadius: 6,
     paddingVertical: 7,
     marginTop: 10,
-    borderWidth: 1,
-    borderColor: colors.red,
+    borderWidth: 0,
+    borderColor: colors.play,
   },
-  qDlTxt: { color: "#fff", fontWeight: "700", fontSize: 11.5 },
+  qDlTxt: { color: colors.playText, fontWeight: "700", fontSize: 11.5 },
   desc: { color: "#D4D4D4", marginTop: 8, lineHeight: 20, fontSize: 13 },
   moreBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6, alignSelf: "flex-start" },
   moreTxt: { color: colors.redSoft, fontWeight: "700", fontSize: 13 },
   castGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 },
-  castCell: { width: (SCREEN_W - 32 - 30) / 4, alignItems: "center" },
+  castCell: { alignItems: "center" },
   castAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#222" },
   castAvatarPh: { alignItems: "center", justifyContent: "center" },
   castName: { color: colors.text, fontSize: 11, fontWeight: "600", marginTop: 6, textAlign: "center" },
@@ -618,8 +747,9 @@ const styles = StyleSheet.create({
   refreshBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: "#1C1C1C", borderWidth: 1, borderColor: "#2A2A2A" },
   refreshTxt: { color: colors.redSoft, fontSize: 12, fontWeight: "700" },
   recoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
-  recoCell: { width: (SCREEN_W - 32 - 16) / 3 },
-  recoImg: { width: "100%", height: 148, borderRadius: 12, backgroundColor: "#222" },
+  recoCell: {},
+  recoImgWrap: { borderRadius: 12, overflow: "hidden", backgroundColor: "#222" },
+  recoImg: { width: "100%", aspectRatio: 2 / 3 },
   recoBadge: {
     position: "absolute",
     top: 6,
@@ -674,20 +804,4 @@ const styles = StyleSheet.create({
   commentName: { color: colors.text, fontWeight: "700", fontSize: 13 },
   commentDate: { color: colors.dim, fontSize: 12 },
   commentBody: { color: colors.muted, fontSize: 13, marginTop: 8, lineHeight: 18 },
-  fabWrap: { position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", pointerEvents: "box-none" },
-  fab: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: colors.red,
-    borderRadius: 24,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-  },
-  fabTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
 });

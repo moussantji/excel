@@ -1,18 +1,23 @@
 export const colors = {
-  bg: "#050505",
-  card: "#161616",
-  search: "rgba(28,28,30,0.88)",
+  bg: "#000000",
+  bgSoft: "#0B0B0B",
+  card: "#181818",
+  search: "rgba(255,255,255,0.10)",
   red: "#E50914",
-  redSoft: "#FF3B45",
+  redSoft: "#FF2D37",
   text: "#FFFFFF",
-  muted: "#A3A3A3",
-  dim: "#8A8A8A",
-  green: "#22C55E",
-  bar: "#0A0A0A",
-  track: "#2A2A2A",
+  muted: "#B3B3B3",
+  dim: "#8C8C8C",
+  green: "#46D369",
+  gold: "#F5C518",
+  bar: "#000000",
+  track: "#2F2F2F",
   border: "#2A2A2A",
   onRed: "#FFFFFF",
+  play: "#FFFFFF",
+  playText: "#141414",
+  glass: "rgba(109,109,110,0.62)",
+  glassBorder: "rgba(255,255,255,0.14)",
 };
 
-// Hauteur de la barre d'onglets (App.js), hors safe-area
-export const TAB_BAR_HEIGHT = 86;
+export const TAB_BAR_HEIGHT = 64;
