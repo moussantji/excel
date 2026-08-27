@@ -300,7 +300,6 @@ export function initDownloads() {
     }
     snapshotDirty = true;
     notify();
-    console.log("[DL] init done jobs", jobs.size);
     persistAll().catch(() => {});
   })();
   return initPromise;

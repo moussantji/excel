@@ -431,12 +431,12 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
           (a.season || 0) - (b.season || 0) || (a.episode || 0) - (b.episode || 0)
       )
     );
-    console.log("[DL UI] jobs", jobs.length, "actives", actives.length, "dones", dones.length, "doneGroups", doneGroups.length, "cache", cacheSize);
     return { actives, doneGroups, cacheSize };
   }, [jobs]);
 
+  const doneCount = doneGroups.reduce((s, g) => s + g.length, 0);
   const list = tab === "dl" ? actives : doneGroups;
-  const listCount = tab === "dl" ? actives.length : doneGroups.reduce((s, g) => s + g.length, 0);
+  const listCount = tab === "dl" ? actives.length : doneCount;
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + 4 }]}>
@@ -481,7 +481,7 @@ export default function FilesScreen({ onPlay, onBack, onOpenItem }) {
       <View style={styles.tabs}>
         {[
           { id: "dl", label: `Téléchargements (${actives.length})` },
-          { id: "done", label: `Vidéos locales (${listCount})` },
+          { id: "done", label: `Vidéos locales (${doneCount})` },
         ].map((t) => (
           <Pressable key={t.id} style={styles.tab} onPress={() => setTab(t.id)}>
             <Text style={[styles.tabTxt, tab === t.id && styles.tabTxtOn]}>{t.label}</Text>
