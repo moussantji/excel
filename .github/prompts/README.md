@@ -5,6 +5,7 @@ Bibliothèque de prompts réutilisables pour les agents de code (Arena, Copilot,
 | Fichier | À quoi ça sert |
 |---|---|
 | [`react-native-app.prompt.md`](./react-native-app.prompt.md) | Générer une app mobile React Native / Expo complète, sans erreur, prête à lancer en une commande |
+| [`finish-react-native-project.prompt.md`](./finish-react-native-project.prompt.md) | Reprendre un projet React Native inachevé ou cassé : audit, réparation, finition |
 
 ## Comment l'utiliser
 
