@@ -16,7 +16,11 @@ Application statique (HTML/CSS/JS, aucune dépendance) : saisie des trades, mét
 
 **Application installable (PWA)** : utilisable sur ordinateur **et sur tablette**, en plein écran, **hors ligne**, avec une ergonomie tactile (journal en cartes, navigation en bas d'écran).
 
-Pour l'utiliser sur tablette : publier le dossier en HTTPS (GitHub Pages — *Settings → Pages → Source : Deploy from a branch*, branche `main`, dossier `/ (root)`, ou glisser-déposer sur Netlify/Cloudflare Pages), puis ouvrir `https://<utilisateur>.github.io/excel/trading/` et l'ajouter à l'écran d'accueil (iPad : *Partager → Sur l'écran d'accueil* ; Android : *menu ⋮ → Installer l'application*).
+**Sur tablette**, trois voies (détaillées dans [`trading/README.md`](trading/README.md#sur-tablette-ipad--android)) :
+
+1. **Wi-Fi local, tout de suite** : `node trading/tools/serve.js` affiche un QR code à scanner depuis la tablette (pas d'installation possible, ni de hors ligne, en `http://`).
+2. **Application installable (recommandé)** : GitHub Pages → <https://github.com/moussantji/excel/settings/pages> → *Source : Deploy from a branch*, branche `main` (ou `arena/01a09dd0-excel`), dossier `/ (root)` → `https://moussantji.github.io/excel/` (la racine redirige vers l'application). Puis sur la tablette : iPad *Partager → Sur l'écran d'accueil*, Android *menu ⋮ → Installer l'application*.
+3. **Sans GitHub** : déposer l'archive `trading-site.zip` sur [Netlify Drop](https://app.netlify.com/drop) ou Cloudflare Pages → adresse HTTPS en quelques secondes.
 
 ```bash
 node trading/tools/serve.js     # http://localhost:8777

@@ -25,6 +25,10 @@ L'application est 100 % statique : aucune installation n'est nécessaire.
 | **Le plus simple** | Double-cliquez sur `index.html` (fonctionne en `file://`, les données restent dans le navigateur). |
 | **Sans double-clic** | `node tools/serve.js` puis ouvrez <http://localhost:8777/> |
 | **Depuis le repo** | `npx serve trading` ou tout autre serveur statique. |
+| **Sur tablette, via le Wi-Fi** | `node tools/serve.js` puis scanner le QR code affiché (voir § Sur tablette). |
+| **Sur tablette, en application** | Publier en HTTPS (GitHub Pages, ou l'archive `trading-site.zip` sur Netlify Drop) puis l'ajouter à l'écran d'accueil. |
+
+À la racine du dépôt, `index.html` redirige automatiquement vers `trading/` : une fois le site publié (GitHub Pages par exemple), l'adresse racine ouvre directement l'application.
 
 Au premier lancement, le journal est vide. Trois boutons sont proposés : **Ajouter un trade**, **Importer un CSV**, **Charger la démo** (80 trades fictifs pour voir le tableau de bord en action — supprimables depuis *Paramètres*).
 
@@ -32,44 +36,67 @@ Au premier lancement, le journal est vide. Trois boutons sont proposés : **Ajou
 
 ## Sur tablette (iPad / Android)
 
-L'application est une **PWA** : une fois chargée, elle s'installe comme une vraie application, s'ouvre en plein écran (sans barre d'adresse), fonctionne **sans réseau** et reste adaptée au doigt.
+Trois façons de l'utiliser sur la tablette, de la plus rapide à la plus complète.
 
-### 1. La mettre en ligne (une seule fois, gratuit, en HTTPS)
-
-L'installation sur écran d'accueil et le mode hors ligne exigent **HTTPS** (ou `localhost`) : un fichier ouvert en `file://` s'affiche très bien sur tablette, mais ne peut pas s'installer.
-
-#### Méthode A — GitHub Pages, sans ajouter de fichier (le plus rapide)
-
-1. Fusionner la branche `arena/01a09dd0-excel` dans `main`.
-2. Sur GitHub : **Settings → Pages → Build and deployment → Source = « Deploy from a branch »**, puis *Branch* = `main`, *Folder* = `/ (root)` → **Save**.
-3. Après une minute, l'adresse est active :
-
-```
-https://<utilisateur>.github.io/excel/trading/
-```
-
-La mise en ligne s'applique à chaque push sur `main` (aucune configuration supplémentaire).
-
-#### Méthode B — déploiement automatique par GitHub Actions
-
-1. Copier le modèle fourni :
+### Voie A — Tout de suite, en Wi-Fi local (aucun compte, rien à installer)
 
 ```bash
-mkdir -p .github/workflows
-cp trading/exemples/deploiement/github-pages.yml .github/workflows/deploy-trading-pages.yml
-git add .github/workflows/deploy-trading-pages.yml && git commit -m "Déploie le journal de trading" && git push
+node tools/serve.js
 ```
 
-2. Sur GitHub : **Settings → Pages → Source = « GitHub Actions »**.
-3. Le workflow republie l'application à chaque modification du dossier `trading/`.
+Le terminal affiche l'adresse à ouvrir sur la tablette **et un QR code à scanner** avec l'appareil photo :
 
-> Si le push est refusé avec un message du type *« refusing to allow a GitHub App to create or update workflow »*, c'est que votre jeton n'a pas la permission `workflows` : utilisez la méthode A, ou ajoutez le fichier directement depuis l'interface GitHub (**Actions → New workflow → set up a workflow yourself**).
+```
+   Sur cet ordinateur  :  http://localhost:8777/
+   Sur la tablette     :  http://192.168.1.42:8777/   (même réseau Wi-Fi)
+   [QR code à scanner]
+```
 
-#### Méthode C — hébergeur statique (glisser-déposer)
+L'application fonctionne entièrement (saisie, statistiques, graphiques, export JSON), mais en `http://` elle n'est **pas installable** et **pas disponible hors ligne** : c'est la limite des navigateurs, qui réservent ces fonctions au HTTPS. Pour aller plus loin, choisissez la voie B ou C.
 
-Netlify Drop, Cloudflare Pages ou Vercel : glissez le dossier `trading/` dans l'interface, l'HTTPS et l'installation PWA fonctionnent immédiatement, sans compte Git.
+### Voie B — Application installable via GitHub Pages (recommandé)
 
-### 2. L'installer sur la tablette
+Le dépôt est **public**, donc GitHub Pages est disponible gratuitement.
+
+1. **Ouvrir directement** : <https://github.com/moussantji/excel/settings/pages>
+2. Sous **Build and deployment → Source**, choisir **Deploy from a branch**.
+3. Choisir la branche `arena/01a09dd0-excel` (pour tester immédiatement) ou `main` (après avoir fusionné la pull request), dossier **/ (root)**, puis **Save**.
+4. Après 1 à 3 minutes, l'adresse s'affiche en haut de la page du même nom :
+
+```
+https://moussantji.github.io/excel/
+```
+
+La racine du site redirige automatiquement vers l'application (`/trading/`), donc c'est cette adresse qu'il faut enregistrer sur la tablette.
+
+#### Si « Source » ou « Deploy from a branch » n'apparaît pas
+
+| Cause probable | Solution |
+|---|---|
+| Vous consultez GitHub **sur la tablette / le téléphone** : la version mobile masque le menu des réglages | Ouvrir le menu du navigateur → **Version pour ordinateur** (Safari : bouton **aA** → *Demander le site web pour ordinateur* ; Chrome Android : **⋮** → *Site pour ordinateur*), puis rouvrir l'adresse ci-dessus |
+| Vous êtes sur **Settings** mais pas sur la page **Pages** | Dans le menu de gauche, section **Code and automation** (ou *Sécurité* selon la version), cliquer sur **Pages** — ce n'est pas la même page que *General* |
+| La page affiche un écran d'accueil « GitHub Pages » | Cliquer sur **Configure** / **Get started** : le menu **Source** apparaît ensuite |
+| Vous n'êtes **pas propriétaire** du dépôt | Seul le propriétaire (ou un administrateur) voit et modifie cette page |
+| Un bandeau parle d'un **forfait payant** | Cela arrive quand le dépôt est **privé**. Ici le dépôt `moussantji/excel` est public : ce message ne devrait pas s'afficher. Si c'est le cas, dites-moi le texte exact affiché. |
+| Rien de tout cela | Utilisez la **voie C** (5 minutes, sans GitHub) |
+
+### Voie C — Sans GitHub : Netlify Drop ou Cloudflare Pages
+
+Une archive prête à publier est fournie à la racine du dépôt : **`trading-site.zip`** (326 Ko, `index.html` à la racine de l'archive). Elle se régénère à tout moment avec :
+
+```bash
+node trading/tools/make-site-zip.js
+```
+
+- **Netlify Drop** : ouvrir <https://app.netlify.com/drop>, déposer/choisir `trading-site.zip` → une adresse HTTPS est prête en quelques secondes (compte gratuit pour la conserver).
+- **Cloudflare Pages** : *Workers & Pages → Create → Pages → Upload assets*, puis déposer l'archive.
+- **Vercel** : *Add New → Project → Import* l'archive ou le dépôt GitHub.
+
+Le résultat est identique à GitHub Pages : HTTPS, installation sur écran d'accueil, fonctionnement hors ligne (l'archive a été testée dans cet état).
+
+### Installation sur la tablette (voies B et C)
+
+
 
 | Appareil | Manipulation |
 |---|---|
@@ -79,7 +106,7 @@ Netlify Drop, Cloudflare Pages ou Vercel : glissez le dossier `trading/` dans l'
 
 L'application affiche elle-même le mode opératoire : un bandeau en haut d'écran propose l'installation, et un bouton « Installer sur cet appareil » figure en bas de la barre latérale.
 
-### 3. Ce qui est pensé pour la tablette
+### Ce qui est pensé pour la tablette
 
 - **Barre de navigation en bas**, cibles tactiles ≥ 44 px, champs de saisie en 16 px (évite le zoom automatique sur iOS).
 - **Journal en cartes** : sur écran étroit, chaque trade devient une carte (instrument, P&L, R, setup, session, risque, pips, frais, durée, badges plan/émotion/erreur) — plus de tableau coupé. Bascule **Tableau / Cartes / Auto** en haut du journal ; en mode *Auto*, l'affichage s'adapte à la largeur de l'écran.
@@ -87,14 +114,14 @@ L'application affiche elle-même le mode opératoire : un bandeau en haut d'écr
 - **Hors ligne** : après une première ouverture avec connexion, le service worker met en cache l'application. Le bandeau d'accueil, l'onglet actif, les checklists et les saisies en cours sont conservés si vous passez à une autre application.
 - **Synchronisation entre onglets** : si le journal est ouvert deux fois (ou sur deux fenêtres), l'affichage se met à jour. Un bouton **⟳** en haut à droite recharge les données enregistrées.
 
-### 4. Vos données sur tablette
+### Vos données sur tablette
 
 Elles sont stockées **dans le navigateur de la tablette** (aucun serveur). Deux conséquences pratiques :
 
 - Pour **retrouver le même journal sur l'ordinateur et la tablette**, utilisez *Exporter → Sauvegarde JSON* sur l'un, puis *Importer* sur l'autre (fichier à transférer par e-mail, AirDrop, iCloud/Drive…).
 - Un vidage du navigateur, une réinstallation ou une navigation privée effacent les données : **sauvegarde JSON hebdomadaire**, en même temps que la revue du plan.
 
-### 5. Vérifier le rendu sur tablette (développement)
+### Vérifier le rendu sur tablette (développement)
 
 ```bash
 node tools/serve.js                 # dans un premier terminal
@@ -218,17 +245,22 @@ trading/
 │       └── pwa.js                Installation, hors ligne, synchronisation entre onglets
 ├── exemples/                     Modèles CSV, jeu de démonstration, modèle de workflow Pages
 └── tools/
-    ├── serve.js                  Serveur statique local (node tools/serve.js)
+    ├── serve.js                  Serveur local + QR code pour la tablette (node tools/serve.js)
+    ├── make-site-zip.js          Archive prête à publier (trading-site.zip)
     ├── smoke-test.js             Contrôle automatique de tous les écrans (jsdom)
-    └── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
+    ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
+    └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
 ```
+
+À la racine du dépôt : `index.html` (redirection vers l'application), `.nojekyll` (nécessaire pour GitHub Pages) et `trading-site.zip` (archive publiée).
 
 Le déploiement HTTPS (GitHub Pages) est décrit dans `exemples/deploiement/` (modèle de workflow) et dans la section « Sur tablette ».
 
 ## Outils de développement (optionnels)
 
 ```bash
-node tools/serve.js                                    # servir l'app sur http://localhost:8777
+node tools/serve.js                                    # serveur local + QR code pour la tablette
+node trading/tools/make-site-zip.js                     # régénérer l'archive de publication
 npm i -D jsdom && node tools/smoke-test.js              # chaque vue se rend sans erreur JS
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
