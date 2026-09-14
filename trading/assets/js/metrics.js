@@ -197,42 +197,86 @@
   }
 
   /* ---------- objectifs & garde-fous ---------- */
+  /**
+   * Renvoie, pour chaque garde-fou, une valeur « utilisée » toujours positive
+   * (0 quand la journée/la semaine est gagnante) et un niveau d'alerte
+   * (ok < 50 %, warn 50–85 %, danger > 85 % du seuil), pour que l'affichage
+   * ne mente jamais : une perte de 92 % du seuil ne doit pas être verte.
+   */
+  function gauge(used, limit) {
+    if (!limit || limit <= 0) return { used: 0, ratio: 0, tone: 'ok' };
+    var ratio = Math.round(used / limit * 10000) / 100;
+    return {
+      used: round2(Math.min(used, limit)),
+      overLimit: used > limit,
+      ratio: ratio,
+      tone: used >= limit ? 'danger' : ratio >= 85 ? 'danger' : ratio >= 50 ? 'warn' : 'ok'
+    };
+  }
+
   function goals(trades, settings, today) {
+    var cap = settings.startingCapital || 1;
     var monthK = String(today).slice(0, 7);
     var monthTrades = trades.filter(function (t) { return t.hasResult && String(t.date).slice(0, 7) === monthK; });
     var monthNet = round2(sum(monthTrades.map(function (t) { return t.netPnl; })));
     var todayTrades = trades.filter(function (t) { return t.hasResult && t.date === today; });
     var todayNet = round2(sum(todayTrades.map(function (t) { return t.netPnl; })));
-    var todayLossPct = settings.startingCapital > 0 ? round2(-todayNet / settings.startingCapital * 100) : 0;
-    var cap = settings.startingCapital || 1;
     var weekStart = (function () {
       var d = new Date(today + 'T12:00:00');
       d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     })();
-    var weekNet = round2(sum(trades.filter(function (t) { return t.hasResult && t.date >= weekStart; }).map(function (t) { return t.netPnl; })));
+    var weekTrades = trades.filter(function (t) { return t.hasResult && t.date >= weekStart; });
+    var weekNet = round2(sum(weekTrades.map(function (t) { return t.netPnl; })));
+
+    // Pertes réelles (jamais négatives) et jauges associées
+    var todayLoss = Math.max(0, -todayNet);
+    var weekLoss = Math.max(0, -weekNet);
+    var dailyLimit = cap * (settings.maxDailyLossPct || 0) / 100;
+    var weeklyLimit = cap * (settings.maxWeeklyLossPct || 0) / 100;
+    var dailyGauge = gauge(todayLoss, dailyLimit);
+    var weekGauge = gauge(weekLoss, weeklyLimit);
+    var monthTargetMoney = round2(cap * (settings.targetMonthlyPct || 0) / 100);
+    var monthGauge = gauge(Math.max(0, -monthNet), cap * 100);   // le mois n'a pas de seuil de perte dédié
+    var monthProgress = monthTargetMoney > 0 ? Math.round(Math.max(0, monthNet) / monthTargetMoney * 10000) / 100 : 0;
+
     return {
       today: today,
       todayNet: todayNet,
       todayCount: todayTrades.length,
+      weekStart: weekStart,
+      weekCount: weekTrades.length,
       todayLimits: {
         tradesReached: todayTrades.length >= settings.maxTradesPerDay,
         tradesLeft: Math.max(0, settings.maxTradesPerDay - todayTrades.length),
-        lossReached: todayNet < 0 && -todayNet >= cap * settings.maxDailyLossPct / 100,
-        lossUsedPct: todayLossPct,
+        lossReached: todayLoss >= dailyLimit && dailyLimit > 0,
+        lossUsed: dailyGauge.used,
+        lossUsedPct: dailyGauge.used / cap * 100,
+        lossLimit: round2(dailyLimit),
         lossLimitPct: settings.maxDailyLossPct,
-        lossLeft: round2(Math.max(0, cap * settings.maxDailyLossPct / 100 + Math.min(0, todayNet))),
-        blocked: (todayTrades.length >= settings.maxTradesPerDay) || (todayNet < 0 && -todayNet >= cap * settings.maxDailyLossPct / 100)
+        lossLeft: round2(Math.max(0, dailyLimit - todayLoss)),
+        gauge: dailyGauge,
+        blocked: (todayTrades.length >= settings.maxTradesPerDay) || (todayLoss >= dailyLimit && dailyLimit > 0)
       },
-      week: { net: weekNet, lossLimit: round2(cap * settings.maxWeeklyLossPct / 100), lossReached: weekNet < 0 && -weekNet >= cap * settings.maxWeeklyLossPct / 100 },
+      week: {
+        net: weekNet,
+        lossUsed: weekGauge.used,
+        lossLimit: round2(weeklyLimit),
+        lossLimitPct: settings.maxWeeklyLossPct,
+        lossLeft: round2(Math.max(0, weeklyLimit - weekLoss)),
+        lossReached: weekLoss >= weeklyLimit && weeklyLimit > 0,
+        gauge: weekGauge
+      },
       month: {
         key: monthK,
         net: monthNet,
         pct: round2(monthNet / cap * 100),
         targetPct: settings.targetMonthlyPct,
-        targetMoney: round2(cap * settings.targetMonthlyPct / 100),
-        progressPct: settings.targetMonthlyPct ? round2(Math.max(0, monthNet / (cap * settings.targetMonthlyPct / 100)) * 100) : 0,
-        trades: monthTrades.length
+        targetMoney: monthTargetMoney,
+        progressPct: monthProgress,
+        trades: monthTrades.length,
+        lossUsed: monthGauge.used,
+        lossPct: round2(Math.max(0, -monthNet) / cap * 100)
       }
     };
   }
@@ -370,10 +414,15 @@
 
     // 7. Discipline : ce que coûtent les écarts au plan
     var ok = model.byPlan.filter(function (g) { return g.key === 'Plan respecté'; })[0];
+    var partial = model.byPlan.filter(function (g) { return g.key === 'Partiellement'; })[0];
     var ko = model.byPlan.filter(function (g) { return g.key === 'Plan non respecté'; })[0];
     model.discipline = {
       ok: ok || null,
+      partial: partial || null,
       ko: ko || null,
+      // trades hors plan au sens large : partiels + non respectés
+      offPlanClosed: (partial ? partial.closed : 0) + (ko ? ko.closed : 0),
+      offPlanNet: round2((partial ? partial.net : 0) + (ko ? ko.net : 0)),
       costPerTrade: (ok && ko && ok.expectancyMoney && ko.expectancyMoney) ? round2(ok.expectancyMoney - ko.expectancyMoney) : null,
       missedMoney: (function () {
         if (!ok || !ko) return null;

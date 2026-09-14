@@ -23,7 +23,8 @@
   function savedJournalView() {
     try { return localStorage.getItem(VIEW_KEY) || 'auto'; } catch (e) { return 'auto'; }
   }
-  function isNarrow() { return (global.innerWidth || 1200) < 1000; }
+  // auto : cartes sur téléphone, tableau (colonnes allégées) dès la tablette
+  function isNarrow() { return (global.innerWidth || 1200) < 700; }
 
   var state = {
     view: 'dashboard',
@@ -212,7 +213,8 @@
       '</div>';
   }
   function progress(pct, tone) {
-    return '<div class="progress ' + (tone || '') + '"><div class="progress-fill" style="width:' + UI.fmtNum(Math.max(0, Math.min(100, pct)), 1) + '%"></div></div>';
+    return '<div class="progress ' + (tone || '') + '"><div class="progress-fill" style="width:' +
+      UI.fmtNum(Math.max(0, Math.min(100, pct)), 1) + '%"></div></div>';
   }
   function table(headers, rows, opts) {
     opts = opts || {};
@@ -222,9 +224,15 @@
       }).join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
   }
   function planBadge(v) {
-    var map = { oui: ['Plan respecté', 'ok'], partiel: ['Partiel', 'warn'], non: ['Hors plan', 'ko'], '': ['—', 'flat'] };
+    var map = {
+      oui: ['Plan respecté', 'Respecté', 'ok'],
+      partiel: ['Partiel', 'Partiel', 'warn'],
+      non: ['Hors plan', 'Hors plan', 'ko'],
+      '': ['—', '—', 'flat']
+    };
     var it = map[v] || map[''];
-    return '<span class="badge ' + it[1] + '">' + it[0] + '</span>';
+    return '<span class="badge ' + it[2] + '"><span class="lbl-long">' + it[0] + '</span>' +
+      '<span class="lbl-short">' + it[1] + '</span></span>';
   }
 
   /* =========================================================
@@ -615,23 +623,72 @@
   }
 
   /* ---------- objectifs ---------- */
+  /**
+   * Jauge d'objectif : value à droite, barre colorée selon le niveau réel.
+   * `tone` : ok (marge confortable) · warn (à surveiller) · danger (proche ou au-delà du seuil)
+   */
+  function gauge(label, valueHTML, ratioPct, tone, subHTML) {
+    return '<div class="obj">' +
+      '<div class="obj-head"><span>' + label + '</span><b>' + valueHTML + '</b></div>' +
+      progress(ratioPct, tone) +
+      (subHTML ? '<div class="obj-sub">' + subHTML + '</div>' : '') +
+      '</div>';
+  }
+
   function objectivesHTML(model) {
     var g = model.goals, s = state.settings, k = model.kpis;
     var html = '<div class="obj-list">';
-    html += '<div class="obj"><div class="obj-head"><span>Objectif du mois (' + esc(Store.monthLabel(g.month.key, true)) + ')</span><b>' + UI.fmtPct(g.month.pct) + ' / +' + g.month.targetPct + ' %</b></div>' +
-      progress(g.month.progressPct, g.month.pct >= g.month.targetPct ? 'pos' : g.month.pct >= 0 ? 'gold' : 'neg') +
-      '<div class="obj-sub">' + UI.fmtMoneySigned(g.month.net) + ' · ' + UI.pl(g.month.trades, 'trade') + ' · reste ' + UI.fmtMoney(Math.max(0, g.month.targetMoney - g.month.net)) + '</div></div>';
-    html += '<div class="obj"><div class="obj-head"><span>Perte journalière autorisée</span><b>' + UI.fmtNum(g.todayLimits.lossUsedPct, 2) + ' / ' + g.todayLimits.lossLimitPct + ' %</b></div>' +
-      progress(g.todayLimits.lossUsedPct / g.todayLimits.lossLimitPct * 100, g.todayLimits.lossReached ? 'neg' : g.todayLimits.lossUsedPct > g.todayLimits.lossLimitPct * 0.6 ? 'gold' : 'pos') +
-      '<div class="obj-sub">' + (g.todayLimits.blocked ? 'Arrêt imposé par le plan' : UI.fmtMoney(g.todayLimits.lossLeft) + ' de perte encore disponible aujourd\'hui') + '</div></div>';
-    html += '<div class="obj"><div class="obj-head"><span>Semaine en cours</span><b class="' + UI.signClass(g.week.net) + '">' + UI.fmtMoneySigned(g.week.net) + '</b></div>' +
-      progress(Math.abs(Math.min(0, g.week.net)) / (g.week.lossLimit || 1) * 100, g.week.lossReached ? 'neg' : 'gold') +
-      '<div class="obj-sub">' + (g.week.lossReached
-        ? 'Seuil d\'arrêt hebdomadaire atteint (' + UI.fmtMoney(-g.week.lossLimit) + ') : arrêt jusqu\'à lundi'
-        : UI.fmtMoney(g.week.lossLimit) + ' de perte encore possible cette semaine (' + s.maxWeeklyLossPct + ' % du capital)') + '</div></div>';
-    html += '<div class="obj"><div class="obj-head"><span>Drawdown vs seuil (' + s.maxDrawdownPct + ' %)</span><b>' + UI.fmtNum(Math.abs(k.maxDDPct), 2) + ' %</b></div>' +
-      progress(Math.abs(k.maxDDPct) / (s.maxDrawdownPct || 1) * 100, Math.abs(k.maxDDPct) >= s.maxDrawdownPct ? 'neg' : 'pos') +
-      '<div class="obj-sub">Trades max/jour : ' + s.maxTradesPerDay + ' · risque ' + s.riskPerTradePct + ' % · ' + UI.pl(k.open, 'trade en cours', 'trades en cours') + '</div></div>';
+
+    // 1. Objectif du mois
+    var monthTone = g.month.pct >= g.month.targetPct ? 'ok' : g.month.pct >= 0 ? 'warn' : 'danger';
+    html += gauge(
+      'Objectif du mois (' + esc(Store.monthLabel(g.month.key, true)) + ')',
+      UI.fmtPct(g.month.pct) + ' / +' + g.month.targetPct + ' %',
+      g.month.progressPct, monthTone,
+      UI.fmtMoneySigned(g.month.net) + ' · ' + UI.pl(g.month.trades, 'trade') + ' · ' +
+      (g.month.net >= g.month.targetMoney
+        ? 'objectif atteint (+' + UI.fmtMoney(g.month.targetMoney) + ')'
+        : 'reste ' + UI.fmtMoney(Math.max(0, g.month.targetMoney - g.month.net)) + ' pour l\'atteindre')
+    );
+
+    // 2. Perte du jour réellement consommée
+    var dayGauge = g.todayLimits.gauge;
+    html += gauge(
+      'Perte du jour utilisée',
+      UI.fmtNum(g.todayLimits.lossUsed, 2) + ' € / ' + UI.fmtMoney(g.todayLimits.lossLimit) +
+      ' <span class="muted">(' + UI.fmtNum(dayGauge.ratio, 0) + ' % du seuil)</span>',
+      dayGauge.ratio, dayGauge.tone,
+      g.todayLimits.lossReached
+        ? 'Seuil journalier atteint : arrêt imposé par le plan pour aujourd\'hui.'
+        : (g.todayLimits.lossUsed <= 0
+          ? 'Aucune perte aujourd\'hui — marge complète de ' + UI.fmtMoney(g.todayLimits.lossLimit) + '.'
+          : 'Il reste ' + UI.fmtMoney(g.todayLimits.lossLeft) + ' avant l\'arrêt de la journée (' + s.maxDailyLossPct + ' %).')
+    );
+
+    // 3. Semaine en cours
+    var weekGauge = g.week.gauge;
+    html += gauge(
+      'Semaine en cours',
+      '<span class="' + UI.signClass(g.week.net) + '">' + UI.fmtMoneySigned(g.week.net) + '</span>',
+      weekGauge.ratio, weekGauge.tone,
+      g.week.lossReached
+        ? 'Seuil d\'arrêt hebdomadaire atteint (' + UI.fmtMoney(g.week.lossLimit) + ') : arrêt jusqu\'à lundi.'
+        : (g.week.lossUsed <= 0
+          ? 'Aucune perte cette semaine — seuil d\'arrêt à ' + UI.fmtMoney(g.week.lossLimit) + ' (' + s.maxWeeklyLossPct + ' %).'
+          : 'Perte consommée : ' + UI.fmtMoney(g.week.lossUsed) + ' · reste ' + UI.fmtMoney(g.week.lossLeft) + '.')
+    );
+
+    // 4. Drawdown vs seuil du plan
+    var ddRatio = s.maxDrawdownPct ? Math.min(100, Math.abs(k.maxDDPct) / s.maxDrawdownPct * 100) : 0;
+    var ddTone = Math.abs(k.maxDDPct) >= s.maxDrawdownPct ? 'danger' : ddRatio >= 85 ? 'danger' : ddRatio >= 50 ? 'warn' : 'ok';
+    html += gauge(
+      'Drawdown vs seuil du plan',
+      UI.fmtNum(Math.abs(k.maxDDPct), 2) + ' % / ' + s.maxDrawdownPct + ' %',
+      ddRatio, ddTone,
+      UI.fmtMoney(k.maxDD) + ' depuis le plus haut · ' + UI.pl(k.open, 'trade en cours', 'trades en cours') +
+      ' · risque ' + s.riskPerTradePct + ' % / trade (' + s.maxTradesPerDay + ' max par jour)'
+    );
+
     html += '</div>';
     return html;
   }
@@ -689,15 +746,15 @@
     { key: 'date', label: 'Date', sub: 'time' },
     { key: 'symbol', label: 'Instrument', sub: 'direction' },
     { key: 'session', label: 'Session', sub: 'setup' },
-    { key: 'riskAmount', label: 'Risque', cls: 'num', fmt: function (t) { return t.riskAmount ? UI.fmtMoney(t.riskAmount) : '—'; } },
+    { key: 'riskAmount', label: 'Risque', cls: 'num', hide: 'col-opt', fmt: function (t) { return t.riskAmount ? UI.fmtMoney(t.riskAmount) : '—'; } },
     { key: 'pips', label: 'Pips', cls: 'num', fmt: function (t) { return t.pips === null ? '—' : UI.fmtNum(t.pips, 1); } },
-    { key: 'pnl', label: 'P&L brut', cls: 'num', fmt: function (t) { return t.pnl === null ? '—' : UI.fmtMoney(t.pnl); } },
-    { key: 'fees', label: 'Frais', cls: 'num', fmt: function (t) { return t.fees ? UI.fmtMoney(t.fees) : '—'; } },
+    { key: 'pnl', label: 'P&L brut', cls: 'num', hide: 'col-opt', fmt: function (t) { return t.pnl === null ? '—' : UI.fmtMoney(t.pnl); } },
+    { key: 'fees', label: 'Frais', cls: 'num', hide: 'col-opt', fmt: function (t) { return t.fees ? UI.fmtMoney(t.fees) : '—'; } },
     { key: 'netPnl', label: 'P&L net', cls: 'num' },
     { key: 'rMultiple', label: 'R', cls: 'num' },
     { key: 'planFollowed', label: 'Plan', cls: 'num' },
-    { key: 'emotion', label: 'Émotion', sub: 'mistake' },
-    { key: 'durationMin', label: 'Durée', cls: 'num' },
+    { key: 'emotion', label: 'Émotion', sub: 'mistake', hide: 'col-opt' },
+    { key: 'durationMin', label: 'Durée', cls: 'num', hide: 'col-opt' },
     { key: 'actions', label: '' }
   ];
 
@@ -888,33 +945,41 @@
     }).join(' ');
     var rows = trades.map(function (t) {
       var cells = JOURNAL_COLUMNS.map(function (c) {
-        var v;
-        if (c.fmt) return '<td class="' + (c.cls || '') + '">' + c.fmt(t) + '</td>';
+        // classes de la cellule : alignement + masquage éventuel sur écran étroit
+        var cls = ((c.cls || '') + ' ' + (c.hide || '')).trim();
+        var td = function (extra, inner) {
+          return '<td class="' + (cls + ' ' + (extra || '')).trim() + '">' + inner + '</td>';
+        };
+        if (c.fmt) return td('', c.fmt(t));
         switch (c.key) {
           case 'date':
-            return '<td><b>' + esc(Store.fmtDateFR(t.date)) + '</b><div class="cell-sub">' + esc(t.time || '') + '</div></td>';
+            // deux écritures : complète sur grand écran, numérique sur tablette (voir CSS)
+            return td('', '<b class="date-long">' + esc(Store.fmtDateFR(t.date)) + '</b>' +
+              '<b class="date-short">' + esc(Store.fmtDateNumeric ? Store.fmtDateNumeric(t.date) : Store.fmtDateFR(t.date)) + '</b>' +
+              '<div class="cell-sub">' + esc(t.time || '') + '</div>');
           case 'symbol':
-            return '<td><b>' + esc(t.symbol || '—') + '</b><div class="cell-sub">' + (t.direction === 'short' ? 'Vente' : 'Achat') + (t.plannedRR ? ' · RR ' + UI.fmtNum(t.plannedRR, 1) : '') + '</div></td>';
+            return td('', '<b>' + esc(t.symbol || '—') + '</b><div class="cell-sub">' + (t.direction === 'short' ? 'Vente' : 'Achat') + (t.plannedRR ? ' · RR ' + UI.fmtNum(t.plannedRR, 1) : '') + '</div>');
           case 'session':
-            return '<td>' + esc(t.session || '—') + '<div class="cell-sub">' + esc(t.setup || '') + '</div></td>';
+            return td('', '<span class="nowrap">' + esc(t.session || '—') + '</span>' +
+              (t.setup ? '<div class="cell-sub ellipsis-sub" title="' + attr(t.setup) + '">' + esc(t.setup) + '</div>' : ''));
           case 'netPnl':
-            return '<td class="num ' + UI.signClass(t.netPnl) + '"><b>' + (t.hasResult ? UI.fmtMoneySigned(t.netPnl) : '<span class="badge flat">en cours</span>') + '</b></td>';
+            return td('num ' + UI.signClass(t.netPnl), '<b>' + (t.hasResult ? UI.fmtMoneySigned(t.netPnl) : '<span class="badge flat">en cours</span>') + '</b>');
           case 'rMultiple':
-            return '<td class="num ' + UI.signClass(t.rMultiple) + '"><b>' + UI.fmtR(t.rMultiple) + '</b></td>';
+            return td('num ' + UI.signClass(t.rMultiple), '<b>' + UI.fmtR(t.rMultiple) + '</b>');
           case 'planFollowed':
-            return '<td class="num">' + planBadge(t.planFollowed) + '</td>';
+            return td('num', planBadge(t.planFollowed));
           case 'emotion':
-            return '<td>' + esc(t.emotion || '—') + (t.mistake && t.mistake !== 'Aucune'
-              ? '<div class="cell-sub warn-txt">' + UI.icon('warn') + esc(t.mistake) + '</div>' : '') + '</td>';
+            return td('', esc(t.emotion || '—') + (t.mistake && t.mistake !== 'Aucune'
+              ? '<div class="cell-sub warn-txt">' + UI.icon('warn') + esc(t.mistake) + '</div>' : ''));
           case 'durationMin':
-            return '<td class="num">' + UI.dur(t.durationMin) + '</td>';
+            return td('num', UI.dur(t.durationMin));
           case 'actions':
-            return '<td class="num nowrap">' +
+            return td('num nowrap',
               '<button class="icon-btn" data-action="duplicate" data-id="' + t.id + '" title="Dupliquer le trade">' + UI.icon('copy') + '</button>' +
-              '<button class="icon-btn danger" data-action="delete" data-id="' + t.id + '" title="Supprimer le trade">' + UI.icon('trash') + '</button></td>';
+              '<button class="icon-btn danger" data-action="delete" data-id="' + t.id + '" title="Supprimer le trade">' + UI.icon('trash') + '</button>');
           default:
-            v = t[c.key];
-            return '<td class="' + (c.cls || '') + '">' + (v === null || v === undefined || v === '' ? '—' : esc(v)) + '</td>';
+            var v = t[c.key];
+            return td('', v === null || v === undefined || v === '' ? '—' : esc(v));
         }
       }).join('');
       return '<tr data-id="' + t.id + '" class="row-click' + (t.notes ? '' : '') + '">' + cells + '</tr>';
@@ -922,12 +987,12 @@
     var cols = JOURNAL_COLUMNS.map(function (c) { return { label: c.label, cls: c.cls, key: c.key, raw: c.key }; });
     var html = table(cols.map(function (c) {
       var sorted = state.sort.key === c.key;
-      return { label: esc(c.label) + (sorted ? '<span class="sort-ico">' + (state.sort.dir === 'asc' ? '↑' : '↓') + '</span>' : ''), cls: (c.cls || '') + ' sortable' + (sorted ? ' sorted' : ''), title: 'Trier' };
+      return { label: esc(c.label) + (sorted ? '<span class="sort-ico">' + (state.sort.dir === 'asc' ? '↑' : '↓') + '</span>' : ''), cls: ((c.cls || '') + ' ' + (c.hide || '') + ' sortable' + (sorted ? ' sorted' : '')).trim(), title: 'Trier' };
     }), rows, { class: 'table-journal' });
     // remplace l'entête par des cellules cliquables portant la clé de tri
     var headCells = JOURNAL_COLUMNS.map(function (c) {
       var sorted = state.sort.key === c.key;
-      return '<th class="' + (c.cls || '') + ' sortable' + (sorted ? ' sorted' : '') + '" data-sort="' + c.key + '">' + esc(c.label) +
+      return '<th class="' + ((c.cls || '') + ' ' + (c.hide || '') + ' sortable' + (sorted ? ' sorted' : '')).trim() + '" data-sort="' + c.key + '">' + esc(c.label) +
         (sorted ? '<span class="sort-ico">' + (state.sort.dir === 'asc' ? '↑' : '↓') + '</span>' : '') + '</th>';
     }).join('');
     return html.replace(/<thead><tr>[\s\S]*?<\/tr><\/thead>/, '<thead><tr>' + headCells + '</tr></thead>');

@@ -9,7 +9,7 @@
      Contenu du plan (modifiable directement ici)
      --------------------------------------------------------- */
   var PLAN = {
-    version: '1.0',
+    version: '1.2',
     title: 'Plan de trading',
     subtitle: 'Forex & indices CFD — intraday et swing court',
     updated: 'Septembre 2026',
@@ -452,6 +452,16 @@
       actual: (g.pct > 0 ? '+' : '') + g.pct.toFixed(2).replace('.', ',') + ' %',
       status: g.pct >= g.targetPct ? 'ok' : (g.pct >= 0 ? 'warn' : 'ko'),
       hint: g.trades + ' trade' + (g.trades > 1 ? 's' : '') + ' clôturé' + (g.trades > 1 ? 's' : '') + ' ce mois-ci.'
+    });
+
+    // 13. Perte du jour consommée
+    var dl = model.goals.todayLimits;
+    rows.push({
+      label: 'Seuil de perte journalière',
+      target: '≤ ' + dl.lossLimitPct + ' %',
+      actual: dl.lossUsed <= 0 ? 'non entamé' : (dl.gauge.ratio).toFixed(0) + ' % du seuil',
+      status: dl.gauge.tone === 'ok' ? 'ok' : dl.gauge.tone === 'warn' ? 'warn' : 'ko',
+      hint: dl.lossReached ? 'Seuil atteint : arrêt imposé.' : 'Il reste ' + dl.lossLeft.toFixed(0) + ' € avant l\'arrêt de la journée.'
     });
 
     return rows;

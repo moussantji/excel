@@ -165,7 +165,14 @@
     // --- KPI avancés ---
     var feesTotal = model.results.reduce(function (a, t) { return a + (t.fees || 0); }, 0);
     var advance = [
-      { label: 'SQN', value: k.sqn === null ? '—' : UI.fmtNum(k.sqn), sub: k.sqn === null ? 'Au moins 6 trades nécessaires' : k.sqn >= 3 ? 'Système exploitable' : k.sqn >= 2 ? 'Système moyen' : 'Système à revoir' },
+      { label: 'SQN', value: k.sqn === null ? '—' : UI.fmtNum(k.sqn),
+        sub: k.sqn === null ? 'Au moins 6 trades nécessaires'
+          : k.sqn >= 5 ? 'Excellent'
+          : k.sqn >= 3 ? 'Bon à excellent'
+          : k.sqn >= 2.5 ? 'Bon'
+          : k.sqn >= 2 ? 'Moyen'
+          : k.sqn >= 1.6 ? 'Sous la moyenne'
+          : 'À revoir' },
       { label: 'Ratio de Sharpe (par trade)', value: k.sharpeR === null ? '—' : UI.fmtNum(k.sharpeR), sub: 'Espérance ÷ volatilité des R' },
       { label: 'Écart-type des R', value: k.sdR === null ? '—' : UI.fmtNum(k.sdR), sub: 'Dispersion des résultats' },
       { label: 'R moyen gagnant', value: UI.fmtR(k.avgWinR), sub: 'Ce que rapporte un trade gagnant', valueClass: 'pos' },
@@ -176,10 +183,12 @@
       { label: 'Série perdante max', value: String(model.streaks.maxLoss), sub: 'Trades perdants consécutifs' },
       { label: 'Série en cours', value: (model.streaks.currentType === 'win' ? '+' : model.streaks.currentType === 'loss' ? '−' : '') + model.streaks.current, sub: model.streaks.currentType === 'win' ? 'trades gagnants' : 'trades perdants' },
       { label: 'Jours verts / rouges', value: model.records.greenDays + ' / ' + model.records.redDays, sub: model.records.tradingDays ? UI.fmtNum(model.records.greenDays / model.records.tradingDays * 100, 0) + ' % de journées positives' : '' },
-      { label: 'Frais totaux', value: UI.fmtMoney(feesTotal), sub: 'Soit ' + UI.fmtPct(k.net ? feesTotal / Math.abs(k.net) * 100 : 0, 1) + ' du résultat net' },
+      { label: 'Frais totaux', value: UI.fmtMoney(feesTotal), sub: 'Soit ' + UI.fmtNum(feesTotal / Math.abs(k.net || 1) * 100, 1) + ' % du résultat net' },
       { label: 'Risque cumulé engagé', value: UI.fmtMoney(k.totalRisk), sub: 'Somme des risques des ' + k.closed + ' trades' },
       { label: 'Risque moyen par trade', value: UI.fmtMoney(k.avgRisk), sub: st.settings.startingCapital ? UI.fmtNum(k.avgRisk / st.settings.startingCapital * 100, 2) + ' % du capital' : '' },
-      { label: 'Trades hors plan', value: String(k.closed - (model.results.filter(function (t) { return t.planFollowed === 'oui'; }).length)), sub: 'Coût estimé : ' + (model.discipline.missedMoney ? UI.fmtMoney(Math.abs(model.discipline.missedMoney)) : '—') },
+      { label: 'Trades hors plan', value: String(model.discipline.offPlanClosed),
+        sub: 'Dont partiels : ' + (model.discipline.partial ? model.discipline.partial.closed : 0) +
+          ' · résultat ' + UI.fmtMoneySigned(model.discipline.offPlanNet) },
       { label: 'Durée moyenne', value: k.avgDuration === null ? '—' : UI.dur(k.avgDuration), sub: 'Temps en position' }
     ];
     html += '<div class="kpi-grid small">' + advance.map(App.kpiCard).join('') + '</div>';

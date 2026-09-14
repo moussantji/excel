@@ -20,7 +20,8 @@ try { puppeteer = require('puppeteer'); } catch (e) {
 const DEVICES = [
   { name: 'iPad portrait (820×1180)', width: 820, height: 1180, touch: true },
   { name: 'iPad paysage (1180×820)', width: 1180, height: 820, touch: true },
-  { name: 'Android 10" (800×1280)', width: 800, height: 1280, touch: true }
+  { name: 'Android 10" (800×1280)', width: 800, height: 1280, touch: true },
+  { name: 'Téléphone (390×844)', width: 390, height: 844, touch: true }
 ];
 
 (async () => {
@@ -58,12 +59,21 @@ const DEVICES = [
     if (info.small.length) { failures++; lines.push('  ✗ cibles tactiles trop petites : ' + info.small.slice(0, 5).join(', ')); }
     console.log('• ' + dev.name + (lines.length ? '\n' + lines.join('\n') : '  ✓ rendu, cibles tactiles et débordement conformes'));
 
-    // Vue cartes du journal (mode automatique sur petit écran)
+    // Vue par défaut du journal : cartes sur téléphone (< 700 px), tableau ailleurs
     await page.evaluate(() => { window.App.state.journalView = 'auto'; window.App.state.view = 'journal'; window.App.render(); });
     await new Promise((r) => setTimeout(r, 400));
-    const nb = await page.evaluate(() => document.querySelectorAll('.trade-card').length);
-    if (dev.width < 1000 && nb === 0) { failures++; console.log('  ✗ vue cartes absente sur écran étroit'); }
-    else if (nb) console.log('  ✓ journal en cartes : ' + nb + ' cartes');
+    const vue = await page.evaluate(() => ({
+      cartes: document.querySelectorAll('.trade-card').length,
+      tableau: document.querySelectorAll('table.table-journal tbody tr').length,
+      debordement: document.querySelector('table.table-journal') ? document.querySelector('table.table-journal').parentElement.scrollWidth - document.querySelector('table.table-journal').parentElement.clientWidth : 0,
+      colonnes: [...document.querySelectorAll('table.table-journal thead th')].filter((th) => getComputedStyle(th).display !== 'none').length
+    }));
+    if (dev.width >= 700) {
+      if (!vue.tableau) { failures++; console.log('  ✗ tableau attendu comme vue par défaut'); }
+      else if (vue.debordement > 2) { failures++; console.log('  ✗ le tableau dépasse de ' + vue.debordement + ' px'); }
+      else console.log('  ✓ journal en tableau compact : ' + vue.tableau + ' lignes, ' + vue.colonnes + ' colonnes, aucun défilement horizontal');
+    } else if (!vue.cartes) { failures++; console.log('  ✗ vue cartes absente sur téléphone'); }
+    else console.log('  ✓ journal en cartes sur téléphone : ' + vue.cartes + ' cartes');
 
     await page.close();
   }

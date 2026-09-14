@@ -293,6 +293,13 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 1.3 | **Objectifs : plus de jauge trompeuse.** Les barres « perte autorisée » et « semaine » affichaient le signe du résultat (une journée gagnante apparaissait comme 92 % de perte consommée, en vert). Elles montrent désormais la perte réellement utilisée, toujours positive, et virent au rouge avant d'atteindre le seuil. |
+| 1.3 | **Drawdown honnête** : la barre « drawdown vs seuil » avançait avec un montant négatif (−9,07 % / 10 %) ; elle affiche la valeur absolue et colore l'alerte. |
+| 1.3 | **Calendrier lisible** : les cases faisaient 28 px de large, le symbole « € » passait à la ligne et les niveaux de couleur étaient tous au maximum. Cases élargies (deux mois par ligne sur tablette), montant sur une ligne, multiple de R en dessous, nombre de trades dans le coin, intensité proportionnelle à la meilleure journée de l'année, contraste renforcé. |
+| 1.3 | **Journal sans défilement horizontal** : sur tablette et sur petit écran le tableau masque les colonnes secondaires (risque, P&L brut, frais, émotion, durée, puis pips sous 1250 px), fixe ses largeurs pour tenir exactement dans la page, raccourcit les badges et passe aux dates numériques. Plus aucune valeur tronquée de 768 à 1680 px. |
+| 1.3 | **Vue par défaut** : le journal s'ouvre en tableau compact dès la tablette (cartes sur téléphone, sous 700 px) — 5 300 px de défilement au lieu de 23 500 px pour 80 trades. |
+| 1.3 | **Analyses cohérentes** : « Coût estimé » d'un montant qui ne correspondait à aucune colonne du graphique est remplacé par le résultat réel des trades hors plan ; les bandes du SQN suivent la grille de Van Tharp (« Bon » à 2,88 au lieu de « moyen ») ; les frais ne s'affichent plus avec un « + ». |
+| 1.3 | **Cache v3** : le service worker reprend les fichiers au premier rechargement (`trading-desk-v3`). |
 | 1.2 | **Confirmations fiabilisées** : « Annuler » répondait à la place de « Confirmer », ce qui empêchait silencieusement la suppression d'un trade, la purge de la démo et « Tout effacer » (le verrou de résolution est désormais posé avant la fermeture de la fenêtre). |
 | 1.2 | **Démo repérée et supprimable** : chaque trade fictif porte un marqueur `demo`, trois points de purge, indicateur permanent dans la barre du haut. |
 | 1.2 | **Écran d'accueil** quand le journal est vide (au lieu de graphiques à zéro) et message « Journal vide » dans la barre du haut. |

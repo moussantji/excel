@@ -115,6 +115,14 @@
   var DOW_FR = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
   var DOW_FR_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
+  /** Date courte numérique (jj/mm/aa) — utilisée dans le journal sur écran étroit. */
+  function fmtDateNumeric(iso) {
+    if (!iso) return '—';
+    var p = String(iso).split('-');
+    if (p.length < 3) return iso;
+    return p[2] + '/' + p[1] + '/' + String(p[0]).slice(2);
+  }
+
   function fmtDateFR(iso, opts) {
     opts = opts || {};
     if (!iso) return '—';
@@ -654,7 +662,7 @@
     uid: uid, num: num, round: round, round2: round2, clamp: clamp,
     todayISO: todayISO, nowTime: nowTime, normDate: normDate, normTime: normTime,
     addDays: addDays, dowIndex: dowIndex, monthKey: monthKey, isoWeekKey: isoWeekKey,
-    fmtDateFR: fmtDateFR, monthLabel: monthLabel, pad2: pad2,
+    fmtDateFR: fmtDateFR, fmtDateNumeric: fmtDateNumeric, monthLabel: monthLabel, pad2: pad2,
     pipSize: pipSize, defaultSettings: defaultSettings, emptyTrade: emptyTrade,
     normalizeTrade: normalizeTrade, toRaw: toRaw,
     emptyState: emptyState, loadState: loadState, saveState: saveState, hydrate: hydrate,

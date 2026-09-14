@@ -404,26 +404,34 @@
   var MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
   var DOWS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-  function dayCell(dateISO, day, data, fmt, onPick, today) {
+  function dayCell(dateISO, day, data, fmt, onPick, today, maxAbs, cellFmt) {
     var cell = el('div', 'cal-cell');
     if (!day) { cell.classList.add('cal-empty'); return cell; }
     if (today && dateISO === today) cell.classList.add('cal-today');
     var d = data && data[dateISO];
-    cell.innerHTML = '<span class="cal-day">' + day + '</span>';
+    var headRow = el('span', 'cal-top');
+    headRow.appendChild(el('span', 'cal-day', String(day)));
+    cell.appendChild(headRow);
     if (d) {
       cell.classList.add(d.net > 0 ? 'pos' : d.net < 0 ? 'neg' : 'flat');
-      var lvl = d.net === 0 ? 0 : Math.min(3, Math.ceil(Math.abs(d.net) / (Math.max(Math.abs(d.net), 1)) * 3));
+      // intensité proportionnelle à la meilleure/pire journée de l'année (1 à 3)
+      var ref = maxAbs > 0 ? Math.abs(d.net) / maxAbs : 0;
+      var lvl = d.net === 0 ? 0 : Math.max(1, Math.min(3, Math.ceil(ref * 3)));
       cell.classList.add('lvl' + lvl);
-      cell.innerHTML += '<span class="cal-val">' + (d.net > 0 ? '+' : '') + fmt(d.net) + '</span>' +
-        '<span class="cal-sub">' + d.count + ' trade' + (d.count > 1 ? 's' : '') + (d.hasR ? ' · ' + (d.r > 0 ? '+' : '') + d.r.toFixed(1).replace('.', ',') + 'R' : '') + '</span>';
-      cell.title = dateISO + ' — ' + d.count + ' trade' + (d.count > 1 ? 's' : '') + ', ' + (d.net > 0 ? '+' : '') + fmt(d.net) + (d.hasR ? ', ' + d.r.toFixed(2).replace('.', ',') + ' R' : '');
+      // nombre de trades dans le coin, puis le montant et le multiple de R : tout tient sur une ligne
+      headRow.appendChild(el('span', 'cal-count', d.count > 1 ? String(d.count) : ''));
+      cell.appendChild(el('span', 'cal-val', cellFmt(d.net)));
+      cell.appendChild(el('span', 'cal-sub',
+        d.hasR ? (d.r > 0 ? '+' : '') + d.r.toFixed(1).replace('.', ',') + 'R' : '—'));
+      cell.title = dateISO + ' — ' + d.count + ' trade' + (d.count > 1 ? 's' : '') + ', ' + (d.net > 0 ? '+' : '') +
+        fmt(d.net) + (d.hasR ? ', ' + d.r.toFixed(2).replace('.', ',') + ' R' : '');
       cell.style.cursor = 'pointer';
       cell.addEventListener('click', function () { if (onPick) onPick(dateISO); });
     }
     return cell;
   }
 
-  function monthGrid(year, month, data, fmt, onPick, today) {
+  function monthGrid(year, month, data, fmt, onPick, today, maxAbs) {
     var wrap = el('div', 'cal-mini');
     wrap.appendChild(el('div', 'cal-title', MONTHS[month] + ' ' + year));
     var head = el('div', 'cal-head');
@@ -433,10 +441,15 @@
     var first = new Date(year, month, 1);
     var offset = (first.getDay() + 6) % 7;
     var daysInMonth = new Date(year, month + 1, 0).getDate();
-    for (var i = 0; i < offset; i++) grid.appendChild(dayCell(null, null, data, fmt, onPick, today));
+    // dans une case : pas de symbole monétaire (il tient sur une ligne dans l'infobulle et les totaux)
+    var cellFmt = function (v) {
+      var txt = fmt(v).replace(/\s*€/, '').replace(/\u00a0/g, ' ');
+      return (v > 0 ? '+' : '') + txt;
+    };
+    for (var i = 0; i < offset; i++) grid.appendChild(dayCell(null, null, data, fmt, onPick, today, maxAbs, cellFmt));
     for (var d = 1; d <= daysInMonth; d++) {
       var iso = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-      grid.appendChild(dayCell(iso, d, data, fmt, onPick, today));
+      grid.appendChild(dayCell(iso, d, data, fmt, onPick, today, maxAbs, cellFmt));
     }
     wrap.appendChild(grid);
     return wrap;
@@ -455,10 +468,12 @@
       monthsNet[mk] = (monthsNet[mk] || 0) + data[k].net;
     });
     var year = o.year || String(o.today).slice(0, 4);
+    // référence d'intensité : la plus forte journée de l'année
+    var maxAbs = Object.keys(data).reduce(function (m, k) { return Math.max(m, Math.abs(data[k].net)); }, 0);
     var grid = el('div', 'cal-year');
     for (var m = 0; m < 12; m++) {
       var mk = year + '-' + String(m + 1).padStart(2, '0');
-      var mini = monthGrid(+year, m, data, fmt, o.onPick, o.today);
+      var mini = monthGrid(+year, m, data, fmt, o.onPick, o.today, maxAbs);
       var tot = monthsNet[mk] || 0;
       var badge = el('div', 'cal-total ' + (tot > 0 ? 'pos' : tot < 0 ? 'neg' : 'flat'),
         (tot > 0 ? '+' : '') + fmt(tot));
