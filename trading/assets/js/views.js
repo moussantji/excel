@@ -66,7 +66,7 @@
       tipFn: function (it) {
         return '<div class="tip-t">' + esc(it.meta.label) + '</div>' +
           '<div class="tip-v ' + UI.signClass(it.value) + '">' + UI.fmtMoneySigned(it.value) + '</div>' +
-          '<div class="tip-s">' + it.meta.closed + ' trades · ' + UI.fmtR(it.meta.sumR, 1) + '</div>';
+          '<div class="tip-s">' + UI.pl(it.meta.closed, 'trade') + ' · ' + UI.fmtR(it.meta.sumR, 1) + '</div>';
       }
     });
 
@@ -143,7 +143,7 @@
     function list(items, cls) {
       return '<ul class="record-list">' + items.map(function (d) {
         return '<li><button class="link" data-day-jump="' + d.date + '">' + esc(Store.fmtDateFR(d.date)) + '</button>' +
-          '<span class="muted">' + d.count + ' trade' + (d.count > 1 ? 's' : '') + '</span>' +
+          '<span class="muted">' + UI.pl(d.count, 'trade') + '</span>' +
           '<b class="' + cls + '">' + UI.fmtMoneySigned(d.net) + '</b></li>';
       }).join('') + '</ul>';
     }
@@ -157,7 +157,7 @@
   function analyses(host, model, App) {
     var k = model.kpis, st = App.state;
     if (!model.results.length) {
-      host.innerHTML = '<div class="empty"><div class="ico">🔍</div><h3>Aucun trade clôturé sur cette période</h3><p>Élargissez la période ou ajoutez des trades dans le journal.</p></div>';
+      host.innerHTML = '<div class="empty"><div class="empty-ico">' + UI.icon('analyses') + '</div><h3>Aucun trade clôturé sur cette période</h3><p>Élargissez la période ou ajoutez des trades dans le journal.</p></div>';
       return;
     }
     var html = '';
@@ -228,7 +228,7 @@
           return {
             label: g.key, value: g[valueKey],
             display: fmt === 'r' ? UI.fmtR(g[valueKey], 1) : UI.fmtMoneySigned(g[valueKey]),
-            sub: g.closed + ' trades · espérance ' + UI.fmtR(g.expectancyR)
+            sub: UI.pl(g.closed, 'trade') + ' · espérance ' + UI.fmtR(g.expectancyR)
           };
         });
       if (!items.length) { hostEl.innerHTML = '<p class="muted">Aucune donnée.</p>'; return; }
@@ -245,7 +245,7 @@
       height: 280, barWidth: 46,
       tipFn: function (it) {
         return '<div class="tip-t">' + esc(it.meta.key) + '</div><div class="tip-v ' + UI.signClass(it.value) + '">' + UI.fmtMoneySigned(it.value) + '</div>' +
-          '<div class="tip-s">' + it.meta.closed + ' trades · ' + UI.fmtNum(it.meta.winRate, 0) + ' % de réussite · ' + UI.fmtR(it.meta.sumR, 1) + '</div>';
+          '<div class="tip-s">' + UI.pl(it.meta.closed, 'trade') + ' · ' + UI.fmtNum(it.meta.winRate, 0) + ' % de réussite · ' + UI.fmtR(it.meta.sumR, 1) + '</div>';
       }
     });
   }
@@ -274,7 +274,9 @@
     }
     return '<div class="chart-host" id="conformStack"></div>' +
       '<div class="conform-grid">' +
-      block('✅ Plan respecté', ok, 'good') + block('⚡ Partiellement respecté', part, 'mid') + block('❌ Hors plan', ko, 'bad') +
+      block('<span class="dot-ico ok">' + UI.icon('check') + '</span> Plan respecté', ok, 'good') +
+      block('<span class="dot-ico warn">' + UI.icon('bolt') + '</span> Partiellement respecté', part, 'mid') +
+      block('<span class="dot-ico ko">' + UI.icon('warn') + '</span> Hors plan', ko, 'bad') +
       '</div>' +
       '<p class="muted small">Lecture : si la colonne « hors plan » est la plus coûteuse, le problème n\'est pas la stratégie mais l\'exécution. À l\'inverse, si le plan respecté perd de l\'argent sur beaucoup de trades, il faut revoir le plan lui-même (après 20 trades minimum par setup).</p>' +
       (function () { setTimeout(function () { var h = $('#conformStack'); if (h) Charts.stack(h, { segments: segs }); }, 0); return ''; })();
@@ -373,7 +375,7 @@
         }).join('') + '</div>';
       case 'cards':
         return '<div class="plan-cards">' + item.cards.map(function (c) {
-          return '<div class="plan-card"><span class="ico">' + c.icon + '</span><b>' + esc(c.value) + '</b><span class="t">' + esc(c.title) + '</span><span class="s">' + esc(c.sub) + '</span></div>';
+          return '<div class="plan-card"><span class="ico">' + UI.icon(c.icon) + '</span><b>' + esc(c.value) + '</b><span class="t">' + esc(c.title) + '</span><span class="s">' + esc(c.sub) + '</span></div>';
         }).join('') + '</div>';
       case 'table':
         return '<div class="table-wrap"><table class="table"><thead><tr>' + item.head.map(function (h) {
@@ -398,7 +400,7 @@
             return '<div class="kv"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>';
           }).join('') + '</div></article>';
       case 'routine':
-        return '<article class="routine-card"><h4><span>' + item.icon + '</span>' + esc(item.title) + '</h4>' +
+        return '<article class="routine-card"><h4><span>' + UI.icon(item.icon) + '</span>' + esc(item.title) + '</h4>' +
           '<ul class="plan-list check">' + item.items.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul></article>';
       case 'steps':
         return '<ol class="steps">' + item.steps.map(function (s) {
@@ -472,11 +474,13 @@
       '<button class="btn ghost" id="stDemo">Charger la démo (80 trades)</button>' +
       '<button class="btn ghost" id="stImport">Importer CSV / JSON</button>' +
       '<button class="btn ghost" id="stExport">Exporter</button>' +
-      '<button class="btn ghost danger" id="stClearDemo">Supprimer les trades de démo</button>' +
+      '<button class="btn ghost danger" id="stClearDemo"' + (App.hasDemo() ? '' : ' disabled') + '>Supprimer les trades de démo' + (App.demoCount() ? ' (' + App.demoCount() + ')' : '') + '</button>' +
       '<button class="btn danger" id="stReset">Tout effacer</button>' +
       '</div>' +
       '<div class="storage-info">' +
-      '<p><b>' + App.state.trades.length + '</b> trade(s) enregistré(s) · sauvegarde : <b>' + (App.state.storage === 'local' ? 'stockage local du navigateur' : 'mémoire (temporaire)') + '</b></p>' +
+      '<p><b>' + App.state.trades.length + '</b> trade' + (App.state.trades.length > 1 ? 's' : '') + ' enregistré' + (App.state.trades.length > 1 ? 's' : '') + '' +
+      (App.hasDemo() ? ' — dont <b class="warn-txt">' + App.demoCount() + ' de démonstration</b>' : '') +
+      ' · sauvegarde : <b>' + (App.state.storage === 'local' ? 'stockage local du navigateur' : 'mémoire (temporaire)') + '</b></p>' +
       '<p class="muted small">Les données restent dans votre navigateur (aucun envoi vers un serveur). Pour les transférer sur un autre appareil : « Exporter » puis « Importer » la sauvegarde JSON.</p>' +
       '<p class="muted small">Astuce : faites une sauvegarde JSON chaque fin de semaine, comme la revue hebdomadaire du plan.</p>' +
       '</div>');
@@ -528,20 +532,7 @@
     $('#stDemo').addEventListener('click', function () { App.loadDemo(); });
     $('#stImport').addEventListener('click', function () { App.openImportDialog(App.buildModel()); });
     $('#stExport').addEventListener('click', function () { App.openExportDialog(App.buildModel()); });
-    $('#stClearDemo').addEventListener('click', function () {
-      UI.confirmDialog({
-        title: 'Supprimer les trades de démonstration ?',
-        message: 'Seuls les trades marqués comme démo seront retirés. Cette action est irréversible.',
-        confirmLabel: 'Supprimer la démo', danger: true
-      }).then(function (ok) {
-        if (!ok) return;
-        var before = App.state.trades.length;
-        if (App.state.demo) { App.state.trades = []; App.state.demo = false; }
-        else UI.toast('Les trades actuels ne sont pas des données de démo.', 'warn');
-        App.persist(); App.render();
-        if (before !== App.state.trades.length) UI.toast('Données de démonstration supprimées.');
-      });
-    });
+    $('#stClearDemo').addEventListener('click', function () { App.confirmRemoveDemo(); });
     $('#stReset').addEventListener('click', function () {
       UI.confirmDialog({
         title: 'Tout effacer ?',

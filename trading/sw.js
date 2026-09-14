@@ -7,7 +7,7 @@
    ========================================================= */
 'use strict';
 
-const VERSION = 'trading-desk-v1';
+const VERSION = 'trading-desk-v2';
 const CORE = [
   './',
   './index.html',
@@ -50,7 +50,14 @@ self.addEventListener('message', (event) => {
 
 function isAppAsset(url) {
   return url.origin === self.location.origin &&
-    /\.(css|js|png|jpg|jpeg|svg|webmanifest|woff2?|ico)$/i.test(url.pathname);
+    /\.(css|js|html|png|jpg|jpeg|svg|webmanifest|woff2?|ico)$/i.test(url.pathname);
+}
+
+/** Code de l'application : on veut toujours la dernière version quand le
+ *  réseau est disponible (mise à jour au premier rechargement), tout en
+ *  gardant une copie pour le mode hors ligne. */
+function isCode(url) {
+  return /\.(js|css|html|webmanifest)$/i.test(url.pathname) || url.pathname.endsWith('/');
 }
 
 self.addEventListener('fetch', (event) => {
@@ -84,7 +91,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Fichiers de l'application : cache d'abord, rafraîchissement en tâche de fond
+  // 2a. Code (JS/CSS/HTML) : réseau d'abord → la mise à jour arrive au
+  //     premier rechargement ; repli sur le cache si le réseau est absent.
+  if (isAppAsset(url) && isCode(url)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(VERSION);
+      try {
+        const fresh = await fetch(req);
+        if (fresh && fresh.ok) cache.put(req, fresh.clone()).catch(() => null);
+        return fresh;
+      } catch (e) {
+        const cached = await cache.match(req, { ignoreSearch: true });
+        return cached || Response.error();
+      }
+    })());
+    return;
+  }
+
+  // 2b. Images et icônes : cache d'abord (elles changent rarement)
   if (isAppAsset(url)) {
     event.respondWith((async () => {
       const cache = await caches.open(VERSION);

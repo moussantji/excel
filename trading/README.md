@@ -122,7 +122,18 @@ L'application affiche elle-même le mode opératoire : un bandeau en haut d'écr
 - **Journal en cartes** : sur écran étroit, chaque trade devient une carte (instrument, P&L, R, setup, session, risque, pips, frais, durée, badges plan/émotion/erreur) — plus de tableau coupé. Bascule **Tableau / Cartes / Auto** en haut du journal ; en mode *Auto*, l'affichage s'adapte à la largeur de l'écran.
 - **Rotation** portrait/paysage prise en charge (mode paysage : barre latérale complète, grille de KPI sur 3 colonnes).
 - **Hors ligne** : après une première ouverture avec connexion, le service worker met en cache l'application. Le bandeau d'accueil, l'onglet actif, les checklists et les saisies en cours sont conservés si vous passez à une autre application.
+- **Mises à jour** : le code (JS/CSS/HTML) est chargé *réseau d'abord* — une nouvelle version est donc active dès le premier rechargement, y compris sur l'application installée, sans vider le cache à la main.
 - **Synchronisation entre onglets** : si le journal est ouvert deux fois (ou sur deux fenêtres), l'affichage se met à jour. Un bouton **⟳** en haut à droite recharge les données enregistrées.
+
+### Données de démonstration
+
+Le bouton **Charger la démo** sert uniquement à découvrir l'application : il installe 80 trades fictifs cohérents. Chaque trade est marqué « démo », ce qui permet de les retirer **sans toucher à vos trades réels**, à trois endroits :
+
+- le bandeau violet en haut du tableau de bord → bouton **Supprimer la démo** ;
+- le bouton **Supprimer la démo (n)** dans la barre d'outils du journal ;
+- **Paramètres → Données & sauvegarde → Supprimer les trades de démo (n)**.
+
+Un indicateur dans la barre du haut rappelle en permanence **« Mode démonstration — n trades fictifs »** tant qu'il en reste. Dès qu'il n'y a plus aucun trade, le tableau de bord affiche l'écran d'accueil (ajouter un trade, importer un historique, voir la démo) au lieu de graphiques vides.
 
 ### Vos données sur tablette
 
@@ -277,6 +288,18 @@ node tools/smoke-test.js                                # (test complet : import
 ```
 
 Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, les 6 regroupements, ouvre le formulaire, enregistre un trade, coche une checklist, modifie les paramètres et vérifie l'aller-retour CSV — et échoue si une erreur JavaScript apparaît.
+
+## Journal des correctifs notables
+
+| Version | Correction |
+|---|---|
+| 1.2 | **Confirmations fiabilisées** : « Annuler » répondait à la place de « Confirmer », ce qui empêchait silencieusement la suppression d'un trade, la purge de la démo et « Tout effacer » (le verrou de résolution est désormais posé avant la fermeture de la fenêtre). |
+| 1.2 | **Démo repérée et supprimable** : chaque trade fictif porte un marqueur `demo`, trois points de purge, indicateur permanent dans la barre du haut. |
+| 1.2 | **Écran d'accueil** quand le journal est vide (au lieu de graphiques à zéro) et message « Journal vide » dans la barre du haut. |
+| 1.2 | **Icônes 100 % SVG** : plus aucune dépendance aux polices emoji (les caractères s'affichaient en carrés vides sur certaines tablettes) — logo, alertes, notifications, plan, états vides. |
+| 1.2 | **Lisibilité** : la sparkline ne chevauche plus le texte des cartes de KPI, notifications remontées au-dessus de la barre de navigation basse, 3 notifications maximum à l'écran, colonnes du journal plus aérées. |
+| 1.2 | **Français** : accords corrigés (« 1 trade », « 80 trades clôturés » au lieu de « trade(s) clôturé(s) »), libellé « Chaque écart au plan coûte … par trade ». |
+| 1.2 | **Mises à jour instantanées** : service worker en *réseau d'abord* pour le code (cache v2), pour que les correctifs arrivent au premier rechargement sans manipulation. |
 
 ## Limites connues
 

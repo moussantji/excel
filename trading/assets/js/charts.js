@@ -65,7 +65,8 @@
     if (t) t.classList.remove('on');
   }
   function emptyState(host, message) {
-    host.innerHTML = '<div class="chart-empty"><span class="ico">📉</span><p>' + message + '</p></div>';
+    var ic = (global.UI && UI.icon) ? UI.icon('dashboard') : '';
+    host.innerHTML = '<div class="chart-empty"><span class="ico">' + ic + '</span><p>' + message + '</p></div>';
   }
 
   /* =========================================================
@@ -415,7 +416,7 @@
       cell.classList.add('lvl' + lvl);
       cell.innerHTML += '<span class="cal-val">' + (d.net > 0 ? '+' : '') + fmt(d.net) + '</span>' +
         '<span class="cal-sub">' + d.count + ' trade' + (d.count > 1 ? 's' : '') + (d.hasR ? ' · ' + (d.r > 0 ? '+' : '') + d.r.toFixed(1).replace('.', ',') + 'R' : '') + '</span>';
-      cell.title = dateISO + ' — ' + d.count + ' trade(s), ' + (d.net > 0 ? '+' : '') + fmt(d.net) + (d.hasR ? ', ' + d.r.toFixed(2).replace('.', ',') + ' R' : '');
+      cell.title = dateISO + ' — ' + d.count + ' trade' + (d.count > 1 ? 's' : '') + ', ' + (d.net > 0 ? '+' : '') + fmt(d.net) + (d.hasR ? ', ' + d.r.toFixed(2).replace('.', ',') + ' R' : '');
       cell.style.cursor = 'pointer';
       cell.addEventListener('click', function () { if (onPick) onPick(dateISO); });
     }

@@ -45,9 +45,9 @@
         lead: 'Trois niveaux d\'objectifs : le processus (ce que je contrôle), la performance (ce qui en découle), la compétence.',
         items: [
           { type: 'cards', cards: [
-            { icon: '🎯', title: 'Objectif processus', value: '≥ 90 %', sub: 'de trades notés « plan respecté » chaque mois' },
-            { icon: '📈', title: 'Objectif performance', value: '+5 % / mois', sub: 'soit ≥ 2R par semaine en moyenne, drawdown < 10 %' },
-            { icon: '🧠', title: 'Objectif compétence', value: '50 trades revus', sub: 'chaque trimestre, avec statistiques par setup' }
+            { icon: 'plan', title: 'Objectif processus', value: '≥ 90 %', sub: 'de trades notés « plan respecté » chaque mois' },
+            { icon: 'dashboard', title: 'Objectif performance', value: '+5 % / mois', sub: 'soit ≥ 2R par semaine en moyenne, drawdown < 10 %' },
+            { icon: 'journal', title: 'Objectif compétence', value: '50 trades revus', sub: 'chaque trimestre, avec statistiques par setup' }
           ]},
           { type: 'table',
             head: ['Période', 'Objectif de performance', 'Objectif de processus', 'Critère de réussite'],
@@ -143,25 +143,25 @@
         title: 'Routine quotidienne',
         lead: 'Le plan ne s\'exécute pas à l\'écran mais avant et après. Quatre moments, toujours les mêmes.',
         items: [
-          { type: 'routine', title: 'Avant la séance (07h30 – 08h00)', icon: '🌅', items: [
+          { type: 'routine', title: 'Avant la séance (07h30 – 08h00)', icon: 'calendrier', items: [
             'Calendrier économique : news rouges des prochaines 8 h notées (éviter 15 min avant/après).',
             'Biais H4 et H1 écrits en une phrase par instrument suivi.',
             'Zones de liquidité et niveaux clés tracés sur les graphiques.',
             'Risque du jour calculé : R = ______ € / FCFA ; taille à utiliser : ______ lots.',
             'Objectif du jour : 1 à 2 trades de qualité, pas « gagner ».'
           ]},
-          { type: 'routine', title: 'Pendant la séance', icon: '🎯', items: [
+          { type: 'routine', title: 'Pendant la séance', icon: 'plan', items: [
             'Zone de trading silencieuse : téléphone en mode avion, réseaux sociaux fermés.',
             'J\'attends que le prix vienne à ma zone : aucune entrée « au feeling ».',
             'Ordre posé avec stop + TP : j\'arrête de regarder le trade une fois entré.',
             'Après 2 pertes ou 3 trades : écran fermé pour la journée.'
           ]},
-          { type: 'routine', title: 'Après la séance (17h00 – 17h30)', icon: '🌇', items: [
+          { type: 'routine', title: 'Après la séance (17h00 – 17h30)', icon: 'journal', items: [
             'Chaque trade est saisi dans le journal : chiffres, capture d\'écran, émotion, erreur éventuelle.',
             'Répétition mentale : ce qui a bien fonctionné, ce qui doit changer demain.',
             'Aucun trade n\'existe s\'il n\'est pas dans le journal le soir même.'
           ]},
-          { type: 'routine', title: 'Revue hebdomadaire (dimanche, 30 min)', icon: '📅', items: [
+          { type: 'routine', title: 'Revue hebdomadaire (dimanche, 30 min)', icon: 'calendrier', items: [
             'Statistiques de la semaine : résultat en R, nombre de trades, respect du plan (%), erreurs récurrentes.',
             'Classement des setups : lequel gagne, lequel coûte — je note, je n\'abandonne rien avant 20 trades.',
             'Une action concrète unique à corriger pour la semaine suivante.',
@@ -451,7 +451,7 @@
       target: '+' + g.targetPct + ' %',
       actual: (g.pct > 0 ? '+' : '') + g.pct.toFixed(2).replace('.', ',') + ' %',
       status: g.pct >= g.targetPct ? 'ok' : (g.pct >= 0 ? 'warn' : 'ko'),
-      hint: g.trades + ' trade(s) clôturé(s) ce mois-ci.'
+      hint: g.trades + ' trade' + (g.trades > 1 ? 's' : '') + ' clôturé' + (g.trades > 1 ? 's' : '') + ' ce mois-ci.'
     });
 
     return rows;

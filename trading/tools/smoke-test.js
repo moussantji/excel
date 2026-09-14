@@ -55,9 +55,38 @@ vc.on('log', () => {});
   };
 
   console.log('\n1. Démarrage (journal vide)');
+  check('écran d\'accueil affiché sans aucun trade', () => {
+    w.App.state.view = 'dashboard'; w.App.render();
+    const cards = d.querySelectorAll('.welcome-card').length;
+    if (!cards) throw new Error('écran d\'accueil absent');
+    return cards + ' actions proposées';
+  });
   await w.App.loadDemo();
   await wait(60);
   check('démo chargée', () => w.App.state.trades.length + ' trades');
+  check('démo marquée trade par trade', () => {
+    if (!w.App.state.trades.every((t) => t.demo)) throw new Error('trades non marqués');
+    return w.App.demoCount() + ' trades de démo repérés';
+  });
+  check('bandeau « mode démonstration » sur le tableau de bord', () => {
+    w.App.state.view = 'dashboard'; w.App.render();
+    const b = d.querySelector('.alert.demo [data-action="purge-demo"]');
+    if (!b) throw new Error('bandeau ou bouton de nettoyage absent');
+    return 'bouton de nettoyage présent';
+  });
+  check('un trade réel survit à la purge de la démo', () => {
+    w.App.state.trades.push(w.Store.normalizeTrade({ symbol: 'EURUSD', date: w.Store.todayISO(), entry: 1.1, stop: 1.09, exit: 1.12, size: 1, pnl: 200, riskAmount: 100 }, w.App.state.settings));
+    const before = w.App.state.trades.length;
+    w.App.state.trades = w.App.state.trades.filter((t) => !t.demo);
+    w.App.state.demo = false;
+    const after = w.App.state.trades.length;
+    if (after !== 1) throw new Error(after + ' trade(s) restant(s) au lieu de 1');
+    return before + ' → ' + after + ' trade réel conservé';
+  });
+
+  // On recharge la démo pour la suite des tests
+  await w.App.loadDemo();
+  await wait(60);
 
   console.log('\n2. Rendu de toutes les vues');
   for (const v of ['dashboard', 'journal', 'calendrier', 'analyses', 'plan', 'params']) {
@@ -175,6 +204,82 @@ vc.on('log', () => {});
     return w.App.state.trades.length + ' trades';
   });
 
+  console.log('\n5 bis. Confirmations et suppressions (parcours critiques)');
+  const checkAsync = async (name, fn) => {
+    try {
+      const info = await fn();
+      console.log('  ✓ ' + name + (info ? ' — ' + info : ''));
+    } catch (e) {
+      errors.push(name + ' → ' + e.message);
+      console.log('  ✗ ' + name + ' : ' + e.message);
+    }
+  };
+
+  await checkAsync('supprimer un trade depuis le journal', async () => {
+    purgeModals();
+    w.App.state.journalView = 'table';
+    w.App.state.view = 'journal';
+    w.App.render();
+    const avant = w.App.state.trades.length;
+    d.querySelector('tr[data-id] [data-action="delete"]').click();
+    const mod = lastModal();
+    if (!mod) throw new Error('aucune confirmation affichée');
+    const btns = mod.querySelectorAll('.modal-foot .btn');
+    if (btns.length !== 2) throw new Error('boutons inattendus');
+    btns[1].click();                                   // « Supprimer »
+    await wait(300);
+    const n = w.App.state.trades.length;
+    const persisted = (w.Store.loadState().trades || []).length;
+    if (n !== avant - 1) throw new Error('trade non supprimé (' + avant + ' → ' + n + ')');
+    if (n !== persisted) throw new Error('mémoire ' + n + ' ≠ stockage ' + persisted);
+    return avant + ' → ' + n + ' trades (stockage synchronisé)';
+  });
+
+  await checkAsync('« Annuler » ne supprime rien', async () => {
+    purgeModals();
+    const avant = w.App.state.trades.length;
+    d.querySelector('tr[data-id] [data-action="delete"]').click();
+    lastModal().querySelectorAll('.modal-foot .btn')[0].click();   // « Annuler »
+    await wait(300);
+    if (w.App.state.trades.length !== avant) throw new Error('un trade a disparu malgré l\'annulation');
+    return avant + ' trades inchangés';
+  });
+
+  await checkAsync('purge de la démo via le bandeau', async () => {
+    purgeModals();
+    w.App.loadDemo();
+    const avant = w.App.state.trades.length;
+    w.App.state.view = 'dashboard';
+    w.App.render();
+    const btn = d.querySelector('[data-action="purge-demo"]');
+    if (!btn) throw new Error('bouton de purge absent');
+    btn.click();
+    lastModal().querySelectorAll('.modal-foot .btn')[1].click();
+    await wait(350);
+    if (w.App.demoCount() !== 0) throw new Error(w.App.demoCount() + ' trades de démo encore présents');
+    if (w.App.state.trades.length !== 0) throw new Error('il reste ' + w.App.state.trades.length + ' trades');
+    return avant + ' trades de démo supprimés, journal vidé';
+  });
+
+  await checkAsync('« Tout effacer » depuis les paramètres', async () => {
+    purgeModals();
+    w.App.loadDemo();
+    await wait(50);
+    purgeModals();
+    w.App.state.view = 'params';
+    w.App.render();
+    d.getElementById('stReset').click();
+    lastModal().querySelectorAll('.modal-foot .btn')[1].click();
+    await wait(350);
+    if (w.App.state.trades.length !== 0) throw new Error('journal non vidé');
+    if ((w.Store.loadState().trades || []).length !== 0) throw new Error('stockage non vidé');
+    return 'journal et stockage vidés';
+  });
+
+  // La démo est rechargée pour la suite des tests
+  w.App.loadDemo();
+  await wait(60);
+
   console.log('\n6. Plan : checklists');
   w.App.state.view = 'plan'; w.App.render();
   check('blocs du plan', () => {
@@ -258,16 +363,26 @@ vc.on('log', () => {});
   });
 
   console.log('\n9. Vidage complet');
-  check('journal vide → état vide', () => {
+  check('journal vide → état vide avec les 3 actions', () => {
     w.App.state.trades = [];
     w.App.state.view = 'journal';
     w.App.render();
     if (!d.querySelector('.empty')) throw new Error('pas d\'état vide');
+    if (d.querySelectorAll('.empty-actions .btn').length < 3) throw new Error('actions manquantes');
     return 'état vide affiché';
   });
-  check('dashboard sans données', () => {
+  check('dashboard sans données → écran d\'accueil', () => {
     w.App.state.view = 'dashboard'; w.App.render();
-    return 'ok';
+    if (!d.querySelector('.welcome')) throw new Error('écran d\'accueil absent');
+    return 'accueil affiché';
+  });
+  check('démo supprimable depuis les paramètres', () => {
+    w.App.loadDemo();
+    const n = w.App.demoCount();
+    if (!d.getElementById('settingsForm')) { w.App.state.view = 'params'; w.App.render(); }
+    const btn = d.getElementById('stClearDemo');
+    if (!btn || btn.disabled) throw new Error('bouton désactivé alors que la démo est chargée');
+    return n + ' trades, bouton actif';
   });
 
   if (errors.length) {

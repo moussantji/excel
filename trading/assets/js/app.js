@@ -64,6 +64,25 @@
     return Metrics.build(state.trades, state.settings, state.filters, Store.todayISO());
   }
 
+  /* ---- données de démonstration : repérées, donc supprimables seules ---- */
+  function demoTrades() { return state.trades.filter(function (t) { return t.demo; }); }
+  function realTrades() { return state.trades.filter(function (t) { return !t.demo; }); }
+  function demoCount() { return demoTrades().length; }
+  function hasDemo() { return demoCount() > 0; }
+
+  function removeDemoTrades(silent) {
+    var n = demoCount();
+    if (!n) return 0;
+    state.trades = realTrades();
+    if (!state.trades.length) state.demo = false;
+    // la démo peut avoir posé un filtre de période « tout » : on revient sur 30 jours
+    if (!state.trades.length) applyPreset('30d', true);
+    persist();
+    render();
+    if (!silent) UI.toast(UI.pl(n, 'trade de démonstration supprimé', 'trades de démonstration supprimés') + '. Votre journal est prêt.');
+    return n;
+  }
+
   /* =========================================================
      Périodes
      ========================================================= */
@@ -161,13 +180,18 @@
     $('#topToday').innerHTML =
       "<span class=\"lbl\">Aujourd'hui</span><b class=\"" + UI.signClass(g.todayNet) + "\">" +
       (g.todayCount ? UI.fmtMoneySigned(g.todayNet) : '—') + '</b>' +
-      '<span class="sub">' + g.todayCount + ' trade' + (g.todayCount > 1 ? 's' : '') + '</span>';
+      '<span class="sub">' + UI.pl(g.todayCount, 'trade') + '</span>';
     var blocked = g.todayLimits.blocked;
     var badge = $('#topStatus');
-    badge.className = 'status-badge ' + (blocked ? 'ko' : 'ok');
+    var demo = hasDemo();
+    badge.className = 'status-badge ' + (blocked ? 'ko' : demo ? 'demo' : 'ok');
     badge.innerHTML = blocked
       ? '<span class="dot"></span>Limite atteinte : stop'
-      : (state.filters.preset ? '<span class="dot"></span>' + periodLabel() : '<span class="dot"></span>Prêt à trader');
+      : demo
+        ? '<span class="dot"></span>Mode démonstration — ' + UI.pl(demoCount(), 'trade fictif', 'trades fictifs')
+        : !state.trades.length
+          ? '<span class="dot"></span>Journal vide — rien n\'est encore enregistré'
+          : (state.filters.preset ? '<span class="dot"></span>' + periodLabel() : '<span class="dot"></span>Prêt à trader');
   }
 
   /* =========================================================
@@ -180,7 +204,7 @@
       '<div class="card-body">' + bodyHTML + '</div></section>';
   }
   function kpiCard(k) {
-    return '<div class="kpi ' + (k.tone || '') + '">' +
+    return '<div class="kpi ' + (k.tone || '') + (k.spark ? ' has-spark' : '') + '">' +
       '<div class="kpi-label">' + esc(k.label) + '</div>' +
       '<div class="kpi-value ' + (k.valueClass || '') + '">' + k.value + '</div>' +
       (k.sub ? '<div class="kpi-sub">' + k.sub + '</div>' : '') +
@@ -206,28 +230,80 @@
   /* =========================================================
      VUE : TABLEAU DE BORD
      ========================================================= */
+  /** Écran d'accueil : aucun trade enregistré (première utilisation, tablette…). */
+  function renderWelcome(host) {
+    var demo = hasDemo();
+    host.innerHTML =
+      '<section class="welcome">' +
+      '<div class="welcome-hero">' +
+      '<span class="welcome-logo">' + UI.icon('logo') + '</span>' +
+      '<h2>Bienvenue sur votre journal de trading</h2>' +
+      '<p>Plan écrit, journal des trades et performances en R et en devise — sur ordinateur comme sur tablette. ' +
+      (demo ? 'Les données de démonstration sont encore chargées : supprimez-les pour démarrer sur une base propre.' : 'Commencez par enregistrer votre premier trade ou importez votre historique.') +
+      '</p>' +
+      '</div>' +
+      '<div class="welcome-steps">' +
+      '<button class="welcome-card" data-empty="add">' +
+      '<span class="wc-ico">' + UI.icon('plus') + '</span><b>Ajouter un trade</b>' +
+      '<span>Du jour ou passé : instrument, entrée, stop, sortie, émotion, erreur. Les pips, le risque et le multiple de R sont calculés automatiquement.</span>' +
+      '<span class="wc-go">Ouvrir le formulaire →</span>' +
+      '</button>' +
+      '<button class="welcome-card" data-empty="import">' +
+      '<span class="wc-ico">' + UI.icon('importFile') + '</span><b>Importer un historique</b>' +
+      '<span>CSV ou Excel : les colonnes en français et en anglais sont reconnues, les virgules décimales aussi. Modèles fournis dans <code>exemples/</code>.</span>' +
+      '<span class="wc-go">Importer un fichier →</span>' +
+      '</button>' +
+      '<button class="welcome-card" data-empty="demo">' +
+      '<span class="wc-ico">' + UI.icon('flask') + '</span><b>Voir avec des données de démo</b>' +
+      '<span>80 trades fictifs cohérents pour découvrir le tableau de bord, les graphiques et le calendrier. Supprimables en un clic à tout moment.</span>' +
+      '<span class="wc-go">Charger la démo →</span>' +
+      '</button>' +
+      (demo ? '<button class="welcome-card danger" data-empty="cleardemo">' +
+        '<span class="wc-ico">' + UI.icon('broom') + '</span><b>Supprimer la démonstration</b>' +
+        '<span>' + UI.pl(demoCount(), 'trade fictif est encore enregistré', 'trades fictifs sont encore enregistrés') + (realTrades().length ? ' à côté de vos ' + UI.pl(realTrades().length, 'trade') : '') + '. Les trades de démo sont repérés et supprimés seuls.</span>' +
+        '<span class="wc-go">Nettoyer la démo →</span></button>' : '') +
+      '</div>' +
+      '<div class="welcome-foot">' +
+      '<p><b>Vos données restent sur cet appareil</b> (aucun envoi sur un serveur). Pensez à <i>Exporter → Sauvegarde JSON</i> chaque semaine.</p>' +
+      '<p>Le plan de trading complet (règles de risque, 3 setups, routine, checklists) est dans l\'onglet <b>Plan de trading</b>.</p>' +
+      '</div>' +
+      '</section>';
+  }
+
   function renderDashboard(host, model) {
     var k = model.kpis, s = state.settings, g = model.goals;
+
+    // Première utilisation : écran d'accueil tant qu'aucun trade n'existe
+    if (!state.trades.length) { renderWelcome(host); return; }
+
     var html = '';
 
     // ---- bandeau d'alertes / garde-fous ----
     var alerts = [];
+    if (hasDemo()) {
+      alerts.push({
+        tone: 'demo', ic: 'flask',
+        html: 'Mode démonstration : <b>' + UI.pl(demoCount(), 'trade fictif', 'trades fictifs') + '</b>' +
+          (realTrades().length ? ' mélangés à vos ' + UI.pl(realTrades().length, 'trade réel', 'trades réels') : '') +
+          '. Les statistiques ci-dessous les incluent. <button class="alert-btn" data-action="purge-demo">Supprimer la démo</button>'
+      });
+    }
     if (g.todayLimits.blocked) {
-      alerts.push({ tone: 'ko', icon: '🛑', text: "Limite du jour atteinte (" + (g.todayLimits.tradesReached ? 'nombre de trades' : 'perte journalière') + "). Le plan impose l'arrêt : <b>aucun trade de plus aujourd'hui</b>." });
+      alerts.push({ tone: 'ko', ic: 'stop', text: "Limite du jour atteinte (" + (g.todayLimits.tradesReached ? 'nombre de trades' : 'perte journalière') + "). Le plan impose l'arrêt : <b>aucun trade de plus aujourd'hui</b>." });
     } else {
-      alerts.push({ tone: 'ok', icon: '✅', text: g.todayCount === 0
-        ? "Aucun trade aujourd'hui. Reste " + g.todayLimits.tradesLeft + " trade(s) autorisé(s) et " + UI.fmtMoney(g.todayLimits.lossLeft) + " de perte disponible ce jour."
-        : "Journée en cours : " + g.todayCount + " trade(s), " + UI.fmtMoneySigned(g.todayNet) + ". Encore " + g.todayLimits.tradesLeft + " trade(s) possible(s)." });
+      alerts.push({ tone: 'ok', ic: 'check', text: g.todayCount === 0
+        ? "Aucun trade aujourd'hui. Reste " + UI.pl(g.todayLimits.tradesLeft, 'trade') + " autorisé" + (g.todayLimits.tradesLeft > 1 ? 's' : '') + " et " + UI.fmtMoney(g.todayLimits.lossLeft) + " de perte disponible ce jour."
+        : "Journée en cours : " + UI.pl(g.todayCount, 'trade') + ", " + UI.fmtMoneySigned(g.todayNet) + ". Encore " + UI.pl(g.todayLimits.tradesLeft, 'trade') + " possible." });
     }
     if (Math.abs(k.maxDDPct) >= s.maxDrawdownPct) {
-      alerts.push({ tone: 'warn', icon: '📉', text: 'Drawdown de ' + UI.fmtNum(Math.abs(k.maxDDPct), 2) + ' % sur la période (seuil ' + s.maxDrawdownPct + ' %) : taille à réduire de moitié selon le plan.' });
+      alerts.push({ tone: 'warn', ic: 'trendDown', text: 'Drawdown de ' + UI.fmtNum(Math.abs(k.maxDDPct), 2) + ' % sur la période (seuil ' + s.maxDrawdownPct + ' %) : taille à réduire de moitié selon le plan.' });
     }
     if (k.planRespectPct !== null && k.planRespectPct < 90) {
-      alerts.push({ tone: 'warn', icon: '⚡', text: 'Respect du plan à ' + UI.fmtNum(k.planRespectPct, 0) + ' % sur la période. Chaque écart doit avoir sa note dans le journal.' });
+      alerts.push({ tone: 'warn', ic: 'bolt', text: 'Respect du plan à ' + UI.fmtNum(k.planRespectPct, 0) + ' % sur la période. Chaque écart doit avoir sa note dans le journal.' });
     }
-    if (g.week.lossReached) alerts.push({ tone: 'ko', icon: '📆', text: 'Perte hebdomadaire maximale atteinte (' + UI.fmtMoney(g.week.net) + '). Arrêt jusqu\'à lundi.' });
+    if (g.week.lossReached) alerts.push({ tone: 'ko', ic: 'calendarWarn', text: 'Perte hebdomadaire maximale atteinte (' + UI.fmtMoney(g.week.net) + '). Arrêt jusqu\'à lundi.' });
     html += '<div class="alerts">' + alerts.map(function (a) {
-      return '<div class="alert ' + a.tone + '"><span class="alert-ico">' + a.icon + '</span><span>' + a.text + '</span></div>';
+      return '<div class="alert ' + a.tone + '"><span class="alert-ico">' + UI.icon(a.ic) + '</span><span>' + (a.html || a.text) + '</span></div>';
     }).join('') + '</div>';
 
     // ---- bandeau période ----
@@ -241,15 +317,15 @@
 
     // ---- KPI ----
     var kpis = [
-      { label: 'Résultat de la période', value: UI.fmtMoneySigned(k.net), sub: k.closed + ' trade(s) clôturé(s) · ' + UI.fmtPct(k.periodReturnPct), valueClass: UI.signClass(k.net), tone: UI.signClass(k.net) },
+      { label: 'Résultat de la période', value: UI.fmtMoneySigned(k.net), sub: UI.pl(k.closed, 'trade clôturé', 'trades clôturés') + ' · ' + UI.fmtPct(k.periodReturnPct), valueClass: UI.signClass(k.net), tone: UI.signClass(k.net) },
       { label: 'Capital du compte', value: UI.fmtMoney(k.equityTotal), sub: 'Départ ' + UI.fmtMoney(s.startingCapital) + ' · ' + UI.fmtPct(k.totalReturnPct), valueClass: UI.signClass(k.totalReturnPct), spark: 'equity' },
       { label: 'Résultat en R', value: UI.fmtR(k.sumR, 1), sub: 'Espérance ' + (k.expectancyR === null ? '—' : UI.fmtR(k.expectancyR)) + ' / trade', valueClass: UI.signClass(k.sumR), tone: UI.signClass(k.sumR) },
       { label: 'Taux de réussite', value: UI.fmtNum(k.winRate, 1) + ' %', sub: k.wins + ' gagnants / ' + k.losses + ' perdants', valueClass: k.winRate >= 45 ? 'pos' : 'warn-txt' },
       { label: 'Profit factor', value: k.profitFactor === Infinity ? '∞' : UI.fmtNum(k.profitFactor), sub: 'Gains ' + UI.fmtMoney(k.grossProfit) + ' / pertes ' + UI.fmtMoney(-k.grossLoss), valueClass: k.profitFactor >= 1.3 ? 'pos' : k.profitFactor >= 1 ? 'warn-txt' : 'neg' },
       { label: 'Ratio gain / perte', value: k.payoff === null ? '—' : UI.fmtNum(k.payoff), sub: 'Gain moyen ' + UI.fmtMoney(k.avgWin) + ' · perte ' + UI.fmtMoney(k.avgLoss), valueClass: (k.payoff || 0) >= 1.5 ? 'pos' : 'warn-txt' },
       { label: 'Drawdown max', value: UI.fmtNum(Math.abs(k.maxDDPct), 2) + ' %', sub: UI.fmtMoney(k.maxDD) + ' depuis le plus haut', valueClass: Math.abs(k.maxDDPct) <= s.maxDrawdownPct ? 'pos' : 'neg', tone: 'neg-soft' },
-      { label: 'Espérance par trade', value: k.expectancyMoney === 0 ? '—' : UI.fmtMoneySigned(k.expectancyMoney), sub: 'Sur ' + k.closed + ' trades clôturés', valueClass: UI.signClass(k.expectancyMoney) },
-      { label: 'Respect du plan', value: k.planRespectPct === null ? '—' : UI.fmtNum(k.planRespectPct, 0) + ' %', sub: model.discipline && model.discipline.costPerTrade !== null ? 'Écart coûte ' + UI.fmtMoney(Math.abs(model.discipline.costPerTrade)) + ' / trade' : 'À renseigner dans le journal', valueClass: (k.planRespectPct || 0) >= 90 ? 'pos' : 'warn-txt' },
+      { label: 'Espérance par trade', value: k.expectancyMoney === 0 ? '—' : UI.fmtMoneySigned(k.expectancyMoney), sub: 'Sur ' + UI.pl(k.closed, 'trade clôturé', 'trades clôturés'), valueClass: UI.signClass(k.expectancyMoney) },
+      { label: 'Respect du plan', value: k.planRespectPct === null ? '—' : UI.fmtNum(k.planRespectPct, 0) + ' %', sub: model.discipline && model.discipline.costPerTrade !== null ? 'Chaque écart au plan coûte ' + UI.fmtMoney(Math.abs(model.discipline.costPerTrade)) + ' par trade' : 'À renseigner dans le journal', valueClass: (k.planRespectPct || 0) >= 90 ? 'pos' : 'warn-txt' },
       { label: 'Meilleur trade', value: UI.fmtMoneySigned(k.bestTrade), sub: k.bestR === null ? '' : UI.fmtR(k.bestR) + ' · ' + model.records.bestTrade.symbol, valueClass: 'pos' },
       { label: 'Pire trade', value: UI.fmtMoneySigned(k.worstTrade), sub: k.worstR === null ? '' : UI.fmtR(k.worstR) + ' · ' + model.records.worstTrade.symbol, valueClass: 'neg' },
       { label: 'Durée moyenne', value: k.avgDuration === null ? '—' : UI.dur(k.avgDuration), sub: 'Temps passé en position', valueClass: '' }
@@ -321,6 +397,9 @@
       fromIn.addEventListener('change', upd);
       toIn.addEventListener('change', upd);
     }
+    $$('[data-action="purge-demo"]', host).forEach(function (b) {
+      b.addEventListener('click', function () { confirmRemoveDemo(); });
+    });
     $$('[data-chip-remove]', host).forEach(function (b) {
       b.addEventListener('click', function () {
         var f = b.dataset.chipRemove;
@@ -348,14 +427,14 @@
 
   function filterChipsHTML(model) {
     var f = state.filters, chips = [];
-    chips.push('<span class="chip period">Période : ' + esc(periodLabel()) + '<button class="chip-x" data-chip-remove="period">✕</button></span>');
-    if (f.search) chips.push('<span class="chip">Recherche : « ' + esc(f.search) + ' »<button class="chip-x" data-chip-remove="search">✕</button></span>');
+    chips.push('<span class="chip period">Période : ' + esc(periodLabel()) + '<button class="chip-x" data-chip-remove="period" aria-label="Retirer le filtre de période"><svg class="ico-svg" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></span>');
+    if (f.search) chips.push('<span class="chip">Recherche : « ' + esc(f.search) + ' »<button class="chip-x" data-chip-remove="search" aria-label="Effacer la recherche"><svg class="ico-svg" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></span>');
     ['symbols', 'setups', 'sessions', 'directions', 'planStatus'].forEach(function (key) {
       if (f[key] && f[key].length) {
-        chips.push('<span class="chip">' + esc(f[key].join(', ')) + '<button class="chip-x" data-chip-remove="' + key + '">✕</button></span>');
+        chips.push('<span class="chip">' + esc(f[key].join(', ')) + '<button class="chip-x" data-chip-remove="' + key + '" aria-label="Retirer ce filtre"><svg class="ico-svg" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></span>');
       }
     });
-    chips.push('<span class="chip ghost">' + model.trades.length + ' trade(s) affiché(s) sur ' + state.trades.length + '</span>');
+    chips.push('<span class="chip ghost">' + UI.pl(model.trades.length, 'trade affiché', 'trades affichés') + ' sur ' + state.trades.length + '</span>');
     return chips.join('');
   }
 
@@ -364,7 +443,7 @@
     if (state.curveMode === 'equity') return 'Capital ' + UI.fmtMoney(k.startEquity) + ' → ' + UI.fmtMoney(k.endEquity) + ' (' + UI.fmtPct(k.periodReturnPct) + ')';
     if (state.curveMode === 'r') return 'Cumul ' + UI.fmtR(k.sumR, 1) + ' sur ' + k.rCount + ' trades';
     if (state.curveMode === 'dd') return 'Drawdown max ' + UI.fmtNum(Math.abs(k.maxDDPct), 2) + ' % (' + UI.fmtMoney(k.maxDD) + ')';
-    return model.daily.length + ' journée(s) de trading';
+    return UI.pl(model.daily.length, 'journée de trading');
   }
 
   /* ---------- graphique principal ---------- */
@@ -379,7 +458,7 @@
         tipFn: function (it) {
           return '<div class="tip-t">' + esc(Store.fmtDateFR(it.meta.date, { long: true })) + '</div>' +
             '<div class="tip-v ' + UI.signClass(it.value) + '">' + UI.fmtMoneySigned(it.value) + '</div>' +
-            '<div class="tip-s">' + it.meta.count + ' trade(s) · ' + UI.fmtR(it.meta.r, 1) + ' cumulés</div>';
+            '<div class="tip-s">' + UI.pl(it.meta.count, 'trade') + ' · ' + UI.fmtR(it.meta.r, 1) + ' cumulés</div>';
         }
       });
       return;
@@ -467,7 +546,7 @@
         var m = it.meta;
         return '<div class="tip-t">' + esc(m.label) + '</div>' +
           '<div class="tip-v ' + UI.signClass(m.net) + '">' + UI.fmtMoneySigned(m.net) + '</div>' +
-          '<div class="tip-s">' + m.closed + ' trades · ' + UI.fmtR(m.sumR, 1) + ' · ' + UI.fmtNum(m.winRate, 0) + ' % de réussite</div>' +
+          '<div class="tip-s">' + UI.pl(m.closed, 'trade') + ' · ' + UI.fmtR(m.sumR, 1) + ' · ' + UI.fmtNum(m.winRate, 0) + ' % de réussite</div>' +
           '<div class="tip-s">Espérance ' + UI.fmtR(m.expectancyR) + ' · PF ' + (m.profitFactor === Infinity ? '∞' : UI.fmtNum(m.profitFactor)) + '</div>';
       }
     });
@@ -541,7 +620,7 @@
     var html = '<div class="obj-list">';
     html += '<div class="obj"><div class="obj-head"><span>Objectif du mois (' + esc(Store.monthLabel(g.month.key, true)) + ')</span><b>' + UI.fmtPct(g.month.pct) + ' / +' + g.month.targetPct + ' %</b></div>' +
       progress(g.month.progressPct, g.month.pct >= g.month.targetPct ? 'pos' : g.month.pct >= 0 ? 'gold' : 'neg') +
-      '<div class="obj-sub">' + UI.fmtMoneySigned(g.month.net) + ' · ' + g.month.trades + ' trade(s) · reste ' + UI.fmtMoney(Math.max(0, g.month.targetMoney - g.month.net)) + '</div></div>';
+      '<div class="obj-sub">' + UI.fmtMoneySigned(g.month.net) + ' · ' + UI.pl(g.month.trades, 'trade') + ' · reste ' + UI.fmtMoney(Math.max(0, g.month.targetMoney - g.month.net)) + '</div></div>';
     html += '<div class="obj"><div class="obj-head"><span>Perte journalière autorisée</span><b>' + UI.fmtNum(g.todayLimits.lossUsedPct, 2) + ' / ' + g.todayLimits.lossLimitPct + ' %</b></div>' +
       progress(g.todayLimits.lossUsedPct / g.todayLimits.lossLimitPct * 100, g.todayLimits.lossReached ? 'neg' : g.todayLimits.lossUsedPct > g.todayLimits.lossLimitPct * 0.6 ? 'gold' : 'pos') +
       '<div class="obj-sub">' + (g.todayLimits.blocked ? 'Arrêt imposé par le plan' : UI.fmtMoney(g.todayLimits.lossLeft) + ' de perte encore disponible aujourd\'hui') + '</div></div>';
@@ -552,7 +631,7 @@
         : UI.fmtMoney(g.week.lossLimit) + ' de perte encore possible cette semaine (' + s.maxWeeklyLossPct + ' % du capital)') + '</div></div>';
     html += '<div class="obj"><div class="obj-head"><span>Drawdown vs seuil (' + s.maxDrawdownPct + ' %)</span><b>' + UI.fmtNum(Math.abs(k.maxDDPct), 2) + ' %</b></div>' +
       progress(Math.abs(k.maxDDPct) / (s.maxDrawdownPct || 1) * 100, Math.abs(k.maxDDPct) >= s.maxDrawdownPct ? 'neg' : 'pos') +
-      '<div class="obj-sub">Trades max/jour : ' + s.maxTradesPerDay + ' · risque ' + s.riskPerTradePct + ' % · ' + k.open + ' trade(s) en cours</div></div>';
+      '<div class="obj-sub">Trades max/jour : ' + s.maxTradesPerDay + ' · risque ' + s.riskPerTradePct + ' % · ' + UI.pl(k.open, 'trade en cours', 'trades en cours') + '</div></div>';
     html += '</div>';
     return html;
   }
@@ -580,7 +659,7 @@
   function disciplineNarrative(model, score) {
     var k = model.kpis, d = model.discipline, s = state.settings;
     var out = [];
-    out.push('<p>Score de discipline de <b>' + score + '/100</b> sur la période affichée (' + k.closed + ' trades clôturés).</p>');
+    out.push('<p>Score de discipline de <b>' + score + '/100</b> sur la période affichée (' + UI.pl(k.closed, 'trade clôturé', 'trades clôturés') + ').</p>');
     if (d.ok && d.ko) {
       out.push('<p>Espérance quand le plan est respecté : <b class="pos">' + UI.fmtR(d.ok.expectancyR) + '</b> (' + UI.fmtMoneySigned(d.ok.expectancyMoney) + ' / trade). ' +
         'Quand il ne l\'est pas : <b class="neg">' + UI.fmtR(d.ko.expectancyR) + '</b> (' + UI.fmtMoneySigned(d.ko.expectancyMoney) + ' / trade).</p>');
@@ -825,7 +904,8 @@
           case 'planFollowed':
             return '<td class="num">' + planBadge(t.planFollowed) + '</td>';
           case 'emotion':
-            return '<td>' + esc(t.emotion || '—') + '<div class="cell-sub">' + esc(t.mistake && t.mistake !== 'Aucune' ? '⚠ ' + t.mistake : '') + '</div></td>';
+            return '<td>' + esc(t.emotion || '—') + (t.mistake && t.mistake !== 'Aucune'
+              ? '<div class="cell-sub warn-txt">' + UI.icon('warn') + esc(t.mistake) + '</div>' : '') + '</td>';
           case 'durationMin':
             return '<td class="num">' + UI.dur(t.durationMin) + '</td>';
           case 'actions':
@@ -882,7 +962,7 @@
         '<footer>' +
         '<div class="tc-meta">' + planBadge(t.planFollowed) +
         (t.emotion ? '<span class="tc-tag">' + esc(t.emotion) + '</span>' : '') +
-        (t.mistake && t.mistake !== 'Aucune' ? '<span class="tc-tag warn">⚠ ' + esc(t.mistake) + '</span>' : '') +
+        (t.mistake && t.mistake !== 'Aucune' ? '<span class="tc-tag warn">' + UI.icon('warn') + esc(t.mistake) + '</span>' : '') +
         '</div>' +
         '<div class="tc-actions">' +
         '<button class="icon-btn" data-action="duplicate" data-id="' + t.id + '" title="Dupliquer le trade">' + UI.icon('copy') + '</button>' +
@@ -895,13 +975,14 @@
 
   function emptyJournalHTML() {
     if (!state.trades.length) {
-      return '<div class="empty"><div class="empty-ico">📒</div><h3>Votre journal est vide</h3>' +
-        '<p>Commencez par ajouter un trade, importer un CSV (modèle dans <code>trading/exemples/</code>) ou charger des données de démonstration pour voir le dashboard en action.</p>' +
+      return '<div class="empty"><div class="empty-ico">' + UI.icon('journal') + '</div><h3>Votre journal est vide</h3>' +
+        '<p>Ajoutez un trade, importez un CSV (modèles dans <code>trading/exemples/</code>), ou chargez la démonstration pour explorer le tableau de bord.</p>' +
         '<div class="empty-actions"><button class="btn primary" data-empty="add">+ Ajouter un trade</button>' +
         '<button class="btn ghost" data-empty="import">Importer un CSV</button>' +
-        '<button class="btn ghost" data-empty="demo">Charger la démo</button></div></div>';
+        '<button class="btn ghost" data-empty="demo">Voir avec des données de démo</button></div>' +
+        '<p class="muted small">La démonstration est marquée « démo » : elle se supprime d\'un clic, seule, sans toucher à vos trades.</p></div>';
     }
-    return '<div class="empty"><div class="empty-ico">🔎</div><h3>Aucun trade sur cette sélection</h3><p>Élargissez la période ou réinitialisez les filtres.</p>' +
+    return '<div class="empty"><div class="empty-ico">' + UI.icon('analyses') + '</div><h3>Aucun trade sur cette sélection</h3><p>Élargissez la période ou réinitialisez les filtres.</p>' +
       '<div class="empty-actions"><button class="btn ghost" data-empty="reset">Réinitialiser les filtres</button></div></div>';
   }
 
@@ -1079,17 +1160,17 @@
       var res = Store.csvToTrades(text);
       var box = $('#impResult', content);
       if (!res.trades.length) {
-        box.innerHTML = '<div class="alert ko"><span class="alert-ico">⚠️</span><span>Aucun trade lisible dans ' + esc(source) + '. Vérifiez que la première ligne contient bien les entitrés de colonnes.</span></div>';
+        box.innerHTML = '<div class="alert ko"><span class="alert-ico">' + UI.icon('warn') + '</span><span>Aucun trade lisible dans ' + esc(source) + '. Vérifiez que la première ligne contient bien les intitulés de colonnes.</span></div>';
         return;
       }
       var normalized = res.trades.map(function (t) { return Store.normalizeTrade(Store.toRaw(t), state.settings); });
       Array.prototype.push.apply(state.trades, normalized);
       persist();
       render();
-      box.innerHTML = '<div class="alert ok"><span class="alert-ico">✅</span><span>' + normalized.length + ' trade(s) importé(s) depuis ' + esc(source) + '.' +
-        (res.skipped ? ' ' + res.skipped + ' ligne(s) ignorée(s) (vides).' : '') +
+      box.innerHTML = '<div class="alert ok"><span class="alert-ico">' + UI.icon('check') + '</span><span>' + UI.pl(normalized.length, 'trade importé', 'trades importés') + ' depuis ' + esc(source) + '.' +
+        (res.skipped ? ' ' + UI.pl(res.skipped, 'ligne ignorée', 'lignes ignorées') + ' (vides).' : '') +
         (res.unknown.length ? ' Colonnes non reconnues : ' + esc(res.unknown.join(', ')) + '.' : '') + '</span></div>';
-      UI.toast(normalized.length + ' trade(s) importé(s).');
+      UI.toast(UI.pl(normalized.length, 'trade importé', 'trades importés') + '.');
     }
 
     $('#impFile', content).addEventListener('change', function (e) {
@@ -1107,8 +1188,8 @@
             UI.setCurrency(state.settings.currency);
             persist();
             render();
-            UI.toast('Sauvegarde restaurée : ' + st.trades.length + ' trades.');
-            $('#impResult', content).innerHTML = '<div class="alert ok"><span class="alert-ico">✅</span><span>Sauvegarde JSON restaurée (' + st.trades.length + ' trades).</span></div>';
+            UI.toast('Sauvegarde restaurée : ' + UI.pl(st.trades.length, 'trade') + '.');
+            $('#impResult', content).innerHTML = '<div class="alert ok"><span class="alert-ico">' + UI.icon('check') + '</span><span>Sauvegarde JSON restaurée (' + st.trades.length + ' trades).</span></div>';
           } catch (err) {
             UI.toast('Fichier JSON illisible.', 'error');
           }
@@ -1131,7 +1212,7 @@
     content.innerHTML =
       '<p>Exportez vos données pour les sauvegarder ou les analyser ailleurs. Les filtres actuels s\'appliquent à l\'export CSV.</p>' +
       '<ul class="export-list">' +
-      '<li><b>CSV du journal</b> — ' + model.trades.length + ' ligne(s), séparateur « ; » et virgules décimales (Excel français).</li>' +
+      '<li><b>CSV du journal</b> — ' + UI.pl(model.trades.length, 'ligne') + ', séparateur « ; » et virgules décimales (Excel français).</li>' +
       '<li><b>Sauvegarde JSON complète</b> — trades + paramètres, à réimporter plus tard (bouton Importer).</li>' +
       '</ul>';
     UI.openModal({
@@ -1159,8 +1240,22 @@
       if (b.dataset.empty === 'add') openTradeForm(null, buildModel());
       if (b.dataset.empty === 'import') openImportDialog(buildModel());
       if (b.dataset.empty === 'demo') { loadDemo(); }
+      if (b.dataset.empty === 'cleardemo') { confirmRemoveDemo(); }
       if (b.dataset.empty === 'reset') { state.filters.symbols = []; state.filters.setups = []; state.filters.sessions = []; state.filters.directions = []; state.filters.planStatus = []; state.filters.from = null; state.filters.to = null; state.filters.preset = 'all'; render(); }
     });
+  }
+
+  function confirmRemoveDemo() {
+    var n = demoCount();
+    if (!n) { UI.toast('Aucune donnée de démonstration à supprimer.', 'info'); return; }
+    var real = realTrades().length;
+    UI.confirmDialog({
+      title: 'Supprimer la démonstration ?',
+      message: (real
+        ? 'Les <b>' + UI.pl(n, 'trade de démonstration') + '</b> seront retirés ; vos <b>' + UI.pl(real, 'trade personnel', 'trades personnels') + '</b> sont conservés.'
+        : 'Les <b>' + UI.pl(n, 'trade de démonstration') + '</b> seront retirés de ce journal.'),
+      confirmLabel: 'Supprimer la démo', danger: true
+    }).then(function (ok) { if (ok) removeDemoTrades(); });
   }
 
   function loadDemo() {
@@ -1193,6 +1288,7 @@
     buildModel: buildModel,
     persist: persist,
     loadDemo: loadDemo,
+    demoCount: demoCount, hasDemo: hasDemo, removeDemoTrades: removeDemoTrades, confirmRemoveDemo: confirmRemoveDemo,
     applyPreset: applyPreset,
     PRESETS: PRESETS,
     card: card,

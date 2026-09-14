@@ -192,7 +192,7 @@
      --------------------------------------------------------- */
   function emptyTrade() {
     return {
-      id: uid(), date: todayISO(), time: nowTime(), symbol: '', direction: 'long',
+      id: uid(), date: todayISO(), time: nowTime(), symbol: '', direction: 'long', demo: false,
       session: '', setup: '', entry: null, stop: null, target: null, exit: null,
       size: null, riskAmount: null, pnl: null, fees: 0, rMode: 'auto', rMultipleIn: null,
       planFollowed: 'oui', emotion: 'Calme', mistake: 'Aucune', durationMin: null,
@@ -222,6 +222,7 @@
       rMode: raw.rMode === 'manual' ? 'manual' : 'auto',
       rMultipleIn: num(raw.rMultipleIn !== undefined ? raw.rMultipleIn : raw.rMultiple),
       planFollowed: PLAN_STATUS.indexOf(raw.planFollowed) > -1 ? raw.planFollowed : '',
+      demo: raw.demo === true || raw.demo === 'true' || raw.demo === 1 || raw.demo === 'oui',
       emotion: raw.emotion || '',
       mistake: raw.mistake || '',
       durationMin: num(raw.durationMin),
@@ -262,7 +263,7 @@
 
   function toRaw(t) {
     return {
-      id: t.id, date: t.date, time: t.time, symbol: t.symbol, direction: t.direction,
+      id: t.id, date: t.date, time: t.time, symbol: t.symbol, direction: t.direction, demo: !!t.demo,
       session: t.session, setup: t.setup, entry: t.entry, stop: t.stop, target: t.target,
       exit: t.exit, size: t.size, riskAmount: t.riskIn, pnl: t.pnlIn, fees: t.fees,
       rMode: t.rMode, rMultipleIn: t.rMultipleIn, planFollowed: t.planFollowed,
@@ -503,6 +504,7 @@
       if ((obj.pnl === undefined || String(obj.pnl).trim() === '') && obj.rMultiple !== undefined && String(obj.rMultiple).trim() !== '') {
         obj.rMode = 'manual'; obj.rMultipleIn = obj.rMultiple;
       }
+      obj.demo = false;
       var t = normalizeTrade(obj, { pipValuePerLot: 10, startingCapital: 10000 });
       if (!t.symbol && !t.hasResult && !t.entry) { skipped++; continue; }
       trades.push(t);
@@ -596,6 +598,7 @@
       var size = round(risk / (Math.abs(pair.price - stop) / pair.ps * settings.pipValuePerLot), 2);
 
       trades.push(normalizeTrade({
+        demo: true,
         date: day, time: pad2(clamp(hour, 0, 23)) + ':' + pad2(Math.floor(rnd() * 12) * 5),
         symbol: pair.s, direction: direction, session: session, setup: setup,
         entry: pair.price, stop: stop, target: target, exit: exit,
