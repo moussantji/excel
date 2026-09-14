@@ -9,7 +9,7 @@
      Contenu du plan (modifiable directement ici)
      --------------------------------------------------------- */
   var PLAN = {
-    version: '1.2',
+    version: '1.3',
     title: 'Plan de trading',
     subtitle: 'Forex & indices CFD — intraday et swing court',
     updated: 'Septembre 2026',
