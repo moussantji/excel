@@ -1,0 +1,4 @@
+ID;Date;Heure;Instrument;Sens;Session;Setup;Entrée;Stop;Objectif;Sortie;Taille (lots);Risque;P&L brut;Frais;P&L net;R;Respect du plan;Émotion;Erreur;Durée (min);Notes;Capture
+;2026-09-01;09:15;EURUSD;Long;Londres;Break & Retest H1;1,0850;1,0830;1,0900;1,0892;0,50;100,00;210,00;5,00;;;oui;Calme;Sortie trop tôt;95;Setup validé, sortie un peu rapide avant TP2.
+;2026-09-01;15:40;XAUUSD;Short;Overlap LDN/NY;Rejet de liquidité;2342,50;2348,00;2326,00;2330,00;0,20;115,00;230,00;6,50;;;partiel;Impatient;Entrée anticipée;52;Entré avant la confirmation de rejet sur M15.
+;2026-09-03;10:05;US30;Long;Londres;Pullback EMA (tendance);39150;39060;39330;39050;1,20;105,00;-120,00;4,00;;;non;Revanche;Revenge trading;18;Trade pris juste après une perte, hors setup. Stop touché.

@@ -1,0 +1,4 @@
+Date;Heure;Instrument;Sens;Entrée;Stop;Sortie;Taille;Risque;Frais;Respect du plan;Émotion;Erreur;Notes
+01/09/2026;09:15;EURUSD;Long;1,0850;1,0830;1,0892;0,50;100,00;5,00;oui;Calme;Aucune;Modèle simplifié : seules les colonnes utiles au calcul du R.
+01/09/2026;15:40;XAUUSD;Short;2342,50;2348,00;2330,00;0,20;115,00;6,50;partiel;Impatient;Entrée anticipée;
+03/09/2026;10:05;US30;Long;39150;39060;39050;1,20;105,00;4,00;non;Revanche;Revenge trading;Exemple de trade hors plan.
