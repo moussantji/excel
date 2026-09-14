@@ -19,8 +19,15 @@
     { id: 'custom', label: 'Personnalisé' }
   ];
 
+  var VIEW_KEY = 'journal-trading:vue-journal';
+  function savedJournalView() {
+    try { return localStorage.getItem(VIEW_KEY) || 'auto'; } catch (e) { return 'auto'; }
+  }
+  function isNarrow() { return (global.innerWidth || 1200) < 1000; }
+
   var state = {
     view: 'dashboard',
+    journalView: savedJournalView(),
     trades: [],
     settings: Store.defaultSettings(),
     demo: false,
@@ -622,6 +629,10 @@
     html += '<div class="journal-toolbar">' +
       '<div class="search-wrap"><input type="search" id="jSearch" class="input" placeholder="Rechercher un instrument, setup, note…" value="' + attr(state.filters.search || '') + '"></div>' +
       '<button class="btn ghost" id="btnFilters">Filtres' + (filterCount() ? ' (' + filterCount() + ')' : '') + '</button>' +
+      '<div class="seg view-toggle" data-name="journalView">' +
+      [['table', 'Tableau'], ['cards', 'Cartes'], ['auto', 'Auto']].map(function (m) {
+        return '<button class="seg-btn' + (state.journalView === m[0] ? ' active' : '') + '" data-val="' + m[0] + '">' + m[1] + '</button>';
+      }).join('') + '</div>' +
       '<button class="btn ghost" id="btnImport">Importer CSV</button>' +
       '<button class="btn ghost" id="btnExport">Exporter</button>' +
       '<button class="btn primary" id="btnAdd">+ Nouveau trade</button>' +
@@ -646,8 +657,13 @@
       '</div>';
 
     var trades = sortedTrades(model.trades);
-    html += card('', trades.length ? tradesTableHTML(trades) : emptyJournalHTML(), { class: 'card-table' });
-    html += '<p class="muted small">Astuce : cliquez sur une ligne pour modifier le trade, sur l\'entête d\'une colonne pour trier. Les trades sans résultat (P&L vide) sont considérés comme « en cours ».</p>';
+    var asCards = state.journalView === 'cards' || (state.journalView === 'auto' && isNarrow());
+    html += asCards
+      ? card('', trades.length ? tradesCardsHTML(trades) : emptyJournalHTML(), { class: 'card-cards' })
+      : card('', trades.length ? tradesTableHTML(trades) : emptyJournalHTML(), { class: 'card-table' });
+    html += '<p class="muted small">' + (asCards
+      ? 'Touchez une carte pour modifier le trade. Basculez en « Tableau » pour trier par colonne.'
+      : 'Cliquez sur une ligne pour modifier le trade, sur l\'entête d\'une colonne pour trier. Les trades sans résultat (P&L vide) sont considérés comme « en cours ».') + '</p>';
 
     host.innerHTML = html;
 
@@ -660,6 +676,13 @@
     });
     searchIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(tmr); state.filters.search = searchIn.value.trim(); render(); } });
 
+    $$('.view-toggle .seg-btn', host).forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.journalView = b.dataset.val;
+        try { localStorage.setItem(VIEW_KEY, state.journalView); } catch (e) { /* ignore */ }
+        render();
+      });
+    });
     $('#btnFilters').addEventListener('click', function () { $('#filtersPanel').classList.toggle('open'); });
     $('#btnAdd').addEventListener('click', function () { openTradeForm(null, model); });
     $('#btnImport').addEventListener('click', function () { openImportDialog(model); });
@@ -703,7 +726,7 @@
         render();
       });
     });
-    $$('tr[data-id]').forEach(function (tr) {
+    $$('tr[data-id], .trade-card[data-id]').forEach(function (tr) {
       tr.addEventListener('click', function (e) {
         if (e.target.closest('[data-action]')) return;
         var t = state.trades.filter(function (x) { return x.id === tr.dataset.id; })[0];
@@ -828,6 +851,46 @@
         (sorted ? '<span class="sort-ico">' + (state.sort.dir === 'asc' ? '↑' : '↓') + '</span>' : '') + '</th>';
     }).join('');
     return html.replace(/<thead><tr>[\s\S]*?<\/tr><\/thead>/, '<thead><tr>' + headCells + '</tr></thead>');
+  }
+
+  /* --- vue cartes (tablette / mobile / tactile) --- */
+  function tradesCardsHTML(trades) {
+    return '<div class="trade-cards">' + trades.map(function (t) {
+      var rows = [
+        ['Setup', t.setup || '—'],
+        ['Session', t.session || '—'],
+        ['Risque', t.riskAmount ? UI.fmtMoney(t.riskAmount) : '—'],
+        ['Pips', t.pips === null ? '—' : UI.fmtNum(t.pips, 1) + (t.plannedRR ? ' · RR ' + UI.fmtNum(t.plannedRR, 1) : '')],
+        ['Frais', t.fees ? UI.fmtMoney(t.fees) : '—'],
+        ['Durée', UI.dur(t.durationMin)]
+      ];
+      return '<article class="trade-card" data-id="' + t.id + '" tabindex="0">' +
+        '<header>' +
+        '<div class="tc-id">' +
+        '<b>' + esc(t.symbol || '—') + '</b>' +
+        '<span class="tag">' + (t.direction === 'short' ? 'Vente' : 'Achat') + '</span>' +
+        '<span class="tc-date">' + esc(Store.fmtDateFR(t.date)) + (t.time ? ' · ' + esc(t.time) : '') + '</span>' +
+        '</div>' +
+        '<div class="tc-pnl ' + UI.signClass(t.netPnl) + '">' +
+        '<b>' + (t.hasResult ? UI.fmtMoneySigned(t.netPnl) : '<span class="badge flat">en cours</span>') + '</b>' +
+        (t.rMultiple !== null ? '<span>' + UI.fmtR(t.rMultiple) + '</span>' : '') +
+        '</div>' +
+        '</header>' +
+        '<div class="tc-grid">' + rows.map(function (r) {
+          return '<div class="tc-cell"><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>';
+        }).join('') + '</div>' +
+        '<footer>' +
+        '<div class="tc-meta">' + planBadge(t.planFollowed) +
+        (t.emotion ? '<span class="tc-tag">' + esc(t.emotion) + '</span>' : '') +
+        (t.mistake && t.mistake !== 'Aucune' ? '<span class="tc-tag warn">⚠ ' + esc(t.mistake) + '</span>' : '') +
+        '</div>' +
+        '<div class="tc-actions">' +
+        '<button class="icon-btn" data-action="duplicate" data-id="' + t.id + '" title="Dupliquer le trade">' + UI.icon('copy') + '</button>' +
+        '<button class="icon-btn danger" data-action="delete" data-id="' + t.id + '" title="Supprimer le trade">' + UI.icon('trash') + '</button>' +
+        '</div></footer>' +
+        (t.notes ? '<p class="tc-notes">' + esc(UI.truncate(t.notes, 160)) + '</p>' : '') +
+        '</article>';
+    }).join('') + '</div>';
   }
 
   function emptyJournalHTML() {
@@ -1113,12 +1176,13 @@
   function init() {
     load();
     bindGlobal();
-    if (!Store.storageAvailable()) {
-      UI.toast('Le stockage local est indisponible dans ce contexte : pensez à exporter en JSON.', 'warn', 7000);
-    }
     render();
-    if (!state.trades.length) {
-      setTimeout(function () { UI.toast('Journal vide : chargez la démo ou ajoutez votre premier trade.', 'info', 5000); }, 500);
+    // Notifications de démarrage (une seule à la fois, et pas au premier lancement :
+    // l'état vide du journal explique déjà quoi faire).
+    if (!Store.storageAvailable()) {
+      setTimeout(function () {
+        UI.toast('Stockage local indisponible : exportez votre journal en JSON pour ne rien perdre.', 'warn', 7000);
+      }, 400);
     }
   }
 

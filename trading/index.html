@@ -2,11 +2,22 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Journal & Plan de trading — Dashboard de performance</title>
-<meta name="description" content="Journal de trading, plan écrit et tableau de bord de performance (R, espérance, profit factor, drawdown, discipline) — application locale, sans dépendance.">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes">
+<title>Trading Desk — Journal & Plan de trading</title>
+<meta name="description" content="Journal de trading, plan écrit et tableau de bord de performance (R, espérance, profit factor, drawdown, discipline) — application installable, fonctionne hors ligne.">
 <meta name="color-scheme" content="dark">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0e14'/><path d='M18 70 L38 48 L54 60 L82 26' stroke='%23f2c14e' stroke-width='9' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<meta name="theme-color" content="#0b0e14">
+
+<!-- Application installable (PWA) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trading Desk">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Trading Desk">
+
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
@@ -23,11 +34,12 @@
     </div>
     <nav id="nav" class="nav"></nav>
     <div class="sidebar-foot">
+      <button class="btn ghost install-btn" id="btnInstall" hidden>⬇️ Installer sur cet appareil</button>
       <div class="foot-card">
         <b>Données locales</b>
-        <p>Vos trades restent dans ce navigateur. Exportez une sauvegarde JSON chaque semaine.</p>
+        <p>Vos trades restent dans cet appareil. Exportez une sauvegarde JSON chaque semaine.</p>
       </div>
-      <p class="ver">v1.0 · forex &amp; indices</p>
+      <p class="ver">v1.1 · tablette · hors ligne</p>
     </div>
   </aside>
 
@@ -42,15 +54,26 @@
       <div class="tb-right">
         <div id="topEquity" class="tb-kpi"></div>
         <div id="topToday" class="tb-kpi"></div>
+        <button class="icon-btn" id="btnRefresh" title="Recharger les données enregistrées" aria-label="Actualiser">⟳</button>
         <button class="btn primary" id="btnAddGlobal" title="Ajouter un trade (Ctrl+K pour rechercher)">+ Nouveau trade</button>
       </div>
     </header>
+
+    <div id="installBanner" class="install-banner" hidden>
+      <span class="ib-ico">📲</span>
+      <div class="ib-text">
+        <b>Installer l'application</b>
+        <span id="installBannerText">Ajoutez-la à votre écran d'accueil pour l'ouvrir en plein écran, même sans réseau.</span>
+      </div>
+      <button class="btn small primary" id="ibAction">Installer</button>
+      <button class="icon-btn" id="ibClose" aria-label="Fermer">✕</button>
+    </div>
 
     <main id="view" class="view" aria-live="polite"></main>
 
     <footer class="foot">
       <span>Journal, plan et tableau de bord de trading — calculs : P&amp;L net = P&amp;L brut − frais · R = P&amp;L net ÷ risque · drawdown depuis le plus haut.</span>
-      <span class="foot-right">Sauvegarde locale · <kbd>Ctrl</kbd>+<kbd>K</kbd> journal · <kbd>Ctrl</kbd>+<kbd>P</kbd> PDF du plan</span>
+      <span class="foot-right">Données locales · <kbd>Ctrl</kbd>+<kbd>K</kbd> journal · <kbd>Ctrl</kbd>+<kbd>P</kbd> PDF du plan</span>
     </footer>
   </div>
 </div>
@@ -65,5 +88,6 @@
 <script src="assets/js/ui.js"></script>
 <script src="assets/js/views.js"></script>
 <script src="assets/js/app.js"></script>
+<script src="assets/js/pwa.js"></script>
 </body>
 </html>

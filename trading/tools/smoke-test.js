@@ -42,6 +42,8 @@ vc.on('log', () => {});
   await wait(600);
 
   const view = () => d.getElementById('view');
+  const lastModal = () => Array.from(d.querySelectorAll('.modal-overlay')).pop();
+  const purgeModals = () => Array.from(d.querySelectorAll('.modal-overlay')).forEach((o) => o.remove());
   const check = (name, fn) => {
     try {
       const info = fn();
@@ -122,10 +124,38 @@ vc.on('log', () => {});
   });
   check('preset tout', () => { w.App.applyPreset('all'); return d.querySelectorAll('tr[data-id]').length + ' lignes'; });
 
+  console.log('\n4 bis. Journal en cartes (tablette / tactile)');
+  check('bascule en vue cartes', () => {
+    w.App.state.journalView = 'cards';
+    w.App.render();
+    const n = d.querySelectorAll('.trade-card').length;
+    if (!n) throw new Error('aucune carte rendue');
+    return n + ' cartes';
+  });
+  check('cellules clés de la carte', () => {
+    const c = d.querySelector('.trade-card');
+    ['tc-pnl', 'tc-grid', 'tc-meta'].forEach((cl) => { if (!c.querySelector('.' + cl)) throw new Error(cl + ' manquant'); });
+    return 'P&L, grille, méta OK';
+  });
+  check('toucher une carte ouvre le formulaire', () => {
+    d.querySelector('.trade-card').click();
+    const f = lastModal() && lastModal().querySelector('form');
+    if (!f) throw new Error('formulaire non ouvert');
+    purgeModals();
+    return 'édition au doigt OK';
+  });
+  check('retour en vue tableau', () => {
+    w.App.state.journalView = 'table';
+    w.App.render();
+    if (!d.querySelectorAll('tr[data-id]').length) throw new Error('tableau absent');
+    return 'OK';
+  });
+
   console.log('\n5. Formulaire de trade');
   check('ouverture + aperçu calculé', () => {
+    purgeModals();
     w.App.openTradeForm(null, w.App.buildModel());
-    const form = d.querySelector('.modal-overlay form');
+    const form = lastModal().querySelector('form');
     if (!form) throw new Error('formulaire absent');
     form.elements.symbol.value = 'EURUSD';
     form.elements.entry.value = '1.0850';
@@ -133,13 +163,13 @@ vc.on('log', () => {});
     form.elements.exit.value = '1.0900';
     form.elements.size.value = '1';
     form.elements.entry.dispatchEvent(new w.Event('input'));
-    const preview = d.querySelector('.modal-overlay #preview');
+    const preview = lastModal().querySelector('#preview');
     if (!preview || preview.innerHTML.indexOf('Aperçu') === -1) throw new Error('aperçu manquant');
     return 'aperçu OK';
   });
   check('enregistrement du trade', () => {
     const before = w.App.state.trades.length;
-    const btns = d.querySelectorAll('.modal-overlay .modal-foot .btn');
+    const btns = lastModal().querySelectorAll('.modal-foot .btn');
     btns[btns.length - 1].click();
     if (w.App.state.trades.length !== before + 1) throw new Error('trade non ajouté');
     return w.App.state.trades.length + ' trades';
@@ -158,6 +188,31 @@ vc.on('log', () => {});
     box.dispatchEvent(new w.Event('change'));
     const cnt = d.querySelector('[data-progress] .cl-count').textContent;
     return 'compteur ' + cnt;
+  });
+
+  console.log('\n6 bis. Application installable (PWA)');
+  check('manifest lié et lisible', () => {
+    const link = d.querySelector('link[rel=manifest]');
+    if (!link) throw new Error('lien manifest absent');
+    return link.getAttribute('href');
+  });
+  check('icônes et métadonnées iOS', () => {
+    const apple = d.querySelector('link[rel=apple-touch-icon]');
+    const cap = d.querySelector('meta[name=apple-mobile-web-app-capable]');
+    if (!apple || !cap) throw new Error('métadonnées manquantes');
+    return apple.getAttribute('href');
+  });
+  check('bandeau d\'installation présent', () => {
+    if (!d.getElementById('installBanner') || !d.getElementById('ibAction')) throw new Error('bandeau absent');
+    w.PWA.showBanner();
+    return d.getElementById('installBanner').hidden ? 'masqué' : 'affiché';
+  });
+  check('service worker déclaré dans index.html', () => {
+    const html = require('fs').readFileSync(require('path').join(ROOT, 'index.html'), 'utf8');
+    if (!/pwa\.js/.test(html)) throw new Error('pwa.js non chargé');
+    const sw = require('fs').readFileSync(require('path').join(ROOT, 'sw.js'), 'utf8');
+    if (!/addEventListener\('fetch'/.test(sw)) throw new Error('gestion du cache absente');
+    return 'sw.js + pwa.js présents';
   });
 
   console.log('\n7. Paramètres + export/import');
@@ -180,10 +235,10 @@ vc.on('log', () => {});
     w.App.state.trades = [];
     w.App.state.view = 'journal';
     w.App.render();
+    purgeModals();
     w.App.openImportDialog(w.App.buildModel());
-    // prendre la modale contenant le panneau d'import (les anciennes sont retirées avec un délai)
-    const mod = Array.from(d.querySelectorAll('.modal-overlay')).filter((o) => o.querySelector('#impPaste')).pop();
-    if (!mod) throw new Error('modale d\'import absente');
+    const mod = lastModal();
+    if (!mod || !mod.querySelector('#impPaste')) throw new Error('modale d\'import absente');
     d.getElementById('impPasteBtn').click();
     mod.querySelector('.import-paste textarea').value =
       'Date;Heure;Instrument;Sens;Entrée;Stop;Sortie;Taille;Risque;Frais;Respect du plan;Émotion;Erreur;Notes\n' +
@@ -196,8 +251,8 @@ vc.on('log', () => {});
     return 'R=' + t.rMultiple + ', P&L net=' + t.netPnl + ', prix relu=' + t.entry;
   });
   check('rendu après import', () => {
-    Array.from(d.querySelectorAll('.modal-overlay')).filter((o) => o.querySelector('#impPaste')).pop()
-      .querySelector('[data-close]').click();
+    lastModal().querySelector('[data-close]').click();
+    purgeModals();
     w.App.render();
     return d.querySelectorAll('tr[data-id]').length + ' lignes';
   });
