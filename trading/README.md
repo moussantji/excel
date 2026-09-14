@@ -58,9 +58,18 @@ L'application fonctionne entièrement (saisie, statistiques, graphiques, export 
 
 Le dépôt est **public**, donc GitHub Pages est disponible gratuitement.
 
-1. **Ouvrir directement** : <https://github.com/moussantji/excel/settings/pages>
-2. Sous **Build and deployment → Source**, choisir **Deploy from a branch**.
-3. Choisir la branche `arena/01a09dd0-excel` (pour tester immédiatement) ou `main` (après avoir fusionné la pull request), dossier **/ (root)**, puis **Save**.
+1. **Ouvrir la page** : <https://github.com/moussantji/excel/settings/pages>
+2. Section **Build and deployment** → le champ **Source** est un *menu déroulant* : par défaut il n'affiche qu'une valeur (« GitHub Actions » ou « None »). **Cliquez sur ce menu** pour voir les deux choix, puis sélectionnez **Deploy from a branch**.
+
+   ```
+   Build and deployment
+     Source   [ GitHub Actions  ▾ ]   ← cliquer ici
+                ┌──────────────────────────┐
+                │ Deploy from a branch   ✓ │
+                │ GitHub Actions           │
+                └──────────────────────────┘
+   ```
+3. Un nouveau bloc **Branch** apparaît : choisir la branche `arena/01a09dd0-excel` (pour tester tout de suite) ou `main` (après fusion de la pull request), dossier **/ (root)**, puis **Save**.
 4. Après 1 à 3 minutes, l'adresse s'affiche en haut de la page du même nom :
 
 ```
@@ -74,6 +83,7 @@ La racine du site redirige automatiquement vers l'application (`/trading/`), don
 | Cause probable | Solution |
 |---|---|
 | Vous consultez GitHub **sur la tablette / le téléphone** : la version mobile masque le menu des réglages | Ouvrir le menu du navigateur → **Version pour ordinateur** (Safari : bouton **aA** → *Demander le site web pour ordinateur* ; Chrome Android : **⋮** → *Site pour ordinateur*), puis rouvrir l'adresse ci-dessus |
+| Le menu **Source** affiche seulement « GitHub Actions » | C'est un menu déroulant : cliquez dessus, l'option **Deploy from a branch** s'y trouve |
 | Vous êtes sur **Settings** mais pas sur la page **Pages** | Dans le menu de gauche, section **Code and automation** (ou *Sécurité* selon la version), cliquer sur **Pages** — ce n'est pas la même page que *General* |
 | La page affiche un écran d'accueil « GitHub Pages » | Cliquer sur **Configure** / **Get started** : le menu **Source** apparaît ensuite |
 | Vous n'êtes **pas propriétaire** du dépôt | Seul le propriétaire (ou un administrateur) voit et modifie cette page |
