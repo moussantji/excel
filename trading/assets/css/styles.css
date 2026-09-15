@@ -1197,6 +1197,47 @@ body.verrouille>#app,body.verrouille>.mobile-nav{filter:blur(9px) saturate(.5);p
 }
 
 /* =========================================================
+   RELECTURE DES VRAIS TRADES + PRATIQUE SUR GRAPHIQUES RÉELS
+   ========================================================= */
+.rel-vide{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border:1px dashed var(--line-2);border-radius:12px;background:var(--panel-2)}
+.rel-vide p{margin:0}
+.rel-fiche{border:1px solid var(--line);border-radius:12px;background:var(--panel-2);padding:14px}
+.rel-tete{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.rel-nom{font-weight:700;letter-spacing:.01em}
+.rel-contexte{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px 14px;margin-bottom:12px}
+.rel-item{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted var(--line);padding:4px 0;font-size:.82rem}
+.rel-item span{color:var(--muted)}
+.rel-item b{font-variant-numeric:tabular-nums}
+.rel-avant{margin:0 0 10px;font-size:.8rem;color:var(--muted-2);font-style:italic}
+.rel-resultat{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:var(--panel-3);border:1px solid var(--line-2)}
+.rel-resultat.pos{border-color:rgba(46,211,160,.35)}
+.rel-resultat.neg{border-color:rgba(255,100,112,.35)}
+.rel-r{font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}
+.rel-resultat.pos .rel-r{color:var(--green)}
+.rel-resultat.neg .rel-r{color:var(--red)}
+.rel-questions{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.rel-q{border-top:1px solid var(--line);padding-top:10px}
+.rel-intitule{margin:0 0 8px;font-size:.88rem}
+.rel-choix{display:flex;gap:8px;flex-wrap:wrap}
+.rel-choix .btn[data-actif="1"]{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
+.rel-choix .btn.bon{border-color:rgba(46,211,160,.5);color:var(--green);background:var(--green-dim)}
+.rel-choix .btn.faux{border-color:rgba(255,100,112,.5);color:var(--red);background:var(--red-dim)}
+.rel-expl{margin:8px 0 0;font-size:.78rem}
+.rel-expl.ok{color:var(--green)}
+.rel-expl.ko{color:var(--muted)}
+.rel-actions{display:flex;gap:8px;flex-wrap:wrap}
+.vrais-table{display:flex;flex-direction:column;gap:12px;margin:12px 0}
+.vrais-ligne{border-left:2px solid var(--gold-dim);padding-left:12px}
+.vrais-quoi{display:flex;flex-direction:column;gap:2px}
+.vrais-quoi b{font-size:.86rem}
+.vrais-quoi span{font-size:.76rem;color:var(--muted-2)}
+.vrais-ligne p{margin:.35em 0 0}
+@media print{
+  /* la relecture est un exercice : elle ne s'imprime pas */
+  .relecture,.vrais{display:none !important}
+}
+
+/* =========================================================
    GRAPHIQUE EXTERNE (TradingView) — lien, jamais un chargement
    ========================================================= */
 .lien-ext{color:var(--muted-2)}

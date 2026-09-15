@@ -95,6 +95,8 @@
 
     html += carteEntete(p, chapitres, App);
     html += carteEntraineur(p, App);
+    html += carteRelecture(App);
+    html += carteVraisGraphiques(App);
 
     html += '<section class="card form-card"><header class="card-head"><h3>Le cours — 12 chapitres, dans l\'ordre du plan</h3>' +
       '<div class="card-tools"><button class="btn ghost small" id="fToutOuvrir">Tout déplier (impression)</button>' +
@@ -105,6 +107,9 @@
 
     host.innerHTML = html;
     cabler(host, App);
+    rafraichirRelecture(host, App);
+    var voirReel = host.querySelector('#fVraisOuvrir');
+    if (voirReel) voirReel.addEventListener('click', ouvrirGraphiqueReel);
     return html;
   }
 
@@ -164,6 +169,73 @@
     var reglages = planReglages();
     var trades = (appCourante && appCourante.state && appCourante.state.trades) || [];
     G.ouvrir(G.instrumentPrincipal(trades, reglages), reglages);
+  }
+
+  /* ---------------------------------------------------------
+     Relire ses vrais trades (relecture.js)
+     --------------------------------------------------------- */
+  function carteRelecture(App) {
+    if (!global.Relecture) return '';
+    var p = global.Relecture.lire();
+    return '<section class="card form-card relecture" id="relecture">' +
+      '<header class="card-head"><h3>Relire mes vrais trades — se corriger sur ses propres décisions</h3>' +
+      '<div class="card-tools"><span class="badge ' + (p.questions ? 'ok' : 'flat') + '">' +
+      (p.questions ? p.bonnes + ' / ' + p.questions + ' juste(s)' : 'à commencer') + '</span></div></header>' +
+      '<div class="card-body">' +
+      '<p class="muted">L\'entraîneur fabrique des graphiques pour travailler chaque concept, hors ligne. Ici, c\'est le marché qui a parlé : ' +
+      'l\'application reprend vos trades du journal et vous repose les questions du plan — règles chiffrées d\'un côté (stop, ratio, risque, fenêtre de tir), ' +
+      'jugement de lecture de l\'autre. <b>Le résultat reste masqué jusqu\'à ce que vous ayez conclu</b> : c\'est la seule façon de juger sa lecture sans être influencé par ce qu\'on sait déjà.</p>' +
+      '<div id="fZoneRelire">' + global.Relecture.zoneHTML(App) + '</div>' +
+      '</div></section>';
+  }
+
+  function rafraichirRelecture(host, App) {
+    var zone = host.querySelector('#fZoneRelire');
+    if (!zone) return;
+    zone.innerHTML = global.Relecture.zoneHTML(App);
+    global.Relecture.cabler(zone, App, function () { rafraichirRelecture(host, App); });
+  }
+
+  /* ---------------------------------------------------------
+     Pratiquer sur de vrais graphiques — depuis la tablette
+     --------------------------------------------------------- */
+  function carteVraisGraphiques(App) {
+    var G = global.Graphe;
+    var dispo = G && G.actif(planReglages());
+    var lignes = [
+      ['Lire la structure, trouver le biais (ch. 05)', 'TradingView, replay en <b>journalier</b> (gratuit dans l\'application Android)', 'Le replay gratuit s\'arrête à l\'unité journalière : c\'est exactement l\'échelle du biais HTF du plan. Vous avancez jour par jour et vous concluez : haussière, baissière ou consolidation — puis vous vérifiez.'],
+      ['Les zones d\'offre et de demande (ch. 06)', 'TradingView, replay en journalier', 'Sur chaque journée rejouée, marquez la zone avant de faire avancer le prix. Vous verrez combien de vos zones sont réellement défendues, et combien étaient du bruit.'],
+      ['La liquidité (ch. 07)', 'TradingView, replay en journalier', 'Repérez les EQH/EQL et les intacts avant l\'avance, puis notez lequel est venu chercher le prix. C\'est l\'exercice qui fait le plus progresser sur cette loi.'],
+      ['Les phases de Wyckoff (ch. 04)', 'TradingView, replay en journalier', 'Rejouez une fourchette jour par jour et nommez les phases A à E à mesure qu\'elles se forment, sans voir la suite.'],
+      ['La routine et l\'exécution (ch. 03 et 09)', 'MetaTrader 5 pour Android, <b>compte démo gratuit</b>', 'Ne rejoue pas l\'histoire, mais entraîne le geste en conditions réelles : fenêtre de tir, calcul de taille, stop 15 pips, breakeven, prises partielles, arrêt après deux stop loss. Le journal reprend ensuite ce que vous avez fait.'],
+      ['Le tri des configurations (ch. 08)', G && G.actif(planReglages()) ? 'QuizTraders (navigateur, en anglais)' : 'QuizTraders (navigateur, en anglais)', 'Décider « acheter / vendre / ne rien faire » sur de vrais graphiques SMC, avec correction immédiate. Offre gratuite limitée : à utiliser en complément, pas en pilier.']
+    ];
+    var html = '<section class="card form-card vrais" id="vrais">' +
+      '<header class="card-head"><h3>Pratiquer sur de vrais graphiques — depuis la tablette</h3>' +
+      '<div class="card-tools"><span class="badge flat">gratuit</span></div></header>' +
+      '<div class="card-body">' +
+      '<p class="muted">L\'entraîneur travaille les concepts sur des graphiques fabriqués par l\'application : c\'est parfait pour répéter, mais ce n\'est pas le marché. ' +
+      'Voici ce qui est réellement gratuit, <b>utilisable depuis votre tablette Android</b>, et à quoi cela sert dans l\'ordre du plan. ' +
+      'Limites constatées en 2026 — si elles changent, vous me le dites et je mets à jour.</p>' +
+      '<div class="vrais-table">' + lignes.map(function (l) {
+        return '<div class="vrais-ligne"><div class="vrais-quoi"><b>' + l[0] + '</b><span>' + l[1] + '</span></div>' +
+          '<p class="muted small">' + l[2] + '</p></div>';
+      }).join('') + '</div>' +
+      '<div class="alert warn"><span class="alert-ico">' + UI.icon('info') + '</span><span><b>La limite à connaître :</b> ' +
+      'le replay <b>intraday</b> (15 min, 1 h) n\'est plus gratuit chez TradingView (offre payante depuis 2026). ' +
+      'Le gratuit couvre le <b>journalier</b> — donc la lecture HTF, les zones, la liquidité et Wyckoff — ' +
+      'tandis que l\'entraîneur de l\'application couvre l\'intraday à 50–60 bougies, hors ligne. ' +
+      'Les deux ensemble couvrent tout le plan.</span></div>' +
+      '<p class="small">Un contournement existe pour l\'intraday sur TradingView : un <b>indicateur communautaire gratuit</b> qui rejoue les bougies ' +
+      'en faisant glisser une zone sur le graphique. La qualité dépend de son auteur, à essayer avec prudence — ' +
+      'le principe reste le même : avancer une bougie à la fois, conclure avant de voir la suite.</p>' +
+      (dispo ? '<p class="small"><button class="btn ghost small" id="fVraisOuvrir">' + UI.icon('link') +
+        ' Ouvrir un graphique TradingView maintenant</button> <span class="muted small">(nécessite internet ; l\'entraîneur fonctionne sans)</span></p>' : '') +
+      '<p class="muted small"><b>Si un jour vous avez un ordinateur :</b> MetaTrader 5 dispose d\'un mode de test <i>visuel</i> gratuit qui rejoue ' +
+      'n\'importe quelle période en intraday, bougie par bougie, avec des ordres placés à la main — c\'est la seule façon gratuite de s\'entraîner ' +
+      'en intraday sur des données réelles. Dites-le moi ce jour-là : j\'ajouterai la procédure pas à pas.</p>' +
+      '</div></section>';
+    return html;
   }
 
   function carteEntraineur(p, App) {

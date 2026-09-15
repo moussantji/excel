@@ -64,7 +64,7 @@ L'application **fonctionne entièrement sans connexion** une fois ouverte une pr
 Deux précisions utiles :
 
 - **Tablette en Wi-Fi local** (`http://192.168.x.x`) : l'application marche, mais le mode hors ligne **et** l'installation sur l'écran d'accueil exigent **https** — donc l'adresse GitHub Pages (ou Netlify/Cloudflare). C'est la seule raison de préférer cette adresse au Wi-Fi local.
-- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v12`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
+- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v13`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
 
 Recette automatique du mode hors ligne : `node tools/offline-test.js` (service worker réel simulé, réseau coupé, serveur en panne, fichiers manquants).
 
@@ -149,6 +149,38 @@ Trois scores en haut de la vue : **chapitres étudiés**, **exercices de cours**
 
 Le contenu suit **les deux documents de la méthode que vous avez fournis** (`ULTRA BOOK FX.pdf` et `PLAN TRADING.pdf`), et la vue cite la source de chaque chapitre. Quand un module du plan n'est pas traité dans les documents, l'application le **signale au lieu de l'inventer** : la vue « Sources du cours » liste ces manques à compléter (modules 9 à 11, détail des prises partielles, gestion du risque sur plusieurs positions).
 
+### Relire ses vrais trades
+
+L'entraîneur travaille les concepts sur des graphiques **fabriqués par l'application**. La relecture, elle, reprend **vos trades réels** : l'application tire un trade clôturé du journal et vous repose les questions du plan, **sans révéler le résultat**.
+
+Deux familles de questions, volontairement séparées :
+
+| Famille | Exemples | Correction |
+|---|---|---|
+| **Les règles chiffrées du plan** | stop ≤ 15 pips, ratio visé ≥ 1:7, risque ≤ 1 % du capital, entrée dans une fenêtre de tir, limite de trades par jour | **Automatique et incontestable** : l'application compare votre réponse au chiffre, avec la mesure affichée (« écart entrée → stop mesuré : 13,0 pips ») |
+| **Votre jugement de lecture** | « la structure allait-elle dans le sens de votre entrée ? » (avant la révélation) puis « était-ce un bon trade selon le plan, indépendamment du résultat ? » (après) | **Non notée, par honnêteté** : l'application ne peut pas lire le graphique de vos trades, elle ne fait pas semblant. Les réponses sont enregistrées pour montrer votre **constance** d'un trade à l'autre |
+
+Pourquoi le résultat reste caché : pour que votre lecture ne soit pas influencée par ce que vous savez déjà. Le bilan de relecture (trades relus, règles justes, jugements) est rangé **avec la progression de la formation**, donc chiffré par le verrouillage et sauvegardé dans votre dépôt.
+
+**Point de rigueur** : la règle des 15 pips est celle des **paires forex**. Sur l'or et les indices, l'application ne la pose pas — elle ne mélange pas les unités, et affiche l'écart en points.
+
+### Pratiquer sur de vrais graphiques (gratuit, depuis la tablette)
+
+L'entraîneur est illimité et hors ligne, mais ses graphiques sont générés. Voici ce qui est **réellement gratuit en 2026** et utilisable depuis une tablette Android (limites constatées, à revérifier si les éditeurs changent d'offre) :
+
+| Chapitre du plan | Outil gratuit | Ce que vous y travaillez |
+|---|---|---|
+| 05 — La structure | **TradingView**, replay en unité **journalière** (gratuit dans l'application Android) | Le biais HTF, jour par jour : haussière, baissière ou consolidation — puis vérification |
+| 06 — Offre et demande | TradingView, replay journalier | Marquer la zone **avant** d'avancer le prix, et compter celles qui sont réellement défendues |
+| 07 — La liquidité | TradingView, replay journalier | Repérer EQH/EQL et intacts avant l'avance, noter lequel vient chercher le prix |
+| 04 — Wyckoff | TradingView, replay journalier | Nommer les phases A à E à mesure qu'elles se forment, sans voir la suite |
+| 03 et 09 — Risque, routine | **MetaTrader 5 pour Android**, compte démo gratuit | Le geste en conditions réelles : fenêtre de tir, taille de position, stop, breakeven, prises partielles, arrêt après deux stop loss |
+| 08 — Tri des configurations | **QuizTraders** (navigateur, en anglais) | Décider « acheter / vendre / ne rien faire » sur de vrais graphiques SMC, correction immédiate (offre gratuite limitée) |
+
+**La limite à connaître** : chez TradingView, le replay **intraday** (15 min, 1 h) n'est plus gratuit (offre payante depuis 2026). En gratuit, le replay s'arrête au **journalier** — ce qui couvre exactement la partie HTF du plan. L'intraday, c'est l'entraîneur de l'application qui le couvre, hors ligne, avec 50 à 60 bougies par scénario. **Les deux ensemble couvrent tout le plan.**
+
+**Si un jour vous avez un ordinateur** : MetaTrader 5 dispose d'un mode de test **visuel** gratuit qui rejoue n'importe quelle période en intraday, bougie par bougie, avec des ordres placés à la main (Espace pour mettre en pause, F12 pour avancer d'une bougie, F9 pour passer un ordre). C'est la seule façon gratuite de s'entraîner en intraday sur des données réelles — dites-le-moi ce jour-là, j'ajouterai la procédure pas à pas dans la Formation.
+
 ### Hors ligne, tablette, impression
 
 - Tout le cours, les exercices et l'entraîneur sont **dans le cache hors ligne** : la formation s'utilise sans réseau, y compris sur l'application installée.
@@ -157,7 +189,7 @@ Le contenu suit **les deux documents de la méthode que vous avez fournis** (`UL
 
 La formation **explique** le plan, elle ne le remplace pas : le plan reste la référence en séance, la formation sert à le comprendre et à s'entraîner dessus.
 
-Recette dédiée : `node tools/formation-test.js` (72 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression).
+Recettes dédiées : `node tools/formation-test.js` (72 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression) et `node tools/relecture-test.js` (61 contrôles — règles chiffrées et leur notation, masquage du résultat avant la révélation, jugements séparés du score, bilan enregistré, cas particuliers).
 
 ---
 
@@ -518,6 +550,7 @@ trading/
 │       ├── plan.js               Contenu du plan + contrôles de discipline
 │       ├── formation-contenu.js  Cours de la vue Formation (12 chapitres, sources, manques)
 │       ├── entraineur.js         Générateur de scénarios et correction (structure, zones, liquidité, Wyckoff)
+│       ├── relecture.js          Relecture des vrais trades : règles du plan + jugements
 │       ├── formation.js          Vue Formation : cours, exercices, entraîneur, progression
 │       ├── ui.js                 Formatage FR, modales, toasts, icônes SVG
 │       ├── graphe.js             Lien vers le graphique TradingView (symbole, unité de temps)
@@ -537,6 +570,7 @@ trading/
     ├── notify-test.js            Recette des rappels : heures du plan, anti-doublon, rattrapage
     ├── formation-test.js         Recette de la formation : cours, scénarios, correction, progression
     ├── graphe-test.js            Recette du lien graphique : symboles, correction, hors ligne, boutons
+    ├── relecture-test.js         Recette de la relecture des trades : notation, masquage, bilan
     ├── style-check.js            Recette du thème : contrastes AA, jetons, cibles tactiles, impression
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
@@ -558,6 +592,7 @@ node tools/offline-test.js                              # hors ligne : service w
 node tools/notify-test.js                               # rappels du plan : heures, doublons, autorisation
 npm i -D jsdom && node tools/formation-test.js           # formation : cours, entraîneur, correction, progression
 npm i -D jsdom && node tools/graphe-test.js              # graphique TradingView : lien, hors ligne, boutons
+npm i -D jsdom && node tools/relecture-test.js           # relecture des vrais trades : règles, notation, bilan
 node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
@@ -569,6 +604,8 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.7 | **Relire ses vrais trades** : l'application reprend vos trades du journal et vous repose les questions du plan — règles chiffrées (stop 15 pips, ratio 1:7, risque 1 %, fenêtre de tir, limite du jour) corrigées automatiquement avec la mesure affichée, jugements de lecture enregistrés séparément et non notés. **Le résultat du trade reste masqué jusqu'à la révélation**, pour que la lecture ne soit pas influencée. La règle des 15 pips n'est posée que sur les paires forex. Recette `tools/relecture-test.js` (61 contrôles). |
+| 2.7 | **Pratiquer sur de vrais graphiques** : la Formation indique désormais, chapitre par chapitre, ce qui est réellement gratuit et utilisable **depuis une tablette Android** — replay journalier TradingView, compte démo MT5 pour l'exécution, quiz SMC dans le navigateur — avec la limite constatée en 2026 (le replay **intraday** TradingView n'est plus gratuit) et l'annexe ordinateur (testeur visuel MT5 + FX Blue) pour le jour où vous en auriez un. |
 | 2.6 | **Graphique TradingView à côté du journal** : bouton sur chaque trade, dans l'en-tête du journal, dans la fiche de saisie et dans l'entraîneur. L'application ouvre **le bon symbole et la bonne unité de temps** — et rien d'autre : aucun script externe n'est chargé dans la page, aucune donnée du journal ne part avec le lien. Correspondance des symboles corrigeable (le symbole de votre courtier gagne sur le défaut), bouton désactivable, et message explicite hors ligne. Recette dédiée `tools/graphe-test.js` (57 contrôles). |
 | 2.6 | **Journal → place à côté (Android)** : procédure écrite pour l'écran partagé, avec le **piège connu** de l'application TradingView pour tablette Android (écran partagé refusé depuis une mise à jour de 2026 — passer par tradingview.com dans le navigateur). Limite assumée et écrite noir sur blanc : **vos tracés ne sont pas lisibles** par l'application, ils restent dans votre compte. |
 | 2.5 | **Vue Formation — apprendre la méthode et s'entraîner** : le plan est expliqué dans l'ordre de ses **12 chapitres** (essentiel, leçons, lecture sur le graphique, étapes, erreurs fréquentes) avec **52 exercices notés**, dont le calcul de risque. |
