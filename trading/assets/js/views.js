@@ -453,6 +453,87 @@
   /* =========================================================
      VUE : PARAMÈTRES
      ========================================================= */
+  /* ---------- sauvegarde cloud (dépôt GitHub) ---------- */
+  function carteNuage(App) {
+    var S = global.Sync;
+    if (!S) return '';
+    var c = S.loadConfig();
+    var st = S.status();
+    var corps = '';
+
+    if (!S.isConfigured()) {
+      corps = '<div class="cloud-form">' +
+        '<p class="muted small">Vos trades sont écrits dans un fichier de <b>votre propre dépôt GitHub</b>. Aucun serveur tiers, aucun abonnement. Le journal continue de fonctionner hors ligne : les modifications partent dès que le réseau revient.</p>' +
+        '<div class="cloud-grid">' +
+          champNuage('Propriétaire (compte GitHub)', 'cfOwner', c.owner || 'moussantji', 'moussantji') +
+          champNuage('Dépôt', 'cfRepo', c.repo, 'journal-trading') +
+          champNuage('Branche', 'cfBranch', c.branch, 'main') +
+          champNuage('Fichier de sauvegarde', 'cfPath', c.path, 'sauvegarde.json') +
+        '</div>' +
+        '<div class="form-field wide"><label>Jeton d\'accès (fine-grained, Contents : Read and write)</label>' +
+        '<input class="input" type="password" id="cfToken" autocomplete="off" spellcheck="false" placeholder="github_pat_…" value="' + attr(c.token) + '"></div>' +
+        '<div class="cloud-actions">' +
+        '<button class="btn ghost" id="cfTest">Tester la connexion</button>' +
+        '<button class="btn primary" id="cfSave">Activer la sauvegarde automatique</button>' +
+        '<a class="btn ghost" href="https://github.com/new" target="_blank" rel="noopener">Créer le dépôt</a>' +
+        '<a class="btn ghost" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Créer un jeton</a>' +
+        '</div>' +
+        '<div id="cfResult" class="cloud-result" hidden></div>' +
+        '<details class="cloud-help"><summary>Comment créer le jeton (2 minutes)</summary><ol>' +
+        '<li>GitHub → <b>Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token</b>.</li>' +
+        '<li><b>Repository access</b> : cochez <i>Only select repositories</i> puis votre dépôt de sauvegarde.</li>' +
+        '<li><b>Permissions → Repository permissions → Contents</b> : choisissez <b>Read and write</b>.</li>' +
+        '<li><b>Expiration</b> : 90 jours (vous en recréerez un ensuite). Générez, copiez, collez ci-dessus.</li>' +
+        '<li>Sauvegardez : la première synchro crée le fichier <code>' + esc(S.loadConfig().path) + '</code> dans le dépôt.</li>' +
+        '</ol><p class="muted small">Conseil : utilisez un <b>dépôt privé dédié</b> (ex. <code>journal-trading</code>) plutôt que le dépôt public de l\'application — sinon votre journal serait lisible par tout le monde. Le jeton reste stocké uniquement dans le navigateur de cet appareil.</p></details>' +
+        '</div>';
+    } else {
+      corps = '<div class="cloud-active">' +
+        '<div class="cloud-line"><span class="sync-chip ' + st.tone + '"><span class="sync-dot"></span>' + esc(st.label) + '</span>' +
+        '<span class="muted small">' + esc(S.cheminLisible()) + '</span></div>' +
+        '<div class="cloud-actions">' +
+        '<button class="btn ghost" id="cfSync">Synchroniser maintenant</button>' +
+        '<button class="btn ghost" id="cfPull">Récupérer du cloud</button>' +
+        '<button class="btn ghost" id="cfTest">Tester la connexion</button>' +
+        '<button class="btn ghost danger" id="cfOff">Désactiver</button>' +
+        '</div>' +
+        '<label class="cloud-toggle"><input type="checkbox" id="cfAuto"' + (c.autoSync ? ' checked' : '') + '><span>Sauvegarde automatique (recommandé) — sinon, « Synchroniser maintenant »</span></label>' +
+        '<div id="cfResult" class="cloud-result" hidden></div>' +
+        (st.code === 'conflict'
+          ? '<div class="cloud-conflict"><b>Conflit à résoudre</b><p>Le journal a été modifié sur un autre appareil le ' + esc(st.dateDistante || '?') + '.</p>' +
+            '<div class="cloud-actions"><button class="btn primary" id="cfMerge">Fusionner les deux</button>' +
+            '<button class="btn ghost" id="cfMine">Garder mes données</button>' +
+            '<button class="btn ghost" id="cfTheirs">Prendre le cloud</button></div></div>'
+          : '') +
+        '<div class="cloud-log"><b>Dernières opérations</b><ul>' +
+        ((st.log || []).slice(-6).reverse().map(function (l) {
+          return '<li class="' + (l.tone === 'ko' ? 'ko' : l.tone === 'warn' ? 'warn' : 'ok') + '">' +
+            '<span>' + esc(S.dateCourte(l.at) || '') + '</span>' + esc(l.text) + '</li>';
+        }).join('') || '<li class="muted">Aucune opération pour l\'instant.</li>') +
+        '</ul></div>' +
+        '<p class="muted small">Le jeton est conservé dans ce navigateur uniquement. Sur un nouvel appareil, saisissez à nouveau le dépôt, le chemin et un jeton : la sauvegarde sera proposée automatiquement.</p>' +
+        detailsEtats(S, st) +
+        '</div>';
+    }
+    return App.card('Sauvegarde cloud (GitHub)', corps, { class: 'cloud-card' });
+  }
+
+  /** Tous les états possibles de la sauvegarde, le courant mis en avant. */
+  function detailsEtats(S, courant) {
+    var liste = S.etats ? S.etats() : [];
+    if (!liste.length) return '';
+    return '<details class="cloud-help"><summary>Tous les états possibles de la sauvegarde (le vôtre est encadré)</summary><ul class="cloud-etats">' +
+      liste.map(function (e) {
+        return '<li class="' + esc(e.tone) + (e.code === courant.code ? ' ici' : '') + '">' +
+          '<b>' + esc(e.label) + '</b><span>' + esc(e.sens) + '</span></li>';
+      }).join('') + '</ul></details>';
+  }
+
+  function champNuage(label, id, value, placeholder) {
+    return '<div class="form-field"><label>' + esc(label) + '</label>' +
+      '<input class="input" id="' + id + '" value="' + attr(value || '') + '" placeholder="' + attr(placeholder) + '" spellcheck="false"></div>';
+  }
+
   function params(host, model, App) {
     var s = App.state.settings;
     var html = '';
@@ -476,6 +557,8 @@
       '<div class="form-field wide"><label>Sessions</label><input class="input" name="sessions" value="' + attr(s.sessions.join(', ')) + '"></div>' +
       '<div class="form-actions"><button class="btn primary" type="submit">Enregistrer les paramètres</button><span class="muted small">Ces valeurs alimentent les alertes du plan et les calculs automatiques.</span></div>' +
       '</form>');
+
+    html += carteNuage(App);
 
     html += '<div class="grid-2">';
     html += App.card('Données & sauvegarde',
@@ -555,6 +638,136 @@
         App.persist();
         App.render();
         UI.toast('Application réinitialisée.');
+      });
+    });
+
+    cableNuage(App);
+  }
+
+  /* ---------- actions de la carte « Sauvegarde cloud » ---------- */
+  function cableNuage(App) {
+    var S = global.Sync;
+    if (!S) return;
+
+    function resultat(html, ton) {
+      var el = document.getElementById('cfResult');
+      if (!el) return;
+      el.hidden = false;
+      el.className = 'cloud-result ' + (ton || '');
+      el.innerHTML = html;
+    }
+    function message(r, contexte) {
+      if (r && r.ok) return contexte + ' : OK';
+      if (r && r.conflict) return 'Le cloud a été modifié sur un autre appareil : utilisez « Récupérer du cloud » ou « Fusionner les deux »';
+      var e = (r && r.error) || {};
+      return contexte + ' impossible — ' + (e.message || 'erreur inconnue');
+    }
+
+    var test = document.getElementById('cfTest');
+    if (test) test.addEventListener('click', function () {
+      var owner = document.getElementById('cfOwner'), repo = document.getElementById('cfRepo');
+      if (owner && repo) {
+        S.saveConfig({
+          owner: owner.value, repo: repo.value,
+          branch: (document.getElementById('cfBranch') || {}).value,
+          path: (document.getElementById('cfPath') || {}).value,
+          token: (document.getElementById('cfToken') || {}).value
+        });
+      }
+      resultat('Test en cours…', '');
+      S.tester().then(function (r) {
+        if (!r.ok) { resultat(esc(message(r, 'Connexion')), 'ko'); App.render(); return; }
+        var avert = r.prive ? '' : '<br><b class="warn-txt">Attention : ce dépôt est public.</b> Votre journal sera lisible par tout le monde — préférez un dépôt privé dédié.';
+        resultat('<b>Connexion réussie</b> — ' + esc(r.depose) + (r.pousse === false ? ' <b class="warn-txt">(le jeton n\'a pas le droit d\'écriture : Contents → Read and write)</b>' : '') +
+          (r.existe ? '<br>Sauvegarde trouvée : ' + r.trades + ' trade' + (r.trades > 1 ? 's' : '') + ' du ' + esc(S.dateCourte(r.updatedAt) || '?') + '.'
+                    : '<br>Aucune sauvegarde encore : le premier envoi la créera.') + avert,
+          r.prive && r.pousse !== false ? 'ok' : 'warn');
+        App.render();
+      });
+    });
+
+    var enregistrer = document.getElementById('cfSave');
+    if (enregistrer) enregistrer.addEventListener('click', function () {
+      var cfg = S.saveConfig({
+        owner: document.getElementById('cfOwner').value,
+        repo: document.getElementById('cfRepo').value,
+        branch: document.getElementById('cfBranch').value,
+        path: document.getElementById('cfPath').value,
+        token: document.getElementById('cfToken').value,
+        enabled: true
+      });
+      if (!cfg.enabled) { resultat('Renseignez le propriétaire, le dépôt et le jeton.', 'ko'); return; }
+      resultat('Connexion en cours…', '');
+      S.tester().then(function (r) {
+        if (!r.ok) {
+          resultat(esc(message(r, 'Connexion')), 'ko');
+          S.saveConfig({ enabled: false });
+          App.render();
+          return;
+        }
+        if (r.existe) {
+          UI.toast('Sauvegarde cloud activée.', 'success');
+          App.render();
+        } else {
+          S.pousser({ force: true }).then(function (p) {
+            resultat(p.ok ? '<b>Première sauvegarde envoyée.</b>' : esc(message(p, 'Envoi')), p.ok ? 'ok' : 'ko');
+            App.render();
+          });
+        }
+      });
+    });
+
+    var sync = document.getElementById('cfSync');
+    if (sync) sync.addEventListener('click', function () {
+      resultat('Synchronisation…', '');
+      S.syncNow().then(function (r) {
+        var ton = r.ok ? 'ok' : (r.conflict ? 'warn' : 'ko');
+        resultat(r.ok ? '<b>À jour.</b> ' + App.state.trades.filter(function (t) { return !t.demo; }).length + ' trades sauvegardés.' : esc(message(r, 'Synchronisation')), ton);
+        App.render();
+      });
+    });
+
+    var pull = document.getElementById('cfPull');
+    if (pull) pull.addEventListener('click', function () {
+      UI.confirmDialog({
+        title: 'Récupérer la sauvegarde du cloud ?',
+        message: 'Les données de cet appareil seront remplacées par la sauvegarde distante.',
+        confirmLabel: 'Récupérer', danger: true
+      }).then(function (ok) {
+        if (!ok) return;
+        S.tirer().then(function (r) {
+          if (r.ok) UI.toast('Sauvegarde récupérée.', 'success');
+          else UI.toast(r.vide ? 'Aucune sauvegarde dans le cloud.' : message(r, 'Récupération'), r.vide ? 'warn' : 'error', 6000);
+          App.render();
+        });
+      });
+    });
+
+    var auto = document.getElementById('cfAuto');
+    if (auto) auto.addEventListener('change', function () {
+      S.saveConfig({ autoSync: auto.checked });
+      if (auto.checked) S.markDirty();
+      UI.toast(auto.checked ? 'Sauvegarde automatique activée.' : 'Sauvegarde automatique désactivée : utilisez le bouton de synchronisation.');
+    });
+
+    var off = document.getElementById('cfOff');
+    if (off) off.addEventListener('click', function () {
+      UI.confirmDialog({
+        title: 'Désactiver la sauvegarde cloud ?',
+        message: 'Le dépôt et le jeton seront oubliés sur cet appareil. Les données locales ne sont pas touchées.',
+        confirmLabel: 'Désactiver', danger: true
+      }).then(function (ok) { if (ok) { S.clearConfig(); UI.toast('Sauvegarde cloud désactivée.'); App.render(); } });
+    });
+
+    [['cfMerge', 'fusion'], ['cfMine', 'local'], ['cfTheirs', 'distant']].forEach(function (paire) {
+      var b = document.getElementById(paire[0]);
+      if (!b) return;
+      b.addEventListener('click', function () {
+        resultat('Résolution du conflit…', '');
+        S.resoudre(paire[1]).then(function (r) {
+          resultat(r.ok ? '<b>Conflit résolu.</b> ' + App.state.trades.length + ' trades.' : esc(message(r, 'Résolution')), r.ok ? 'ok' : 'ko');
+          App.render();
+        });
       });
     });
   }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes">
 <title>Trading Desk — Journal & Plan de trading</title>
-<meta name="description" content="Journal de trading, plan écrit et tableau de bord de performance (R, espérance, profit factor, drawdown, discipline) — application installable, fonctionne hors ligne.">
+<meta name="description" content="Journal de trading, plan écrit et tableau de bord de performance (R, espérance, profit factor, drawdown, discipline) — application installable, fonctionne hors ligne, sauvegarde automatique dans votre dépôt GitHub.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0b0e14">
 
@@ -39,7 +39,7 @@
         <b>Données locales</b>
         <p>Vos trades restent dans cet appareil. Exportez une sauvegarde JSON chaque semaine.</p>
       </div>
-      <p class="ver">v2.0 · SMV · tablette · hors ligne</p>
+      <p class="ver">v2.1 · SMV · sauvegarde cloud</p>
     </div>
   </aside>
 
@@ -54,6 +54,7 @@
       <div class="tb-right">
         <div id="topEquity" class="tb-kpi"></div>
         <div id="topToday" class="tb-kpi"></div>
+        <button type="button" id="topSync" class="sync-chip" hidden aria-label="État de la sauvegarde cloud" title="Sauvegarde cloud"></button>
         <button class="icon-btn" id="btnRefresh" title="Recharger les données enregistrées" aria-label="Actualiser">⟳</button>
         <button class="btn primary" id="btnAddGlobal" title="Ajouter un trade (Ctrl+K pour rechercher)">+ Nouveau trade</button>
       </div>
@@ -69,11 +70,13 @@
       <button class="icon-btn" id="ibClose" aria-label="Fermer">✕</button>
     </div>
 
+    <section id="syncBanner" class="sync-banner" hidden aria-live="polite"></section>
+
     <main id="view" class="view" aria-live="polite"></main>
 
     <footer class="foot">
       <span>Journal, plan et tableau de bord de trading — calculs : P&amp;L net = P&amp;L brut − frais · R = P&amp;L net ÷ risque · drawdown depuis le plus haut.</span>
-      <span class="foot-right">Données locales · <kbd>Ctrl</kbd>+<kbd>K</kbd> journal · <kbd>Ctrl</kbd>+<kbd>P</kbd> PDF du plan</span>
+      <span class="foot-right">Sauvegarde locale + cloud · <kbd>Ctrl</kbd>+<kbd>K</kbd> journal · <kbd>Ctrl</kbd>+<kbd>P</kbd> PDF du plan</span>
     </footer>
   </div>
 </div>
@@ -87,6 +90,7 @@
 <script src="assets/js/plan.js"></script>
 <script src="assets/js/ui.js"></script>
 <script src="assets/js/views.js"></script>
+<script src="assets/js/sync.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/pwa.js"></script>
 </body>

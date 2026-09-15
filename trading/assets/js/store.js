@@ -229,7 +229,7 @@
       session: '', setup: '', entry: null, stop: null, target: null, exit: null,
       size: null, riskAmount: null, pnl: null, fees: 0, rMode: 'auto', rMultipleIn: null,
       planFollowed: 'oui', emotion: 'Calme', mistake: 'Aucune', durationMin: null,
-      notes: '', screenshot: ''
+      notes: '', screenshot: '', updatedAt: new Date().toISOString()
     };
   }
 
@@ -238,6 +238,7 @@
     raw = raw || {};
     var t = {
       id: raw.id || uid(),
+      updatedAt: raw.updatedAt || null,
       date: normDate(raw.date),
       time: normTime(raw.time),
       symbol: String(raw.symbol || '').trim().toUpperCase(),
@@ -301,15 +302,16 @@
       exit: t.exit, size: t.size, riskAmount: t.riskIn, pnl: t.pnlIn, fees: t.fees,
       rMode: t.rMode, rMultipleIn: t.rMultipleIn, planFollowed: t.planFollowed,
       emotion: t.emotion, mistake: t.mistake, durationMin: t.durationMin,
-      notes: t.notes, screenshot: t.screenshot
+      notes: t.notes, screenshot: t.screenshot, updatedAt: t.updatedAt || null
     };
   }
 
   /* ---------------------------------------------------------
      État + persistance
      --------------------------------------------------------- */
+  /** État vide : la liste `deleted` garde la trace des suppressions (fusion entre appareils). */
   function emptyState() {
-    return { version: 1, settings: defaultSettings(), trades: [], demo: false, updatedAt: new Date().toISOString() };
+    return { version: 1, settings: defaultSettings(), trades: [], demo: false, deleted: [], updatedAt: new Date().toISOString() };
   }
 
   function storageAvailable() {
@@ -348,6 +350,7 @@
       st.settings = s;
       st.demo = !!parsed.demo;
       st.trades = (parsed.trades || []).map(function (t) { return normalizeTrade(t, s); });
+      st.deleted = Array.isArray(parsed.deleted) ? parsed.deleted.slice(-500) : [];
       st.updatedAt = parsed.updatedAt || st.updatedAt;
     }
     return st;
@@ -355,7 +358,10 @@
 
   function saveState(state) {
     state.updatedAt = new Date().toISOString();
-    var json = JSON.stringify({ version: 1, settings: state.settings, trades: state.trades.map(toRaw), demo: state.demo, updatedAt: state.updatedAt }, null, 0);
+    var json = JSON.stringify({
+      version: 1, settings: state.settings, trades: state.trades.map(toRaw), demo: state.demo,
+      deleted: state.deleted || [], updatedAt: state.updatedAt
+    }, null, 0);
     if (storageAvailable()) {
       try { global.localStorage.setItem(STORAGE_KEY, json); return 'local'; } catch (e) { /* quota */ }
     }

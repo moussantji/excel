@@ -50,16 +50,18 @@
     state.trades = saved.trades;
     state.settings = saved.settings;
     state.demo = saved.demo;
+    state.deleted = saved.deleted || [];
     state.checks = Plan.loadChecks();
     UI.setCurrency(state.settings.currency);
     if (!state.trades.length) applyPreset('30d');
     else applyPreset('30d', true);
   }
   function persist(silent) {
-    state.storage = Store.saveState({ version: 1, settings: state.settings, trades: state.trades, demo: state.demo });
+    state.storage = Store.saveState({ version: 1, settings: state.settings, trades: state.trades, demo: state.demo, deleted: state.deleted });
     if (!silent && state.storage === 'memory') {
       UI.toast('Sauvegarde locale indisponible : exportez votre journal en JSON pour ne rien perdre.', 'warn', 6000);
     }
+    if (global.Sync && global.Sync.isConfigured()) global.Sync.markDirty();
   }
   function buildModel() {
     return Metrics.build(state.trades, state.settings, state.filters, Store.todayISO());
@@ -154,6 +156,7 @@
     var model = buildModel();
     renderNav();
     renderTopbar(model);
+    renderSyncBanner();
     var host = $('#view');
     host.innerHTML = '';
     switch (state.view) {
@@ -193,6 +196,115 @@
         : !state.trades.length
           ? '<span class="dot"></span>Journal vide — rien n\'est encore enregistré'
           : (state.filters.preset ? '<span class="dot"></span>' + periodLabel() : '<span class="dot"></span>Prêt à trader');
+    renderSyncBadge();
+  }
+
+  /* ---------- sauvegarde cloud : pastille + bandeau ---------- */
+  var SYNC_ICONES = {
+    ok: 'check', syncing: 'refresh', pending: 'cloud', offline: 'cloudOff',
+    remote: 'cloudDown', conflict: 'warn', auth: 'lock', quota: 'hourglass',
+    server: 'cloudOff', error: 'warn', empty: 'cloud', off: 'cloud'
+  };
+
+  function syncActif() { return !!(global.Sync && global.Sync.isConfigured()); }
+
+  function renderSyncBadge() {
+    var el = $('#topSync');
+    if (!el) return;
+    if (!syncActif()) { el.hidden = true; el.innerHTML = ''; return; }
+    var st = global.Sync.status();
+    el.hidden = false;
+    el.className = 'sync-chip ' + st.tone;
+    el.innerHTML = '<span class="sync-dot"></span><span class="sync-txt">' + esc(st.label) + '</span>';
+    el.dataset.code = st.code;
+  }
+
+  /** Bandeau d'état : n'apparaît que quand quelque chose demande une action. */
+  function renderSyncBanner() {
+    var el = $('#syncBanner');
+    if (!el) return;
+    if (!syncActif()) { el.innerHTML = ''; el.hidden = true; return; }
+    var st = global.Sync.status();
+    var muets = { ok: 1, off: 1, empty: 1, pending: 1 };
+    if (muets[st.code]) { el.innerHTML = ''; el.hidden = true; return; }
+    el.hidden = false;
+    var actions = '';
+    if (st.code === 'remote') {
+      actions = '<button class="btn small primary" data-sync="pull">Récupérer la sauvegarde</button>' +
+        '<button class="btn small ghost" data-sync="ignore">Ignorer</button>';
+    } else if (st.code === 'conflict') {
+      actions = '<button class="btn small primary" data-sync="merge">Fusionner les deux</button>' +
+        '<button class="btn small ghost" data-sync="mine">Garder mes données</button>' +
+        '<button class="btn small ghost" data-sync="theirs">Prendre le cloud</button>';
+    } else if (st.code === 'offline') {
+      actions = '<button class="btn small ghost" data-sync="retry">Réessayer</button>';
+    } else {
+      actions = '<button class="btn small ghost" data-sync="retry">Réessayer</button>' +
+        '<button class="btn small ghost" data-sync="settings">Ouvrir les paramètres</button>';
+    }
+    el.className = 'sync-banner ' + st.tone;
+    el.innerHTML = '<span class="sb-ico">' + UI.icon(SYNC_ICONES[st.code] || 'warn') + '</span>' +
+      '<div class="sb-text"><b>' + esc(st.label) + '</b><span>' + esc(syncDetail(st)) + '</span></div>' +
+      '<div class="sb-actions">' + actions + '</div>';
+    $$('[data-sync]', el).forEach(function (b) {
+      b.addEventListener('click', function () { actionSync(b.dataset.sync); });
+    });
+  }
+
+  function syncDetail(st) {
+    switch (st.code) {
+      case 'remote': return 'Une sauvegarde a été trouvée dans ' + global.Sync.cheminLisible() + '. Vos données locales restent intactes tant que vous ne cliquez pas.';
+      case 'conflict': return 'Le journal a été modifié sur un autre appareil. Choisissez la version à garder, ou fusionnez les deux (les trades les plus récents gagnent).';
+      case 'offline': return 'Aucune connexion. Vos modifications sont conservées sur cet appareil et partiront dès le retour du réseau.';
+      case 'auth': return 'Le jeton GitHub est refusé ou n\'a pas les droits sur ce dépôt (Contents : Read and write).';
+      case 'quota': return 'GitHub limite temporairement les requêtes. Réessayez dans quelques minutes.';
+      case 'server': return 'GitHub ne répond pas pour le moment. Vos données restent enregistrées localement.';
+      default: return 'La sauvegarde automatique a échoué. Vos données restent enregistrées localement.';
+    }
+  }
+
+  function actionSync(quoi) {
+    var S = global.Sync;
+    if (quoi === 'settings') { state.view = 'params'; render(); return; }
+    if (quoi === 'ignore') { S.reset(); render(); return; }
+    if (quoi === 'pull' || quoi === 'theirs') {
+      UI.confirmDialog({
+        title: 'Récupérer la sauvegarde du cloud ?',
+        message: 'Les données de cet appareil seront remplacées par la sauvegarde distante.',
+        confirmLabel: 'Récupérer', danger: true
+      }).then(function (ok) {
+        if (!ok) return;
+        S.tirer().then(function (r) {
+          if (r.ok) UI.toast('Sauvegarde récupérée.', 'success');
+          else if (r.vide) UI.toast('Aucune sauvegarde dans le cloud.', 'warn');
+          else UI.toast('Récupération impossible : ' + (r.error ? r.error.message : 'erreur'), 'error', 7000);
+          render();
+        });
+      });
+      return;
+    }
+    if (quoi === 'merge') {
+      S.resoudre('fusion').then(function (r) {
+        UI.toast(r.ok ? 'Fusion effectuée (' + r.trades + ' trades).' : 'Fusion impossible.', r.ok ? 'success' : 'error', 6000);
+        render();
+      });
+      return;
+    }
+    if (quoi === 'mine') {
+      S.resoudre('local').then(function (r) {
+        UI.toast(r.ok ? 'Vos données ont remplacé la version du cloud.' : 'Envoi impossible.', r.ok ? 'success' : 'error', 6000);
+        render();
+      });
+      return;
+    }
+    // sans « force » : si le cloud a bougé ailleurs, on signale le conflit au lieu d'écraser
+    S.syncNow().then(function (r) {
+      if (r.ok) UI.toast('Synchronisation effectuée.', 'success');
+      else if (r.conflict) UI.toast('Le cloud a été modifié ailleurs : choisissez la version à garder.', 'warn', 7000);
+      else if (r.error && r.error.code === 'offline') UI.toast('Toujours hors ligne : nouvel essai au retour du réseau.', 'warn');
+      else UI.toast('Synchronisation impossible.', 'error');
+      render();
+    });
   }
 
   /* =========================================================
@@ -272,7 +384,9 @@
         '<span class="wc-go">Nettoyer la démo →</span></button>' : '') +
       '</div>' +
       '<div class="welcome-foot">' +
-      '<p><b>Vos données restent sur cet appareil</b> (aucun envoi sur un serveur). Pensez à <i>Exporter → Sauvegarde JSON</i> chaque semaine.</p>' +
+      '<p>' + (syncActif()
+        ? '<b>Sauvegarde cloud activée</b> : vos trades partent dans votre dépôt GitHub, et restent disponibles hors ligne sur cet appareil. Exportez de temps en temps une <i>Sauvegarde JSON</i> en plus.'
+        : '<b>Vos données restent sur cet appareil</b> (aucun envoi sur un serveur). Activez la <i>Sauvegarde cloud</i> dans les Paramètres, ou exportez une <i>Sauvegarde JSON</i> chaque semaine.') + '</p>' +
       '<p>Le plan de trading complet (règles de risque, 3 setups, routine, checklists) est dans l\'onglet <b>Plan de trading</b>.</p>' +
       '</div>' +
       '</section>';
@@ -882,11 +996,12 @@
           }).then(function (ok) {
             if (!ok) return;
             state.trades = state.trades.filter(function (x) { return x.id !== t.id; });
+            state.deleted = (state.deleted || []).concat([{ id: t.id, at: new Date().toISOString() }]).slice(-500);
             persist(); render();
             UI.toast('Trade supprimé.');
           });
         } else if (b.dataset.action === 'duplicate') {
-          var copy = Store.normalizeTrade(Object.assign(Store.toRaw(t), { id: Store.uid(), date: Store.todayISO(), time: Store.nowTime() }), state.settings);
+          var copy = Store.normalizeTrade(Object.assign(Store.toRaw(t), { id: Store.uid(), date: Store.todayISO(), time: Store.nowTime(), updatedAt: new Date().toISOString() }), state.settings);
           state.trades.push(copy);
           persist(); render();
           UI.toast('Copie du trade ajoutée à aujourd\'hui.');
@@ -1075,6 +1190,7 @@
             if (!data.symbol) { UI.toast('Indiquez un instrument.', 'error'); return; }
             data.rMode = (data.rMultipleIn === '' || data.rMultipleIn === null || data.rMultipleIn === undefined) ? 'auto' : 'manual';
             var norm = Store.normalizeTrade(Object.assign({}, raw, data), s);
+            norm.updatedAt = new Date().toISOString();
             if (isNew) state.trades.push(norm);
             else {
               var i = state.trades.findIndex(function (x) { return x.id === norm.id; });
@@ -1333,10 +1449,18 @@
     UI.toast('Données de démonstration chargées (80 trades). Supprimez-les dans Paramètres.');
   }
 
+  var demarre = false;
   function init() {
+    if (demarre) return;   // sécurité : une seule initialisation, même si l'événement se répète
+    demarre = true;
     load();
     bindGlobal();
     render();
+    if (global.Sync) {
+      // la pastille suit l'état sans redessiner toute la vue (pas de clignotement)
+      global.Sync.onChange(function () { renderSyncBadge(); renderSyncBanner(); });
+      global.Sync.autoStart();
+    }
     // Notifications de démarrage (une seule à la fois, et pas au premier lancement :
     // l'état vide du journal explique déjà quoi faire).
     if (!Store.storageAvailable()) {
@@ -1346,9 +1470,25 @@
     }
   }
 
+  /** États des checklists (utilisé par la sauvegarde cloud). */
+  function setChecks(checks) {
+    state.checks = checks || {};
+    if (global.Plan) global.Plan.saveChecks(state.checks);
+    return state.checks;
+  }
+
+  /** Recharge l'état depuis le stockage local (après une récupération cloud). */
+  function reloadFromStorage() {
+    load();
+    render();
+    return state;
+  }
+
   // API partagée avec views.js
   var publicAPI = {
     state: state,
+    setChecks: setChecks,
+    reloadFromStorage: reloadFromStorage,
     render: render,
     buildModel: buildModel,
     persist: persist,

@@ -146,10 +146,10 @@ Un indicateur dans la barre du haut rappelle en permanence **« Mode démonstrat
 
 ### Vos données sur tablette
 
-Elles sont stockées **dans le navigateur de la tablette** (aucun serveur). Deux conséquences pratiques :
+Elles sont stockées **dans le navigateur de la tablette** et, si vous l'activez, **sauvegardées automatiquement dans votre dépôt GitHub privé** (voir *Sauvegarde cloud automatique*).
 
-- Pour **retrouver le même journal sur l'ordinateur et la tablette**, utilisez *Exporter → Sauvegarde JSON* sur l'un, puis *Importer* sur l'autre (fichier à transférer par e-mail, AirDrop, iCloud/Drive…).
-- Un vidage du navigateur, une réinstallation ou une navigation privée effacent les données : **sauvegarde JSON hebdomadaire**, en même temps que la revue du plan.
+- Pour **retrouver le même journal sur l'ordinateur et la tablette** : activez la *Sauvegarde cloud* sur les deux appareils (même dépôt, même fichier) — la fusion se fait par trade. Sinon, *Exporter → Sauvegarde JSON* sur l'un puis *Importer* sur l'autre.
+- Un vidage du navigateur, une réinstallation ou une navigation privée effacent le stockage local : avec la sauvegarde cloud, il suffit de reconfigurer le dépôt pour tout retrouver. Sans elle, gardez la **sauvegarde JSON hebdomadaire**.
 
 ### Vérifier le rendu sur tablette (développement)
 
@@ -200,7 +200,7 @@ Plan rédigé sur la méthode **SMV** : les 4 lois (structure, offre/demande, ca
 - Bouton **Imprimer / PDF** avec une feuille de style dédiée (fond clair, lisible sur papier).
 
 ### ⚙️ Paramètres
-Capital, devise, risque par trade, valeur du pip, limites (jour/semaine/drawdown), objectif mensuel, listes d'instruments, de setups et de sessions ; import/export ; effacement des données.
+Capital, devise, risque par trade, valeur du pip, limites (jour/semaine/drawdown), objectif mensuel, listes d'instruments, de setups et de sessions ; **sauvegarde cloud (dépôt GitHub)** : dépôt, branche, fichier, jeton, test de connexion, journal des dernières opérations ; import/export ; effacement des données.
 
 ---
 
@@ -243,10 +243,67 @@ Colonnes reconnues (accents et casse ignorés) : `Date, Heure, Instrument/Symbol
 
 ## Sauvegarde & vie privée
 
-- Les données sont stockées **dans votre navigateur** (`localStorage`), jamais envoyées sur un serveur.
-- *Paramètres → Exporter → Sauvegarde JSON* produit un fichier complet (trades + réglages) à réimporter ailleurs ou après un changement de machine.
+### 1. Hors ligne, sur l'appareil (`localStorage`)
+
+Les données sont stockées **dans votre navigateur**. L'application fonctionne entièrement hors ligne : réseau coupé, tout continue d'être enregistré.
+
+- *Paramètres → Exporter → Sauvegarde JSON* produit un fichier complet (trades + réglages + cases des checklists) à réimporter ailleurs.
 - Videz le cache du navigateur sans sauvegarde = données perdues. Faites la sauvegarde JSON en même temps que la revue hebdomadaire.
 - Un export CSV est également disponible (séparateur `;`, virgules décimales : ouvrable directement dans Excel français).
+
+### 2. Sauvegarde cloud automatique (votre dépôt GitHub)
+
+*Paramètres → **Sauvegarde cloud (GitHub)*** : l'application écrit vos données dans **un fichier de votre dépôt GitHub**. Gratuit, sans service tiers, sans abonnement. Dès qu'une donnée change, la sauvegarde part toute seule (45 secondes après la dernière modification, et au retour du réseau).
+
+Ce qui est sauvegardé : **tous les trades réels**, les paramètres du compte et de risque, et les **cases cochées des checklists**. Les trades de démonstration ne partent pas dans le dépôt.
+
+| Champ | Valeur conseillée |
+|---|---|
+| Propriétaire | votre compte GitHub (ex. `moussantji`) |
+| Dépôt | un dépôt **privé dédié** (ex. `journal-trading`) |
+| Branche | `main` |
+| Fichier | `journal-trading/sauvegarde.json` (créé automatiquement) |
+| Jeton | jeton *fine-grained*, permission **Contents : Read and write** |
+
+#### Créer le jeton (2 minutes)
+
+1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. **Repository access** : *Only select repositories* → votre dépôt de sauvegarde.
+3. **Permissions → Repository permissions → Contents** : **Read and write**.
+4. **Expiration** : 90 jours (à recréer ensuite). Générez, copiez, collez dans le champ *Jeton d'accès*.
+5. Cliquez **Tester la connexion**, puis **Activer la sauvegarde automatique**.
+
+> **Le jeton reste dans ce navigateur** (stockage local de l'appareil) et n'est **jamais** écrit dans le dépôt ni dans le code. Un dépôt **privé dédié** est fortement conseillé : dans un dépôt public, votre journal serait lisible par tout le monde (l'application vous le signale).
+
+#### Les états de la sauvegarde (affichés en clair dans l'application)
+
+| État | Ce que ça veut dire | Ce que fait l'application |
+|---|---|---|
+| Sauvegarde cloud désactivée | Aucun dépôt configuré | Rien, tout reste local |
+| Configuré, aucune sauvegarde envoyée | Premier envoi pas encore fait | Envoie à la première modification |
+| Hors ligne — modifications en attente | Réseau coupé (ou avion) | Garde tout en local, repart au retour du réseau |
+| *n* modification(s) à sauvegarder | Envoi différé en cours | Envoie après 45 s |
+| Synchronisation en cours… | Appel en cours vers GitHub | Attend la réponse (15 s maximum) |
+| **À jour** | Sauvegarde à jour | Indique la date du dernier envoi |
+| Sauvegarde disponible dans le cloud | Un autre appareil a une sauvegarde plus récente et le journal local est vide | Propose de la **récupérer** (jamais sans votre accord) |
+| Conflit : le cloud a été modifié ailleurs | Deux appareils ont modifié le journal | Propose **Fusionner les deux** / Garder mes données / Prendre le cloud |
+| Clé refusée | Jeton expiré, révoqué, ou sans droit sur le dépôt | Explique quoi vérifier (Contents : Read and write) |
+| Quota GitHub atteint | Trop de requêtes | Réessaie plus tard, rien n'est perdu |
+| GitHub injoignable | Panne ou réseau | Réessaie, données locales intactes |
+| Échec de la sauvegarde | Autre erreur, renvoyée telle quelle | Affiche le message exact |
+
+Un **bandeau** apparaît dans l'application uniquement quand une action est attendue (hors ligne, conflit, jeton refusé…), avec les boutons utiles. Le reste du temps, une **pastille** discrète dans la barre du haut suffit.
+
+#### Plusieurs appareils
+
+Tablette + ordinateur : chaque appareil garde son journal et **fusionne par trade** — les modifications les plus récentes gagnent, les suppressions sont conservées (un trade supprimé sur la tablette ne revient pas de l'ordinateur). En cas de doute, « Fusionner les deux » est toujours proposé.
+
+#### Mise en place rapide du dépôt
+
+```bash
+# sur GitHub : New repository → nom « journal-trading » → Private → Create
+# rien à uploader : le premier envoi crée le fichier de sauvegarde tout seul
+```
 
 ---
 
@@ -275,6 +332,7 @@ trading/
 │       ├── plan.js               Contenu du plan + contrôles de discipline
 │       ├── ui.js                 Formatage FR, modales, toasts, icônes SVG
 │       ├── views.js              Vues Calendrier, Analyses, Plan, Paramètres
+│       ├── sync.js               Sauvegarde cloud GitHub (états, conflits, fusion, hors ligne)
 │       ├── app.js                Navigation, tableau de bord, journal, formulaire, import/export
 │       └── pwa.js                Installation, hors ligne, synchronisation entre onglets
 ├── exemples/                     Modèles CSV, jeu de démonstration, modèle de workflow Pages
@@ -282,6 +340,7 @@ trading/
     ├── serve.js                  Serveur local + QR code pour la tablette (node tools/serve.js)
     ├── make-site-zip.js          Archive prête à publier (trading-site.zip)
     ├── smoke-test.js             Contrôle automatique de tous les écrans (jsdom)
+    ├── sync-test.js              Recette de la sauvegarde cloud : 12 états, conflits, fusion (jsdom)
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
 ```
@@ -296,6 +355,7 @@ Le déploiement HTTPS (GitHub Pages) est décrit dans `exemples/deploiement/` (m
 node tools/serve.js                                    # serveur local + QR code pour la tablette
 node trading/tools/make-site-zip.js                     # régénérer l'archive de publication
 npm i -D jsdom && node tools/smoke-test.js              # chaque vue se rend sans erreur JS
+npm i -D jsdom && node tools/sync-test.js                # sauvegarde cloud : états, conflits, fusion
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
 ```
@@ -306,6 +366,9 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.1 | **Sauvegarde cloud automatique dans votre dépôt GitHub** : envoi différé (45 s), reprise au retour du réseau, récupération sur un nouvel appareil, **fusion par trade** entre la tablette et l'ordinateur, suppressions conservées. Gratuit, aucun service tiers. |
+| 2.1 | **États de la sauvegarde affichés en clair** : hors ligne, en attente, à jour, conflit, clé refusée, quota, GitHub injoignable, échec — pastille dans la barre du haut et bandeau avec les boutons utiles (*Réessayer*, *Fusionner les deux*, *Récupérer la sauvegarde*). |
+| 2.1 | **Configuration dans les Paramètres** : dépôt, branche, fichier, jeton (fine-grained, *Contents : Read and write*), bouton *Tester la connexion*, journal des dernières opérations. Le jeton reste dans le navigateur de l'appareil. |
 | 2.0 | **Plan réécrit sur la méthode SMV** (Smart Money Vision) : les 4 lois, la structure (HH/HL, LH/LL, consolidation, 3 types de BOS), l'offre et la demande (OB/POI, order flow, breaker bloc), la cause à effet (phases A à E, accumulation et distribution) et la liquidité (intact, EQH/EQL, trendline, signature, inducement, complexe pull back). |
 | 2.0 | **4 setups SMV** documentés en 6 lignes : Golden Setup (prise de position en phase C), Complexe Pull Back, Market Shift (prise de liquidité + ChoCh), ODF (entrée ratée). |
 | 2.0 | **Règles de risque SMV** : 1 % maximum par trade, stop 15 pips maximum, ratio minimum 1:7, 2 stop loss par jour maximum, breakeven à la cassure, prises partielles 30 / 50 / solde. Deux contrôles de discipline suivent ces règles automatiquement (part des trades à 1:7 ou plus, respect du stop à 15 pips). |
@@ -329,5 +392,7 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 ## Limites connues
 
 - Le multi-comptes n'est pas géré (un seul journal par navigateur).
+- La sauvegarde cloud passe par l'API GitHub : un fichier au-delà de ~950 Ko doit être exporté en JSON (le nombre de trades nécessaire est très largement supérieur à un usage normal).
+- La première activation de la sauvegarde cloud demande un jeton GitHub (voir *Sauvegarde & vie privée*) ; sans elle, tout continue de fonctionner en local.
 - Les captures d'écran sont référencées par URL/chemin (pas d'upload de fichier, pour rester sans serveur).
 - Les frais de swap ne sont pas modélisés séparément : à inclure dans la colonne « Frais ».

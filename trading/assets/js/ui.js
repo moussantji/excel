@@ -214,7 +214,16 @@
     calendarWarn: '<rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v3.4M12 19.2v.3"/>',
     warn: '<path d="M12 3.8 3 20.2h18z"/><path d="M12 10v4.6M12 17.4v.3"/>',
     info: '<circle cx="12" cy="12" r="8.6"/><path d="M12 11v5.6M12 7.6v.3"/>',
-    install: '<path d="M12 3.5v11"/><path d="M7.6 10.5 12 14.9l4.4-4.4"/><path d="M4.5 18.5h15"/><rect x="4.5" y="18.5" width="15" height="2.2" rx="1.1" fill="currentColor" stroke="none"/>'
+    install: '<path d="M12 3.5v11"/><path d="M7.6 10.5 12 14.9l4.4-4.4"/><path d="M4.5 18.5h15"/><rect x="4.5" y="18.5" width="15" height="2.2" rx="1.1" fill="currentColor" stroke="none"/>',
+    // sauvegarde cloud
+    cloud: '<path d="M7.2 18.5h9.6a3.7 3.7 0 0 0 .5-7.4 5.2 5.2 0 0 0-10-1.5 3.9 3.9 0 0 0-.1 7.9z"/>',
+    cloudUp: '<path d="M7.2 18.5h9.6a3.7 3.7 0 0 0 .5-7.4 5.2 5.2 0 0 0-10-1.5 3.9 3.9 0 0 0-.1 7.9z"/><path d="M12 14.6V9.4"/><path d="M9.8 11.4 12 9.2l2.2 2.2"/>',
+    cloudDown: '<path d="M7.2 18.5h9.6a3.7 3.7 0 0 0 .5-7.4 5.2 5.2 0 0 0-10-1.5 3.9 3.9 0 0 0-.1 7.9z"/><path d="M12 9.6v5.2"/><path d="M9.8 12.6 12 14.8l2.2-2.2"/>',
+    cloudOff: '<path d="M7.2 18.5h9.6a3.7 3.7 0 0 0 .5-7.4 5.2 5.2 0 0 0-10-1.5 3.9 3.9 0 0 0-.1 7.9z"/><path d="M4 4l16 16"/>',
+    refresh: '<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4.5V9h-4.5"/>',
+    lock: '<rect x="5" y="10.6" width="14" height="9.4" rx="2.4"/><path d="M8.4 10.6V7.8a3.6 3.6 0 0 1 7.2 0v2.8"/>',
+    hourglass: '<path d="M7 3.5h10"/><path d="M7 20.5h10"/><path d="M8 3.5v3.2c0 2 4 3.6 4 5.3s-4 3.3-4 5.3v3.2"/><path d="M16 3.5v3.2c0 2-4 3.6-4 5.3s4 3.3 4 5.3v3.2"/>',
+    link: '<path d="M10.2 13.8a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 0 0-5.7-5.7l-1.1 1.1"/><path d="M13.8 10.2a4 4 0 0 0-5.7 0l-2.6 2.6a4 4 0 0 0 5.7 5.7l1.1-1.1"/>'
   };
   function icon(name, cls) {
     var body = ICONS[name] || '';
