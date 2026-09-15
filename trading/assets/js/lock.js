@@ -22,8 +22,8 @@
   var ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';   // Crockford : ni I, L, O ni U
   var VERSION_COFFRE = 1;
   var CIBLE_MS = 900;            // durée visée pour la dérivation (une seule fois par ouverture)
-  var ITER_MIN = 250000;
-  var ITER_MAX = global.JT_KDF_MAX || 2000000;
+  var ITER_MIN = 250000;         // plancher : même sur une tablette lente
+  var ITER_MAX = global.JT_KDF_MAX || 3000000;   // plafond : au-delà, le gain est négligeable
   var ITER_FORCE = global.JT_KDF_FORCE || 0;   // utilisé uniquement par les tests
   var DELAI_ECRITURE = 80;       // regroupement des écritures (ms)
 
