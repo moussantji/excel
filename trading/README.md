@@ -34,6 +34,15 @@ Au premier lancement, le journal est vide. Trois boutons sont proposés : **Ajou
 
 ---
 
+## Accès rapide depuis la tablette
+
+![Ouvrir l'application sur la tablette](ouvrir-sur-tablette.png)
+
+Scannez le QR code de l'image ci-dessus (`ouvrir-sur-tablette.png`) avec l'appareil
+photo de la tablette : le navigateur ouvre <https://moussantji.github.io/excel/>.
+Ajoutez ensuite l'application à l'écran d'accueil (*Partager → Sur l'écran
+d'accueil* sur iPad, *⋮ → Installer l'application* sur Android).
+
 ## Sur tablette (iPad / Android)
 
 Trois façons de l'utiliser sur la tablette, de la plus rapide à la plus complète.
