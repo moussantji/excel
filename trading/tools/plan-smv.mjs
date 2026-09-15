@@ -1,14 +1,16 @@
 /* =========================================================
-   plan.js — Plan de trading (contenu + suivi de discipline)
-   Marché : forex & indices CFD — horizon intraday / swing
+   plan-smv.mjs — Génère le contenu du plan (méthode SMV)
+   Remplace l'objet PLAN dans assets/js/plan.js
+   Lancement : node tools/plan-smv.mjs
    ========================================================= */
-(function (global) {
-  'use strict';
+import { readFileSync, writeFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-  /* ---------------------------------------------------------
-     Contenu du plan (modifiable directement ici)
-     --------------------------------------------------------- */
-  var PLAN = {
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const TARGET = join(ROOT, 'assets/js/plan.js');
+
+const PLAN = `  var PLAN = {
     version: '2.0',
     title: 'Plan de trading — SMV',
     subtitle: 'Smart Money Vision · Ultra FX — forex & indices CFD',
@@ -66,7 +68,7 @@
             ]},
           { type: 'list', title: "Conditions d'arrêt (kill switch) — non négociables", items: [
             '2 stop loss pris dans la journée : la journée est terminée, sans exception.',
-            'Perte de 6 % du capital sur la semaine : arrêt jusqu\'au lundi suivant.',
+            'Perte de 6 % du capital sur la semaine : arrêt jusqu\\'au lundi suivant.',
             'Perte de 10 % depuis le plus haut : retour en taille réduite (50 %) pendant 10 trades conformes.',
             '3 trades consécutifs hors plan : arrêt 48 h + revue écrite avant de reprendre.',
             'Fatigue, maladie, conflit personnel majeur : pas de trading ce jour-là.'
@@ -102,7 +104,7 @@
               ['Breakeven', "Je déplace le stop au prix d'entrée dès que le BOS confirme", 'Je ne laisse plus une position gagnante redevenir perdante'],
               ['Target 1 (30 %)', 'Je sécurise 30 % à 1:2 minimum', 'Je paie le trade et je réduis la pression'],
               ['Target 2 (50 %)', 'Je sors 50 % sur le premier intact buyer/seller', 'Je prends la liquidité la plus proche'],
-              ['Target 3 (solde)', 'Je laisse courir jusqu\'à la prochaine zone HTF', "C'est ce palier qui fait la performance (1:7 et plus)"]
+              ['Target 3 (solde)', 'Je laisse courir jusqu\\'à la prochaine zone HTF', "C'est ce palier qui fait la performance (1:7 et plus)"]
             ]},
           { type: 'callout', tone: 'red', title: 'Les 4 interdits absolus', text: "Élargir un stop · Prendre un 3ᵉ trade après 2 stop loss · Entrer sans ChoCh ni prise de liquidité · Trader en dehors des fenêtres de tir. Aucune de ces quatre erreurs n'a de circonstance atténuante : elles sont la cause des comptes qui sautent." }
         ]
@@ -121,7 +123,7 @@
               ['Contexte', "Une consolidation s'est installée (accumulation ou distribution) avec ses phases A et B identifiables en HTF, et mon biais mensuel est connu."],
               ['Déclencheur', "En Phase C : SPRING (accumulation) ou UTAD (distribution) — le mouvement vient chercher la liquidité laissée par le STB ou le UT."],
               ['Entrée', "Sur le retest de la zone après le SPRING/UTAD, quand le ChoCh confirme le changement de caractère en LTF."],
-              ['Stop', '15 pips maximum, sous le plus bas du SPRING (ou au-dessus du plus haut de l\'UTAD).'],
+              ['Stop', '15 pips maximum, sous le plus bas du SPRING (ou au-dessus du plus haut de l\\'UTAD).'],
               ['Objectifs', 'Target 1 sur la liquidité interne, puis targets sur les intact buyer/seller des phases A et B.'],
               ['Invalidation', "Retour dans la fourchette sans ChoCh, ou nouveau bas (SPRING avorté) : le setup n'existe plus, j'annule."]
             ]},
@@ -174,18 +176,18 @@
               ['Consolidation', 'Le prix évolue dans une fourchette, direction non encore donnée', "Je n'anticipe pas : j'attends les prises de liquidité et le BOS"]
             ]},
           { type: 'table',
-            head: ['Type de BOS', 'Ce qu\'il signifie', 'Ce que je fais'],
+            head: ['Type de BOS', 'Ce qu\\'il signifie', 'Ce que je fais'],
             rows: [
               ['Classique / changement de tendance', "Cassure de structure qui montre un arrêt de la tendance et une intention inverse"],
               ['Continuation', 'La structure dominante est respectée et prolongée', 'Je cherche une continuation dans le sens du biais'],
-              ['Trap / fake BOS', "Fausse cassure destinée à piéger les vendeurs ou les acheteurs", 'Aucune entrée : je note le piège et j\'attends le ChoCh']
+              ['Trap / fake BOS', "Fausse cassure destinée à piéger les vendeurs ou les acheteurs", 'Aucune entrée : je note le piège et j\\'attends le ChoCh']
             ]},
           { type: 'kv', rows: [
             ['Structure majeure', 'Se valide par un high au-dessus du high précédent (ou un low sous le low précédent)'],
-            ['Structure mineure', 'Mouvement à l\'intérieur de la structure majeure — sert au timing, pas au biais'],
+            ['Structure mineure', 'Mouvement à l\\'intérieur de la structure majeure — sert au timing, pas au biais'],
             ['Objectif premier', 'Acheter sur les plus bas (HL), vendre sur les plus hauts (LH) : faire partie des 80 %'],
             ['Les 20 %', "Je peux les trader (retracements), mais en sachant que ça ne dure pas — et sans jamais perdre de vue les 80 %"],
-            ['Hedging concept', 'Être positionné sur l\'impulsion et le retracement en même temps : réservé aux setups parfaitement lus']
+            ['Hedging concept', 'Être positionné sur l\\'impulsion et le retracement en même temps : réservé aux setups parfaitement lus']
           ]},
           { type: 'note', text: "En cas de doute sur la structure : pas de trade. Un biais flou est déjà une perte." }
         ]
@@ -210,14 +212,14 @@
             head: ['Phase', 'Ce qui se passe', 'Mon attention'],
             rows: [
               ['A — Arrêt de la tendance', 'Un évènement de climax stoppe le mouvement en cours et élargit la fourchette', 'Je délimite la fourchette de travail'],
-              ['B — Construction de la cause', 'Consolidation : les zones d\'offre et de demande sont testées et la liquidité se renforce', 'Je note les niveaux de liquidité qui se forment'],
+              ['B — Construction de la cause', 'Consolidation : les zones d\\'offre et de demande sont testées et la liquidité se renforce', 'Je note les niveaux de liquidité qui se forment'],
               ['C — Test avec secousse', 'SPRING (accumulation) ou UTAD (distribution) vient prendre la liquidité', "C'est ici que je prends position — le cœur de mon plan"],
-              ['D — Tendance dans la fourchette', 'Le prix évolue à l\'intérieur de la fourchette', "J'accompagne avec mes prises partielles"],
-              ['E — Tendance hors fourchette', 'Sortie de fourchette : l\'effet est en place', 'Je laisse courir le dernier palier']
+              ['D — Tendance dans la fourchette', 'Le prix évolue à l\\'intérieur de la fourchette', "J'accompagne avec mes prises partielles"],
+              ['E — Tendance hors fourchette', 'Sortie de fourchette : l\\'effet est en place', 'Je laisse courir le dernier palier']
             ]},
           { type: 'kv', rows: [
-            ['Accumulation', 'PS (tentative ratée d\'arrêter la baisse) · SC (arrête la baisse, crée le bas de fourchette) · AR (élargit, fixe le haut) · ST (teste la demande, renforce la liquidité) · UA (prend la liquidité de l\'AR) · STB (prend la liquidité laissée par SC et ST) · SPRING (secousse sur le STB) · SOS / BU / LPS (sortie)'],
-            ['Distribution', 'PSY (tentative ratée d\'arrêter la hausse) · BC (arrête la hausse, crée le haut de fourchette) · AR (élargit, fixe le bas) · ST (teste l\'offre, renforce la liquidité) · mSOW (prend la liquidité de l\'AR) · UT (prend la liquidité laissée par BC et ST) · UTAD (secousse sur le UT) · LPSY (reprises baissières)'],
+            ['Accumulation', 'PS (tentative ratée d\\'arrêter la baisse) · SC (arrête la baisse, crée le bas de fourchette) · AR (élargit, fixe le haut) · ST (teste la demande, renforce la liquidité) · UA (prend la liquidité de l\\'AR) · STB (prend la liquidité laissée par SC et ST) · SPRING (secousse sur le STB) · SOS / BU / LPS (sortie)'],
+            ['Distribution', 'PSY (tentative ratée d\\'arrêter la hausse) · BC (arrête la hausse, crée le haut de fourchette) · AR (élargit, fixe le bas) · ST (teste l\\'offre, renforce la liquidité) · mSOW (prend la liquidité de l\\'AR) · UT (prend la liquidité laissée par BC et ST) · UTAD (secousse sur le UT) · LPSY (reprises baissières)'],
             ['Wyckoff neutre / avancé', "Consolidation où le décompte se fait haut et bas en même temps : j'attends que les liquidités externes sautent (UT ou STB) avant de réagir. Cela évite de confondre accumulation et redistribution."]
           ]}
         ]
@@ -256,18 +258,18 @@
         lead: "Les repères techniques qui traduisent la lecture en décisions.",
         items: [
           { type: 'kv', rows: [
-            ['Fibo SMC', 'Trois niveaux : 100 % · 50 % · 0 %. Au-dessus du 50 % = premium (je privilégie les ventes) ; en dessous = discount (je privilégie les achats). Le 50 % ne tient jamais : je ne m\'y fie pas comme niveau d\'entrée.'],
+            ['Fibo SMC', 'Trois niveaux : 100 % · 50 % · 0 %. Au-dessus du 50 % = premium (je privilégie les ventes) ; en dessous = discount (je privilégie les achats). Le 50 % ne tient jamais : je ne m\\'y fie pas comme niveau d\\'entrée.'],
             ['IPA / imbalance', "Déséquilibre entre ordres d'achat et de vente : zone de retour probable du prix."],
             ['Market shift', "Réaction après un high/low qui a fait BOS. Je ne trade jamais la réaction directe : j'attends la confirmation."],
             ['Price delivery', "Lecture algorithmique du parcours du prix (IPDA) : le marché livre le prix d'un niveau à un autre."],
             ['Décompte 0-1-2-3', "0 = tentative d'arrêt qui échoue · 1 = arrêt effectif et création du failed · 2 = prise de liquidité · 3 = test de la prise de liquidité."],
-            ['Vagues d\'Elliott', "4 à 5 vagues d'impulsion, avec une perte de puissance des impulsions : signe de fin de mouvement."],
-            ['Fenêtres de tir', 'Asie 1h–2h · Europe 8h–9h · USA 13h–14h (heure de Bamako). Hors de ces fenêtres, je ne cherche pas d\'entrée.']
+            ['Vagues d\\'Elliott', "4 à 5 vagues d'impulsion, avec une perte de puissance des impulsions : signe de fin de mouvement."],
+            ['Fenêtres de tir', 'Asie 1h–2h · Europe 8h–9h · USA 13h–14h (heure de Bamako). Hors de ces fenêtres, je ne cherche pas d\\'entrée.']
           ]},
           { type: 'table',
             head: ['Étape', 'Ce que je fais'],
             rows: [
-              ['1. Biais', 'HTF : je détermine le biais de structure et je repère les zones d\'offre et de demande majeures'],
+              ['1. Biais', 'HTF : je détermine le biais de structure et je repère les zones d\\'offre et de demande majeures'],
               ['2. Liquidité', "Je liste les inducemements, EQH/EQL et intact que le prix doit aller chercher"],
               ['3. Confirmation', "LTF : j'attends la prise de liquidité, puis le ChoCh qui confirme le changement de caractère"],
               ['4. Déclencheur', "BOS / intention dans le sens du biais, avec consolidation locale"],
@@ -357,7 +359,7 @@
             "Je me surprends à chercher une raison d'entrer plutôt qu'une raison de ne pas entrer.",
             "Je n'ai pas écrit mon biais avant l'ouverture de la séance."
           ]},
-          { type: 'callout', tone: 'gold', title: 'Ma phrase d\'ancrage', text: "Je gagne avec un ratio, pas avec un taux de réussite. Attendre la confirmation n'est pas perdre du temps, c'est le métier." }
+          { type: 'callout', tone: 'gold', title: 'Ma phrase d\\'ancrage', text: "Je gagne avec un ratio, pas avec un taux de réussite. Attendre la confirmation n'est pas perdre du temps, c'est le métier." }
         ]
       },
 
@@ -369,12 +371,12 @@
         lead: "Les chiffres que je regarde, et le seuil à partir duquel j'agis.",
         items: [
           { type: 'table',
-            head: ['Indicateur', 'Seuil d\'alerte', 'Décision'],
+            head: ['Indicateur', 'Seuil d\\'alerte', 'Décision'],
             rows: [
               ['Respect du plan', '< 85 %', 'Revue écrite obligatoire, taille réduite de moitié'],
               ['Ratio gain/perte moyen', '< 1:3', "Mes entrées sont trop tardives : je retravaille le placement (retest vs poursuite)"],
               ['Espérance par trade', '< 0 R sur 20 trades', "Arrêt du setup concerné et retour à l'étude des phases de Wyckoff"],
-              ['Drawdown max', '> 10 %', 'Arrêt complet jusqu\'à revue de tous les trades du drawdown'],
+              ['Drawdown max', '> 10 %', 'Arrêt complet jusqu\\'à revue de tous les trades du drawdown'],
               ['Trades hors fenêtre de tir', '> 2 par semaine', "Je coupe les notifications en dehors des fenêtres"],
               ['Stop moyen', '> 15 pips', "Je n'entre plus : les zones sont mal identifiées"]
             ]},
@@ -452,220 +454,16 @@
       }
     ]
   };
+`;
 
-  /* ---------------------------------------------------------
-     État persistant des checklists
-     --------------------------------------------------------- */
-  var KEY = 'journal-trading:plan:v1';
-  function loadChecks() {
-    try {
-      var raw = global.localStorage && global.localStorage.getItem(KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) { return {}; }
-  }
-  function saveChecks(state) {
-    try { global.localStorage && global.localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
-  }
-
-  /* ---------------------------------------------------------
-     Contrôle de discipline : plan vs exécution réelle
-     --------------------------------------------------------- */
-  function statusOf(ok, warn) { return ok ? 'ok' : (warn ? 'warn' : 'ko'); }
-
-  /**
-   * @param {Object} model  modèle produit par Metrics.build
-   * @returns {Array<{label, target, actual, status, hint}>}
-   */
-  function control(model) {
-    var st = model.settings || {};
-    var res = model.results || [];
-    var cap = st.startingCapital || 0;
-    var rows = [];
-    if (!res.length) return rows;
-
-    var closed = res.length;
-
-    // 1. Risque par trade
-    var maxRisk = Math.max.apply(null, res.map(function (t) { return t.riskAmount || 0; }));
-    var riskPct = cap ? maxRisk / cap * 100 : 0;
-    rows.push({
-      label: 'Risque max par trade',
-      target: '≤ ' + (st.riskPerTradePct || 1) + ' %',
-      actual: riskPct.toFixed(2).replace('.', ',') + ' %',
-      status: statusOf(riskPct <= (st.riskPerTradePct || 1) + 0.01, riskPct <= (st.riskPerTradePct || 1) * 1.25),
-      hint: 'Risque le plus élevé observé sur la période.'
-    });
-
-    // 2. Trades par jour
-    var maxPerDay = Math.max.apply(null, model.daily.map(function (d) { return d.count; }));
-    rows.push({
-      label: 'Trades max dans une journée',
-      target: '≤ ' + (st.maxTradesPerDay || 3),
-      actual: String(maxPerDay),
-      status: statusOf(maxPerDay <= (st.maxTradesPerDay || 3), maxPerDay <= (st.maxTradesPerDay || 3) + 1),
-      hint: 'Journée la plus active de la période.'
-    });
-
-    // 3. Perte max journalière
-    var worstDay = model.records.worstDay;
-    var worstDayPct = worstDay && cap ? Math.abs(Math.min(0, worstDay.net)) / cap * 100 : 0;
-    rows.push({
-      label: 'Perte max journalière',
-      target: '≤ ' + (st.maxDailyLossPct || 3) + ' %',
-      actual: worstDayPct.toFixed(2).replace('.', ',') + ' %' + (worstDay ? ' (' + worstDay.date.split('-').reverse().join('/') + ')' : ''),
-      status: statusOf(worstDayPct <= (st.maxDailyLossPct || 3), worstDayPct <= (st.maxDailyLossPct || 3) * 1.2),
-      hint: 'Pire journée en % du capital initial.'
-    });
-
-    // 4. Perte max hebdomadaire (pires 5 jours ouvrés glissants dans la semaine ISO)
-    var worstWeek = model.weeks.slice().sort(function (a, b) { return a.net - b.net; })[0];
-    var worstWeekPct = worstWeek && cap ? Math.abs(Math.min(0, worstWeek.net)) / cap * 100 : 0;
-    rows.push({
-      label: 'Perte max hebdomadaire',
-      target: '≤ ' + (st.maxWeeklyLossPct || 6) + ' %',
-      actual: worstWeekPct.toFixed(2).replace('.', ',') + ' %',
-      status: statusOf(worstWeekPct <= (st.maxWeeklyLossPct || 6), worstWeekPct <= (st.maxWeeklyLossPct || 6) * 1.2),
-      hint: 'Pire semaine de la période.'
-    });
-
-    // 5. Drawdown
-    var ddPct = Math.abs(model.kpis.maxDDPct);
-    rows.push({
-      label: 'Drawdown maximum',
-      target: '≤ ' + (st.maxDrawdownPct || 10) + ' %',
-      actual: ddPct.toFixed(2).replace('.', ',') + ' %',
-      status: statusOf(ddPct <= (st.maxDrawdownPct || 10), ddPct <= (st.maxDrawdownPct || 10) * 1.15),
-      hint: 'Baisse maximale depuis un plus haut, sur la période filtrée.'
-    });
-
-    // 6. Respect du plan
-    var pr = model.kpis.planRespectPct;
-    rows.push({
-      label: 'Trades conformes au plan',
-      target: '≥ 90 %',
-      actual: (pr === null ? '—' : pr.toFixed(0) + ' %'),
-      status: pr === null ? 'warn' : statusOf(pr >= 90, pr >= 75),
-      hint: 'Part de trades marqués « plan respecté ».'
-    });
-
-    // 7. Stop défini avant l'entrée
-    var withStop = res.filter(function (t) { return t.stop !== null && t.entry !== null; }).length;
-    var stopPct = withStop / closed * 100;
-    rows.push({
-      label: 'Trades avec stop enregistré',
-      target: '100 %',
-      actual: stopPct.toFixed(0) + ' %',
-      status: statusOf(stopPct >= 99.5, stopPct >= 90),
-      hint: 'Un trade sans stop dans le journal est un trade hors plan.'
-    });
-
-    // 8. Journal tenu (notes non vides)
-    var noted = res.filter(function (t) { return (t.notes || '').trim().length > 3; }).length;
-    var notePct = noted / closed * 100;
-    rows.push({
-      label: 'Trades documentés (notes)',
-      target: '≥ 80 %',
-      actual: notePct.toFixed(0) + ' %',
-      status: statusOf(notePct >= 80, notePct >= 50),
-      hint: 'Qualité de la mémoire écrite du journal.'
-    });
-
-    // 9. Revenge trading
-    var revenge = res.filter(function (t) { return /revanche|revenge/i.test(t.mistake || ''); }).length;
-    rows.push({
-      label: 'Trades de revanche',
-      target: '0',
-      actual: String(revenge),
-      status: statusOf(revenge === 0, revenge <= 2),
-      hint: 'Trades marqués « Revenge trading » dans le journal.'
-    });
-
-    // 10. Espérance par trade
-    var expR = model.kpis.expectancyR;
-    rows.push({
-      label: 'Espérance par trade',
-      target: '> +0,20 R',
-      actual: expR === null ? '—' : (expR > 0 ? '+' : '') + expR.toFixed(2).replace('.', ',') + ' R',
-      status: expR === null ? 'warn' : statusOf(expR >= 0.2, expR >= 0),
-      hint: 'Gain moyen attendu sur chaque trade pris.'
-    });
-
-    // 11. RR planifié (règle SMV : 1:7 minimum)
-    var withRR = res.filter(function (t) { return t.plannedRR !== null && t.plannedRR !== undefined; });
-    var okRR = withRR.filter(function (t) { return t.plannedRR >= 7; });
-    var shareRR = withRR.length ? okRR.length / withRR.length * 100 : null;
-    rows.push({
-      label: 'Ratio planifié ≥ 1:7',
-      target: '≥ 90 %',
-      actual: shareRR === null ? '—' : shareRR.toFixed(0).replace('.', ',') + ' % (' + okRR.length + '/' + withRR.length + ')',
-      status: shareRR === null ? 'warn' : statusOf(shareRR >= 90, shareRR >= 70),
-      hint: withRR.length ? 'Part des trades dont le ratio risque/gain visé atteint au moins 1:7.' : 'Renseignez la cible (TP) pour suivre cette règle.'
-    });
-
-    // 12. Stop loss (règle SMV : 15 pips maximum, forex et or)
-    var withStop = res.filter(function (t) {
-      if (t.entry === null || t.stop === null || t.entry === t.stop) return false;
-      var ps = Store.pipSize ? Store.pipSize(t.symbol) : 0.0001;
-      return ps <= 0.1; // forex, or : les indices cotés en points ne sont pas concernés
-    });
-    var pipsStop = withStop.map(function (t) { return Math.abs(t.entry - t.stop) / (Store.pipSize(t.symbol) || 0.0001); });
-    var maxStop = pipsStop.length ? Math.max.apply(null, pipsStop) : null;
-    var avgStop = pipsStop.length ? pipsStop.reduce(function (a, v) { return a + v; }, 0) / pipsStop.length : null;
-    rows.push({
-      label: 'Stop ≤ 15 pips',
-      target: '≤ 15',
-      actual: maxStop === null ? '—' : maxStop.toFixed(1).replace('.', ',') + ' pips (moy. ' + avgStop.toFixed(1).replace('.', ',') + ')',
-      status: maxStop === null ? 'warn' : statusOf(maxStop <= 15, maxStop <= 19),
-      hint: maxStop === null ? 'Renseignez entrée et stop pour suivre cette règle.' : 'Jeu de la règle : un stop au-delà de 15 pips invalide l\'entrée.'
-    });
-
-    // 13. Ratio gain/perte
-    var payoff = model.kpis.payoff;
-    rows.push({
-      label: 'Ratio gain / perte moyen',
-      target: '≥ 1,5',
-      actual: payoff === null ? '—' : payoff.toFixed(2).replace('.', ','),
-      status: payoff === null ? 'warn' : statusOf(payoff >= 1.5, payoff >= 1.2),
-      hint: 'Taille moyenne des gains comparée aux pertes.'
-    });
-
-    // 14. Objectif mensuel
-    var g = model.goals.month;
-    rows.push({
-      label: 'Objectif du mois en cours',
-      target: '+' + g.targetPct + ' %',
-      actual: (g.pct > 0 ? '+' : '') + g.pct.toFixed(2).replace('.', ',') + ' %',
-      status: g.pct >= g.targetPct ? 'ok' : (g.pct >= 0 ? 'warn' : 'ko'),
-      hint: g.trades + ' trade' + (g.trades > 1 ? 's' : '') + ' clôturé' + (g.trades > 1 ? 's' : '') + ' ce mois-ci.'
-    });
-
-    // 15. Perte du jour consommée
-    var dl = model.goals.todayLimits;
-    rows.push({
-      label: 'Seuil de perte journalière',
-      target: '≤ ' + dl.lossLimitPct + ' %',
-      actual: dl.lossUsed <= 0 ? 'non entamé' : (dl.gauge.ratio).toFixed(0) + ' % du seuil',
-      status: dl.gauge.tone === 'ok' ? 'ok' : dl.gauge.tone === 'warn' ? 'warn' : 'ko',
-      hint: dl.lossReached ? 'Seuil atteint : arrêt imposé.' : 'Il reste ' + dl.lossLeft.toFixed(0) + ' € avant l\'arrêt de la journée.'
-    });
-
-    return rows;
-  }
-
-  /** Score global de discipline (0–100) à partir des lignes de contrôle. */
-  function disciplineScore(rows) {
-    if (!rows || !rows.length) return null;
-    var pts = rows.reduce(function (a, r) { return a + (r.status === 'ok' ? 1 : r.status === 'warn' ? 0.5 : 0); }, 0);
-    return Math.round(pts / rows.length * 100);
-  }
-
-  global.Plan = {
-    data: PLAN,
-    loadChecks: loadChecks,
-    saveChecks: saveChecks,
-    control: control,
-    disciplineScore: disciplineScore,
-    KEY: KEY
-  };
-  if (typeof module !== 'undefined' && module.exports) module.exports = global.Plan;
-})(typeof window !== 'undefined' ? window : globalThis);
+const src = readFileSync(TARGET, 'utf8');
+const start = src.indexOf('  var PLAN = {');
+const endMarker = '\n\n  /* ---------------------------------------------------------';
+const end = src.indexOf(endMarker, start);
+if (start === -1 || end === -1) {
+  console.error('Repères introuvables dans plan.js');
+  process.exit(1);
+}
+const next = src.slice(0, start) + PLAN + src.slice(end + 1);
+writeFileSync(TARGET, next);
+console.log('plan.js mis à jour —', PLAN.split('\n').length, 'lignes insérées');

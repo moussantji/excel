@@ -343,7 +343,7 @@
     });
 
     // Checklists
-    html += '<section class="plan-block" id="bloc-checklists"><header><span class="num">09</span><h3>Checklists opérationnelles</h3></header>' +
+    html += '<section class="plan-block" id="bloc-checklists"><header><span class="num">13</span><h3>Checklists opérationnelles</h3></header>' +
       '<p class="lead">Cases à cocher conservées dans le navigateur. Chaque case non cochée est une raison de ne pas cliquer.</p>' +
       '<div class="checklists">' + p.checklists.map(checklistHTML).join('') + '</div>' +
       '</section>';

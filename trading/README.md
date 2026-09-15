@@ -190,9 +190,13 @@ Le script vérifie l'absence de débordement horizontal, la taille des cibles ta
 - **Conformité au plan chiffrée** : espérance des trades « plan respecté » vs « hors plan » — autrement dit, combien coûte chaque écart.
 - Classements par setup, session, jour, heure, instrument, émotion, erreur.
 
-### 🧭 Plan de trading
-Plan complet prêt à personnaliser : identité de trading, objectifs et kill-switch, règles de risque + formule de taille de position, **3 setups documentés** (contexte, déclencheur, entrée, stop, objectifs, invalidation), routine quotidienne, tenue du journal, protocole de discipline, KPI et seuils.
-- **3 checklists interactives** (pré-trade, post-trade, revue hebdomadaire) dont l'état est sauvegardé.
+### 🧭 Plan de trading — méthode SMV (Smart Money Vision)
+Plan rédigé sur la méthode **SMV** : les 4 lois (structure, offre/demande, cause à effet, liquidité), les types de BOS, les phases d'accumulation et de distribution, la lecture de la liquidité (intact, EQH/EQL, inducement, complexe pull back) et les outils (fibo SMC premium/discount, IPA, market shift, décompte 0-1-2-3).
+- **4 setups documentés** avec 6 lignes chacun (contexte, déclencheur, entrée, stop, objectifs, invalidation) : Golden Setup (phase C), Complexe Pull Back, Market Shift (ChoCh), ODF.
+- Règles de risque chiffrées : **1 % maximum par trade, stop 15 pips maximum, ratio minimum 1:7, 2 stop loss par jour maximum**, mise à breakeven à la cassure, prises partielles 30 % / 50 % / solde.
+- Fenêtres de tir : Asie 1h–2h, Europe 8h–9h, USA 13h–14h (heure de Bamako).
+- **4 checklists interactives** (pré-trade, gestion de position, post-trade, revue hebdomadaire) dont l'état est sauvegardé.
+- **2 contrôles de discipline supplémentaires** dans le suivi : part des trades dont le ratio visé atteint 1:7 et respect du stop à 15 pips maximum.
 - Bouton **Imprimer / PDF** avec une feuille de style dédiée (fond clair, lisible sur papier).
 
 ### ⚙️ Paramètres
@@ -302,7 +306,12 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
-| 1.3 | **Objectifs : plus de jauge trompeuse.** Les barres « perte autorisée » et « semaine » affichaient le signe du résultat (une journée gagnante apparaissait comme 92 % de perte consommée, en vert). Elles montrent désormais la perte réellement utilisée, toujours positive, et virent au rouge avant d'atteindre le seuil. |
+| 2.0 | **Plan réécrit sur la méthode SMV** (Smart Money Vision) : les 4 lois, la structure (HH/HL, LH/LL, consolidation, 3 types de BOS), l'offre et la demande (OB/POI, order flow, breaker bloc), la cause à effet (phases A à E, accumulation et distribution) et la liquidité (intact, EQH/EQL, trendline, signature, inducement, complexe pull back). |
+| 2.0 | **4 setups SMV** documentés en 6 lignes : Golden Setup (prise de position en phase C), Complexe Pull Back, Market Shift (prise de liquidité + ChoCh), ODF (entrée ratée). |
+| 2.0 | **Règles de risque SMV** : 1 % maximum par trade, stop 15 pips maximum, ratio minimum 1:7, 2 stop loss par jour maximum, breakeven à la cassure, prises partielles 30 / 50 / solde. Deux contrôles de discipline suivent ces règles automatiquement (part des trades à 1:7 ou plus, respect du stop à 15 pips). |
+| 2.0 | **Journal au vocabulaire SMV** : setups, sessions (Asie / Europe / USA avec les fenêtres de tir) et liste d'erreurs réécrite (pas de ChoCh, entrée hors zone, stop supérieur à 15 pips, ratio inférieur à 1:7, poursuite du prix, prises partielles non respectées…). |
+| 2.0 | **Démo conforme à la méthode** : stops entre 7 et 15 pips, ratios visés de 1:7 à 1:12 sur les trades conformes, sessions et setups SMV. |
+| 1.3 | **Objectifs : plus de jauge trompeuse.** Les barres « perte autorisée » et « semaine » affichaient le signe du résultat (une journée gagnante apparaissait comme 92 % de perte consommée, en vert). Elles montrent désormais la perte réellement utilisée, toujours positive, et virent au rouge avant d'atteindre le seuil. | Les barres « perte autorisée » et « semaine » affichaient le signe du résultat (une journée gagnante apparaissait comme 92 % de perte consommée, en vert). Elles montrent désormais la perte réellement utilisée, toujours positive, et virent au rouge avant d'atteindre le seuil. |
 | 1.3 | **Drawdown honnête** : la barre « drawdown vs seuil » avançait avec un montant négatif (−9,07 % / 10 %) ; elle affiche la valeur absolue et colore l'alerte. |
 | 1.3 | **Calendrier lisible** : les cases faisaient 28 px de large, le symbole « € » passait à la ligne et les niveaux de couleur étaient tous au maximum. Cases élargies (deux mois par ligne sur tablette), montant sur une ligne, multiple de R en dessous, nombre de trades dans le coin, intensité proportionnelle à la meilleure journée de l'année, contraste renforcé. |
 | 1.3 | **Journal sans défilement horizontal** : sur tablette et sur petit écran le tableau masque les colonnes secondaires (risque, P&L brut, frais, émotion, durée, puis pips sous 1250 px), fixe ses largeurs pour tenir exactement dans la page, raccourcit les badges et passe aux dates numériques. Plus aucune valeur tronquée de 768 à 1680 px. |

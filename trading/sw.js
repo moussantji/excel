@@ -7,7 +7,7 @@
    ========================================================= */
 'use strict';
 
-const VERSION = 'trading-desk-v3';
+const VERSION = 'trading-desk-v4';
 const CORE = [
   './',
   './index.html',

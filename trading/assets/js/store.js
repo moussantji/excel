@@ -152,10 +152,35 @@
     { code: 'AUD', symbol: 'A$', label: 'Dollar australien' },
     { code: 'JPY', symbol: '¥', label: 'Yen' }
   ];
-  var SESSION_LIST = ['Asie', 'Londres', 'Overlap LDN/NY', 'New York'];
-  var SETUP_LIST = ['Break & Retest H1', 'Pullback EMA (tendance)', 'Rejet de liquidité', 'Range asiatique', 'Retournement fin de tendance'];
+  var SESSION_LIST = ['Asie', 'Europe', 'USA'];
+  var SETUP_LIST = [
+    'Golden Setup (Phase C)',
+    'Complexe Pull Back',
+    'Market Shift (ChoCh)',
+    'ODF (entrée ratée)'
+  ];
   var EMOTION_LIST = ['Calme', 'Confiant', 'Neutre', 'Impatient', 'FOMO', 'Peur', 'Revanche', 'Fatigué'];
-  var MISTAKE_LIST = ['Aucune', 'Entrée anticipée', 'Stop élargi', 'Lot trop gros', 'Trade hors setup', 'Revenge trading', 'Sortie trop tôt', 'Trade pendant news', 'Oubli du stop', 'Trop de trades'];
+  var MISTAKE_LIST = [
+    'Aucune',
+    'Pas de prise de liquidité',
+    'Pas de ChoCh',
+    'Entrée hors zone (OB/POI)',
+    'Trade contre le biais HTF',
+    'Entrée hors fenêtre de tir',
+    'Stop > 15 pips',
+    'Stop élargi',
+    'Ratio < 1:7',
+    'Prises partielles non respectées',
+    'Breakeven non déplacé',
+    '3e trade après 2 SL',
+    'Poursuite du prix (entrée ratée)',
+    'Lot trop gros',
+    'Trade hors setup',
+    'Revenge trading',
+    'Sortie trop tôt',
+    'Trade pendant news',
+    'Oubli du stop'
+  ];
   var PLAN_STATUS = ['oui', 'partiel', 'non'];
   var SYMBOL_PRESETS = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US30', 'NAS100', 'SPX500', 'GER40', 'BTCUSD'];
 
@@ -183,7 +208,7 @@
       startingCapital: 10000,
       riskPerTradePct: 1,
       maxTradesPerDay: 3,
-      maxDailyLossPct: 3,
+      maxDailyLossPct: 2,
       maxWeeklyLossPct: 6,
       maxDrawdownPct: 10,
       targetMonthlyPct: 5,
@@ -549,7 +574,10 @@
     ];
     var setups = SETUP_LIST.slice(0, 4);
     var emotions = ['Calme', 'Calme', 'Calme', 'Neutre', 'Confiant', 'Impatient', 'FOMO', 'Peur', 'Fatigué'];
-    var mistakes = ['Aucune', 'Aucune', 'Aucune', 'Aucune', 'Aucune', 'Entrée anticipée', 'Stop élargi', 'Sortie trop tôt', 'Revenge trading', 'Lot trop gros'];
+    var mistakes = ['Aucune', 'Aucune', 'Aucune', 'Aucune', 'Aucune',
+      'Pas de ChoCh', 'Entrée hors zone (OB/POI)', 'Entrée hors fenêtre de tir',
+      'Ratio < 1:7', 'Poursuite du prix (entrée ratée)', 'Prises partielles non respectées',
+      'Revenge trading'];
 
     // 1. On tire les dates (jours ouvrés) pour que le dernier trade soit très récent
     var dates = [];
@@ -598,10 +626,12 @@
 
       var pnl = round2(rMult * risk);
       var fees = round2(2 + rnd() * 6);
-      var stopDist = pair.vol * (0.7 + rnd() * 0.8);
+      // Stop 7 à 15 pips (règle SMV : 15 pips maximum) et cible selon le ratio visé
+      var stopDist = pair.ps * (7 + rnd() * 8);
+      var plannedRR = followed === 'oui' ? 7 + rnd() * 5 : followed === 'partiel' ? 3 + rnd() * 3 : 1 + rnd() * 2;
       var dec = pair.ps === 1 ? 1 : 5;
       var stop = round(direction === 'long' ? pair.price - stopDist : pair.price + stopDist, dec);
-      var target = round(direction === 'long' ? pair.price + stopDist * 2 : pair.price - stopDist * 2, dec);
+      var target = round(direction === 'long' ? pair.price + stopDist * plannedRR : pair.price - stopDist * plannedRR, dec);
       var exit = round(direction === 'long' ? pair.price + (pnl / risk) * stopDist : pair.price - (pnl / risk) * stopDist, dec);
       var size = round(risk / (Math.abs(pair.price - stop) / pair.ps * settings.pipValuePerLot), 2);
 
@@ -627,19 +657,18 @@
     return { version: 1, settings: settings, trades: trades, demo: true, updatedAt: new Date().toISOString() };
   }
 
+  /** Sessions SMV avec leurs fenêtres de tir (heure de Bamako). */
   function sessionFor(rnd) {
     var r = rnd();
-    if (r < 0.38) return 'Londres';
-    if (r < 0.62) return 'Overlap LDN/NY';
-    if (r < 0.9) return 'New York';
-    return 'Asie';
+    if (r < 0.40) return 'Europe';   // 8h–9h
+    if (r < 0.75) return 'USA';      // 13h–14h
+    return 'Asie';                   // 1h–2h
   }
   function sessionHour(session) {
     switch (session) {
-      case 'Asie': return 2;
-      case 'Londres': return 8;
-      case 'Overlap LDN/NY': return 14;
-      default: return 15;
+      case 'Asie': return 1;
+      case 'Europe': return 8;
+      default: return 13;            // USA
     }
   }
 
