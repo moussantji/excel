@@ -7,7 +7,7 @@
    ========================================================= */
 'use strict';
 
-const VERSION = 'trading-desk-v6';
+const VERSION = 'trading-desk-v7';
 const CORE = [
   './',
   './index.html',
@@ -20,6 +20,7 @@ const CORE = [
   './assets/js/ui.js',
   './assets/js/views.js',
   './assets/js/app.js',
+  './assets/js/pwa.js',
   './assets/js/sync.js',
   './assets/js/lock.js',
   './assets/icons/icon-192.png',
@@ -98,12 +99,15 @@ self.addEventListener('fetch', (event) => {
   if (isAppAsset(url) && isCode(url)) {
     event.respondWith((async () => {
       const cache = await caches.open(VERSION);
+      let cached = null;
+      try { cached = await cache.match(req, { ignoreSearch: true }); } catch (e) { cached = null; }
       try {
         const fresh = await fetch(req);
-        if (fresh && fresh.ok) cache.put(req, fresh.clone()).catch(() => null);
+        // serveur en panne ou réponse invalide : la copie hors ligne est meilleure qu'une page cassée
+        if (!fresh || !fresh.ok) return cached || fresh || Response.error();
+        cache.put(req, fresh.clone()).catch(() => null);
         return fresh;
       } catch (e) {
-        const cached = await cache.match(req, { ignoreSearch: true });
         return cached || Response.error();
       }
     })());

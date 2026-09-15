@@ -43,6 +43,30 @@ photo de la tablette : le navigateur ouvre <https://moussantji.github.io/excel/>
 Ajoutez ensuite l'application à l'écran d'accueil (*Partager → Sur l'écran
 d'accueil* sur iPad, *⋮ → Installer l'application* sur Android).
 
+## Hors ligne — ce qui marche sans réseau
+
+L'application **fonctionne entièrement sans connexion** une fois ouverte une première fois en ligne : tout est calculé dans l'appareil, rien ne dépend d'un serveur.
+
+| Sans réseau | État |
+|---|---|
+| Consulter, ajouter, modifier, supprimer des trades | ✅ normal |
+| Tableau de bord, calendrier, analyses, plan, checklists | ✅ normal |
+| Verrouiller / déverrouiller (code, Face ID ou empreinte) | ✅ normal — le chiffrement est local |
+| Export CSV / JSON, impression du plan en PDF | ✅ normal |
+| Sauvegarde cloud GitHub | ⏸ en attente : l'envoi repart seul au retour du réseau (= état *Hors ligne* dans la barre du haut) |
+| Récupérer une sauvegarde distante | Internet nécessaire |
+| Première ouverture, installation sur l'écran d'accueil | Internet nécessaire **une fois** |
+| Mise à jour de l'application (nouvelle version publiée) | Internet nécessaire |
+
+Deux précisions utiles :
+
+- **Tablette en Wi-Fi local** (`http://192.168.x.x`) : l'application marche, mais le mode hors ligne **et** l'installation sur l'écran d'accueil exigent **https** — donc l'adresse GitHub Pages (ou Netlify/Cloudflare). C'est la seule raison de préférer cette adresse au Wi-Fi local.
+- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v7`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
+
+Recette automatique du mode hors ligne : `node tools/offline-test.js` (service worker réel simulé, réseau coupé, serveur en panne, fichiers manquants).
+
+---
+
 ## Sur tablette (iPad / Android)
 
 Trois façons de l'utiliser sur la tablette, de la plus rapide à la plus complète.
@@ -360,6 +384,7 @@ trading/
     ├── smoke-test.js             Contrôle automatique de tous les écrans (jsdom)
     ├── sync-test.js              Recette de la sauvegarde cloud : états, conflits, fusion (jsdom)
     ├── lock-test.js              Recette du verrouillage : chiffrement, code, secours, biométrie (jsdom)
+    ├── offline-test.js           Recette du mode hors ligne : service worker, cache, réseau coupé
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
 ```
@@ -376,6 +401,7 @@ node trading/tools/make-site-zip.js                     # régénérer l'archive
 npm i -D jsdom && node tools/smoke-test.js              # chaque vue se rend sans erreur JS
 npm i -D jsdom && node tools/sync-test.js                # sauvegarde cloud : états, conflits, fusion
 npm i -D jsdom && node tools/lock-test.js                # verrouillage : chiffrement, code, secours, biométrie
+node tools/offline-test.js                              # hors ligne : service worker et cache (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
 ```
@@ -386,6 +412,8 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.2 | **Hors ligne vérifié et corrigé** : `pwa.js` manquait dans le cache du service worker (l'installation et la synchronisation entre onglets ne survivaient pas à une ouverture sans réseau) ; un serveur joignable mais en panne ne casse plus la page (repli sur la copie en cache) ; cache en `trading-desk-v7`. Recette dédiée `tools/offline-test.js`. |
+| 2.2 | **Deux bugs du verrouillage corrigés** (trouvés par la recette) : l'application ne rechargeait pas le journal après un déverrouillage quand le verrou avait été activé en cours de session (journal vide à l'écran) ; le **code de secours disparaissait de l'écran** aussitôt affiché, avant qu'on puisse le noter (il faut désormais confirmer par « J'ai noté mon code »). |
 | 2.2 | **Journal chiffré et verrouillé (optionnel)** : code de déverrouillage, chiffrement AES-GCM 256 avec clé dérivée par PBKDF2, **code de secours imprimable** et **biométrie Face ID / empreinte** (passkey + PRF) quand l'appareil le permet. Le fichier du dépôt GitHub devient illisible lui aussi. |
 | 2.2 | **Sécurité dans les Paramètres** : activation en trois étapes expliquées, jauge de force du code, changement de code, nouveau code de secours, désactivation, verrouillage automatique réglable, bouton *Verrouiller maintenant*. |
 | 2.2 | **Aucune écriture pendant le verrouillage** : ni sauvegarde locale, ni envoi vers le dépôt, ni récupération — impossible d'écraser la sauvegarde avec un journal vide (état *Journal verrouillé — sauvegarde en pause*). |

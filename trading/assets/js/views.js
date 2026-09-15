@@ -571,9 +571,12 @@
              r.bio && r.bio.etat === 'sans-prf' ? ' Cet appareil ne fournit pas de clé biométrique : le code sera demandé.' :
              r.bio && r.bio.etat === 'indisponible' ? ' La biométrie n\'est pas disponible sur cet appareil.' : '');
           texte += '<div class="code-secours" id="secCodeAffiche">' + esc(r.codeSecours) + '</div>' +
-            '<p class="sec-note"><b>Notez ce code de secours maintenant</b> (bouton ci-contre) : il ne sera plus jamais affiché. Sans lui et sans votre code, le journal devient illisible.</p>' +
+            '<p class="sec-note"><b>Notez ce code de secours maintenant</b> : il ne sera plus jamais affiché. Sans lui et sans votre code, le journal devient illisible (les données ne sont pas effacées, mais plus personne ne peut les ouvrir).</p>' +
             '<div class="cloud-actions"><button class="btn primary" id="secImprimer">Imprimer / enregistrer le code de secours</button>' +
-            '<button class="btn ghost" id="secCopier">Copier le code</button></div>';
+            '<button class="btn ghost" id="secCopier">Copier le code</button>' +
+            '<button class="btn ghost" id="secNote">J\'ai noté mon code</button></div>';
+          // Important : on ne redessine pas la page ici, sinon le code de secours
+          // disparaîtrait de l'écran avant que l'utilisateur ne puisse le noter.
           zone(texte, 'ok');
           var imp = doc.getElementById('secImprimer');
           if (imp) imp.addEventListener('click', function () { imprimerCodeSecours(r.codeSecours); });
@@ -582,8 +585,9 @@
             try { navigator.clipboard.writeText(r.codeSecours); UI.toast('Code de secours copié.', 'success'); }
             catch (e) { UI.toast('Copie impossible : notez le code à la main.', 'warn'); }
           });
+          var note = doc.getElementById('secNote');
+          if (note) note.addEventListener('click', function () { App.render(); });
           App.persist(true);
-          App.render();
         });
     });
 

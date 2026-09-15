@@ -406,7 +406,13 @@
         return ouvrirCompartiments();
       })
       .then(function (r) {
-        if (ecranVisible()) { cacherEcran(); annoncerDeverrouillage(); emit(); }
+        var toutPremier = !annonce;
+        annonce = true;
+        ecrire(COFFRE, coffre);
+        if (toutPremier) {
+          // prévient l'application exactement une fois : elle recharge ses données
+          annoncerDeverrouillage();
+        }
         if (!aInscrire) return brut;   // la clé maîtresse, pour l'inscription biométrique ou un changement de code
         // proposé juste après la saisie du code : la clé maîtresse est disponible en clair ici
         return inscriptionBiometrie(brut).then(function (etat) {
@@ -490,6 +496,7 @@
     return viderAttenteForce().then(function () {
       cleMaitresse = null;
       memoire = {};
+      annonce = false;
       try { global.sessionStorage.removeItem(SESSION); } catch (e) { /* ignore */ }
       emit();
       return true;
@@ -640,6 +647,7 @@
      --------------------------------------------------------- */
   var abonnesDeverrouillage = [];
   var minuteurEssais = null;
+  var annonce = false;      // l'application a-t-elle déjà été prévenue de ce déverrouillage ?
 
   function surDeverrouillage(cb) { abonnesDeverrouillage.push(cb); }
   function annoncerDeverrouillage() {
@@ -730,9 +738,7 @@
   }
 
   function reussi() {
-    var visible = ecranVisible();
     cacherEcran();
-    if (visible) annoncerDeverrouillage();
     emit();
   }
   function echoue(e) {

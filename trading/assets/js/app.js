@@ -1462,30 +1462,31 @@
     if (typeof document !== 'undefined' && document.body) document.body.classList.add('verrouille');
   }
 
+  var afficheUneFois = false;   // l'application s'est-elle déjà affichée au moins une fois ?
+
   function init() {
     if (demarre) return;   // sécurité : une seule initialisation, même si l'événement se répète
     demarre = true;
+    // Toujours à l'écoute : que le verrou soit actif au démarrage ou activé en cours de route
+    // (Paramètres → Sécurité), l'application doit recharger ses données après chaque déverrouillage.
+    if (global.Lock) global.Lock.surDeverrouillage(function () { reprendre(); });
     // Avec un verrou, l'interface reste couverte tant que le code n'est pas saisi :
     // l'écran est déjà affiché par lock.js, on attend le déverrouillage.
-    var pret = (global.Lock && global.Lock.actif())
+    var pret = global.Lock
       ? global.Lock.demarrer().then(function (r) {
           if (r && r.verrouille && r.impossible) return false;   // navigateur sans déchiffrement : on reste bloqué
           return true;
         })
-      : (global.Lock ? global.Lock.demarrer().then(function () { return true; }) : Promise.resolve(true));
+      : Promise.resolve(true);
     pret.then(function (ouvrable) {
       if (!ouvrable) return;
-      var suite = function () {
-        if (global.Lock) global.Lock.surDeverrouillage(function () { reprendre(); });
-        initialiser();
-      };
-      if (global.Lock && global.Lock.actif()) suite();
-      else initialiser();
+      initialiser();
     });
   }
 
-  /** Recharge l'état après un déverrouillage. */
+  /** Recharge l'état après un déverrouillage (au démarrage, c'est initialiser() qui s'en charge). */
   function reprendre() {
+    if (!afficheUneFois) return;
     load();
     render();
     UI.toast('Journal déverrouillé.', 'success');
@@ -1507,6 +1508,7 @@
         UI.toast('Stockage local indisponible : exportez votre journal en JSON pour ne rien perdre.', 'warn', 7000);
       }, 400);
     }
+    afficheUneFois = true;
   }
 
   /** États des checklists (utilisé par la sauvegarde cloud). */

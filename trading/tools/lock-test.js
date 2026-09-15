@@ -350,13 +350,71 @@ function tresor(w, trades, checks) {
   verif('mention AES-GCM 256', /AES-GCM 256/.test(vue));
   verif('avertissement « code oublié »', /illisible pour toujours/i.test(vue));
 
+  /* ---------- 12 ter. tout fonctionne réseau coupé ---------- */
+  console.log('\n12 ter. Verrouillage sans réseau');
+  const app4 = demarrer({ github: fauxGitHub(), biometrie: true });
+  const w4 = app4.w;
+  await attendre(60);
+  Object.defineProperty(w4.navigator, 'onLine', { value: false, configurable: true });
+  tresor(w4, 3, { 'c-9': { fait: true } });
+  const act4 = await w4.Lock.activer({ code: '482913', confirmation: '482913' });
+  verif('activation du verrou sans réseau', act4.ok === true, act4.message || '');
+  await w4.Lock.verrouiller();
+  w4.App.effacerMemoire();
+  verif('journal verrouillé hors ligne', w4.Lock.deverrouille() === false);
+  const ouv4 = await w4.Lock.ouvrirAvecCode('482913');
+  verif('déverrouillage hors ligne', w4.Lock.deverrouille() === true && !!ouv4);
+  verif('trades lisibles sans réseau', w4.App.state.trades.length === 3, String(w4.App.state.trades.length));
+  verif('checklists lisibles sans réseau', w4.Plan.loadChecks()['c-9'].fait === true);
+  const sec4 = await w4.Lock.nouveauCodeSecours('482913');
+  verif('nouveau code de secours généré hors ligne', sec4.ok === true && w4.Lock.codeValide(sec4.codeSecours));
+
+  /* ---------- 12 quater. parcours réel : activer, verrouiller, déverrouiller ---------- */
+  console.log('\n12 quater. Parcours réel par l\'interface');
+  const app5 = demarrer({ github: fauxGitHub(), biometrie: true });
+  const w5 = app5.w;
+  await attendre(60);
+  tresor(w5, 3, { 'c-5': { fait: true } });
+  w5.App.state.view = 'params';
+  w5.App.render();
+  // activation par le formulaire des Paramètres
+  w5.document.getElementById('secCode').value = 'Jument-Cactus-Vitrail-7';
+  w5.document.getElementById('secCode2').value = 'Jument-Cactus-Vitrail-7';
+  w5.document.getElementById('secActiver').dispatchEvent(new w5.Event('click', { bubbles: true }));
+  await attendre(200);
+  verif('verrou activé depuis les Paramètres', w5.Lock.actif() === true);
+  const codeAffiche = (w5.document.getElementById('secCodeAffiche') || {}).textContent || '';
+  verif('code de secours affiché une fois dans l\'interface', w5.Lock.codeValide(codeAffiche), codeAffiche);
+  verif('bouton d\'impression proposé', !!w5.document.getElementById('secImprimer'));
+  verif('le code reste affiché après l\'activation (pas de redessin prématuré)', !!w5.document.getElementById('secCodeAffiche'));
+  const impression = w5.document.getElementById('secImprimer');
+  verif('bouton « j\'ai noté mon code » proposé', !!w5.document.getElementById('secNote'));
+  w5.document.getElementById('secNote').dispatchEvent(new w5.Event('click', { bubbles: true }));
+  await attendre(80);
+  verif('la page passe en mode chiffré après confirmation', /Sécurité — journal chiffré/.test(w5.document.getElementById('view').innerHTML));
+  // « Verrouiller maintenant »
+  const boutonVerrou = w5.document.getElementById('secVerrou');
+  verif('bouton Verrouiller maintenant présent', !!boutonVerrou);
+  boutonVerrou.dispatchEvent(new w5.Event('click', { bubbles: true }));
+  await attendre(150);
+  verif('écran de verrouillage affiché', w5.document.getElementById('ecranVerrou').hidden === false);
+  verif('mémoire vidée (rien à l\'écran)', w5.App.state.trades.length === 0 && w5.document.getElementById('view').innerHTML === '');
+  // déverrouillage par le formulaire
+  w5.document.getElementById('lockCode').value = 'Jument-Cactus-Vitrail-7';
+  w5.document.getElementById('lockForm').dispatchEvent(new w5.Event('submit', { bubbles: true, cancelable: true }));
+  await attendre(250);
+  verif('journal rouvert', w5.Lock.deverrouille() === true);
+  verif('trades de nouveau visibles', w5.App.state.trades.length === 3, String(w5.App.state.trades.length));
+  verif('écran de rendu repeuplé', w5.document.getElementById('view').innerHTML.length > 300);
+  verif('checklists de nouveau visibles', w5.Plan.loadChecks()['c-5'].fait === true);
+
   /* ---------- 13. fichiers et caches ---------- */
   console.log('\n13. Intégration');
   const html = fs.readFileSync(path.join(RACINE, 'index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8');
   verif('lock.js est chargé par la page', /assets\/js\/lock\.js/.test(html));
   verif('lock.js est en cache hors ligne', /assets\/js\/lock\.js/.test(sw));
-  verif('cache du service worker en v6', /trading-desk-v6/.test(sw));
+  verif('cache du service worker en v7', /trading-desk-v7/.test(sw));
   verif('écran de verrouillage présent dans la page', /id="ecranVerrou"/.test(html) && /id="lockForm"/.test(html) && /id="lockSecours"/.test(html));
   verif('aucune erreur JS pendant la recette', erreurs.length === 0, erreurs.join(' | '));
 

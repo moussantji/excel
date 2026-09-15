@@ -8,6 +8,7 @@
     "test": "node tools/smoke-test.js",
     "test:cloud": "node tools/sync-test.js",
     "test:verrou": "node tools/lock-test.js",
+    "test:hors-ligne": "node tools/offline-test.js",
     "zip": "node tools/make-site-zip.js",
     "tablette": "node tools/tablet-check.js"
   },

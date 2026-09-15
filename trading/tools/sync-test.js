@@ -199,6 +199,44 @@ const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
   verif('envoi manuel réussi', p2.ok === true);
   verif('4 trades dans le cloud', JSON.parse(github.fichier).trades.length === 4);
 
+  /* ---------- 6 bis. hors ligne : travailler puis resynchroniser ---------- */
+  console.log('\n9 bis. Travail hors ligne');
+  Object.defineProperty(w.navigator, 'onLine', { value: false, configurable: true });
+  github.appels.length = 0;
+  const avantHorsLigne = github.fichier;
+  const modeleHL = w.Store.normalizeTrade({ date: '2026-09-14', symbol: 'GBPUSD', direction: 'vente', entry: 1.27, stop: 1.2715, exit: 1.262, lots: 1 }, w.App.state.settings);
+  w.App.state.trades.push(Object.assign({}, modeleHL, { id: 'H1', updatedAt: '2026-09-14T09:00:00Z' }));
+  w.App.persist();
+  verif('trade enregistré sans réseau', w.App.state.trades.filter(function (t) { return t.id === 'H1'; }).length === 1);
+  verif('trade conservé dans le navigateur', /GBPUSD/.test(w.localStorage.getItem('journal-trading:v1') || ''));
+  const stHL = S.status();
+  verif('état « hors ligne »', stHL.code === 'offline', stHL.label);
+  verif('modifications en attente annoncées', /modification/.test(stHL.label), stHL.label);
+  const envoye = await S.syncNow();
+  verif('aucun envoi tant que le réseau est coupé', envoye.ok === false && envoye.error.code === 'offline');
+  verif('aucun appel réseau effectué', github.appels.length === 0, github.appels.length + ' appels');
+  verif('la sauvegarde distante n\'a pas bougé', github.fichier === avantHorsLigne);
+  w.App.render();
+  const bandeauHL = w.document.getElementById('syncBanner');
+  verif('bandeau hors ligne affiché', bandeauHL.hidden === false && /Hors ligne/.test(bandeauHL.innerHTML));
+  verif('bouton Réessayer proposé', /Réessayer/.test(bandeauHL.innerHTML));
+  verif('l\'application reste utilisable (écran rendu)', w.document.getElementById('view').innerHTML.length > 500);
+
+  // le réseau revient
+  Object.defineProperty(w.navigator, 'onLine', { value: true, configurable: true });
+  w.dispatchEvent(new w.Event('online'));
+  await attendre(150);
+  verif('reprise automatique au retour du réseau', github.appels.length > 0, github.appels.length + ' appels');
+  verif('le trade hors ligne est parti dans le dépôt', (github.fichier || '').indexOf('GBPUSD') > -1);
+  verif('état revenu à « ok »', S.status().code === 'ok', S.status().label);
+  // on retire le trade du test hors ligne et on propage la suppression (comme le ferait l'utilisateur)
+  w.App.state.trades = w.App.state.trades.filter(function (t) { return t.id !== 'H1'; });
+  w.App.state.deleted = (w.App.state.deleted || []).concat([{ id: 'H1', at: new Date().toISOString() }]);
+  w.App.persist();
+  const nettoyage = await S.syncNow({ force: true });
+  const idsDistant = (JSON.parse(github.fichier || '{}').trades || []).map(function (t) { return t.id; });
+  verif('nettoyage du trade de test', nettoyage.ok === true && idsDistant.indexOf('H1') === -1, idsDistant.join(','));
+
   /* ---------- 10. deuxième appareil : conflit ---------- */
   console.log('\n10. Conflit entre deux appareils');
   // l'autre appareil a ajouté un trade et poussé sa version
@@ -315,7 +353,7 @@ const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
   verif('13 états déclarés (12 + journal verrouillé)', manquants2.length === 0, manquants2.join(','));
   verif('bandeau stylé pour chaque ton', /\.sync-banner\.warn/.test(styles) && /\.sync-banner\.ko/.test(styles) && /\.sync-banner\.info/.test(styles));
   verif('pastille stylée', /\.sync-chip\.ok/.test(styles) && /\.sync-chip\.ko/.test(styles));
-  verif('service worker en v6', /trading-desk-v6/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
+  verif('service worker en v7', /trading-desk-v7/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
   verif('lock.js en cache hors ligne', /assets\/js\/lock\.js/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
   verif('sync.js dans le cache hors ligne', /assets\/js\/sync\.js/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
   verif('aucune erreur JS sur toute la session', erreurs.length === 0, erreurs.join(' | '));
