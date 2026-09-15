@@ -4,7 +4,8 @@ Application **locale, sans dépendance** (HTML + CSS + JavaScript vanilla) pour 
 
 1. **écrire un plan de trading** et le garder sous les yeux (règles de risque, setups, routine, KPI, checklists) ;
 2. **tenir un journal** de chaque trade (chiffres, capture, émotion, erreur, respect du plan) ;
-3. **voir ses performances** : courbe d'équité, drawdown, P&L par jour/mois/setup/instrument/session, distribution des R, calendrier annuel, score de discipline.
+3. **voir ses performances** : courbe d'équité, drawdown, P&L par jour/mois/setup/instrument/session, distribution des R, calendrier annuel, score de discipline ;
+4. **apprendre la méthode et s'entraîner** : la vue **Formation** explique le plan chapitre par chapitre et fait réviser chaque concept (lire une tendance, reconnaître une cassure, trouver une zone, repérer la liquidité, suivre Wyckoff) sur des graphiques générés et corrigés par l'application.
 
 Cible : compte **forex & indices CFD** (EURUSD, XAUUSD, US30, NAS100…), style intraday / swing court, résultats suivis **en R et en devise**.
 
@@ -61,7 +62,7 @@ L'application **fonctionne entièrement sans connexion** une fois ouverte une pr
 Deux précisions utiles :
 
 - **Tablette en Wi-Fi local** (`http://192.168.x.x`) : l'application marche, mais le mode hors ligne **et** l'installation sur l'écran d'accueil exigent **https** — donc l'adresse GitHub Pages (ou Netlify/Cloudflare). C'est la seule raison de préférer cette adresse au Wi-Fi local.
-- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v7`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
+- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v10`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
 
 Recette automatique du mode hors ligne : `node tools/offline-test.js` (service worker réel simulé, réseau coupé, serveur en panne, fichiers manquants).
 
@@ -103,6 +104,58 @@ Les rappels sont **éteints par défaut** : rien n'est demandé tant que vous n'
 - Si l'application est **au premier plan** au moment du rappel, le message s'affiche dans l'application plutôt que par-dessus : pas de notification redondante pendant que vous lisez déjà l'écran.
 
 Recette dédiée : `node tools/notify-test.js` (83 contrôles — heures du plan, heure du Mali, anti-doublon, rattrapage, refus d'autorisation, `http://`, iPad sans installation, service worker, absence d'appel réseau).
+
+---
+
+## Formation — apprendre la méthode et s'entraîner
+
+La vue **Formation** (menu de gauche) transforme le plan déjà écrit en **cours suivi** : les **12 chapitres du plan, dans l'ordre** (les 4 lois, les setups, la routine, le journal), puis un **entraîneur** qui fait réviser chaque concept sur des graphiques que l'application dessine elle-même.
+
+### Le cours, chapitre par chapitre
+
+Chaque chapitre suit toujours la même forme, pour aller vite :
+
+1. **L'essentiel** — trois phrases à retenir ;
+2. **Les leçons** — la définition exacte de la méthode (structure, BOS, cause à effet, offre/demande, liquidité, Wyckoff), avec les chiffres du plan (1 %, 15 pips, 1:7, 2 stop loss par jour) ;
+3. **Comment le voir sur le graphique** — ce qu'on regarde, dans quel ordre, et où la lecture se trompe ;
+4. **Les étapes à suivre** — la marche à suivre numérotée, dans l'ordre ;
+5. **Les erreurs fréquentes** — celles qui coûtent le plus cher, et leur correction ;
+6. **Les exercices notés** — questions à choix multiple avec explication, plus des exercices de **calcul de risque** (taille de position, perte en devise, R du trade).
+
+Un chapitre s'ouvre d'un appui ; l'application retient les chapitres déjà étudiés et propose le suivant.
+
+### L'entraîneur — réviser par concept
+
+| Concept | Ce que l'exercice demande |
+|---|---|
+| Lire la structure et en déduire la tendance | La direction et la qualité de la tendance, avant toute entrée |
+| Reconnaître la nature d'une cassure de structure | BOS de continuation, piège, ou changement de caractère |
+| Identifier les zones d'offre et de demande | Où se trouvent la zone et son intérêt, et la désigner d'un appui sur le graphique |
+| Repérer la liquidité (EQH/EQL, intacts) | Le niveau que le prix va chercher, et pourquoi |
+| Reconnaître le déroulé de Wyckoff (golden setup) | La phase en cours — et en particulier l'entrée en phase C (SPRING / UTAD) |
+| Mélange de tous les concepts | Une séance de révision complète, sans savoir à l'avance ce qui sera demandé |
+
+- **Les graphiques sont fabriqués par l'application** : 50 à 60 bougies dessinées en SVG à partir d'une graine tirée au hasard — aucun fichier d'image, aucun accès réseau, et un tirage « autre graphique » pour recommencer sur un cas neuf.
+- **La correction est immédiate** : la réponse juste est expliquée, la zone et le niveau de cassure sont **dessinés sur le graphique** avec leurs repères, et la fausse piste est nommée (« la cassure a cassé sans être tenue : c'est un piège »).
+- **Le graphique se touche** : pour désigner une zone, un appui suffit (converti en prix et en bougie, comme sur la tablette).
+
+### Progression
+
+Trois scores en haut de la vue : **chapitres étudiés**, **exercices de cours**, **entraîneur** (essais, bonnes réponses, série en cours, meilleure série, et le détail par concept). La progression est enregistrée **dans le journal** — donc chiffrée par le verrouillage comme le reste du journal, et sauvegardée dans votre dépôt GitHub : on reprend où on s'était arrêté, sur l'ordinateur comme sur la tablette. Le bouton **Remise à zéro** efface seulement la progression de la formation, pas les trades.
+
+### D'où vient le cours
+
+Le contenu suit **les deux documents de la méthode que vous avez fournis** (`ULTRA BOOK FX.pdf` et `PLAN TRADING.pdf`), et la vue cite la source de chaque chapitre. Quand un module du plan n'est pas traité dans les documents, l'application le **signale au lieu de l'inventer** : la vue « Sources du cours » liste ces manques à compléter (modules 9 à 11, détail des prises partielles, gestion du risque sur plusieurs positions).
+
+### Hors ligne, tablette, impression
+
+- Tout le cours, les exercices et l'entraîneur sont **dans le cache hors ligne** : la formation s'utilise sans réseau, y compris sur l'application installée.
+- **Impression / PDF** : le bouton *Tout déplier (impression)* ouvre les chapitres, l'entraîneur est masqué (`@media print`) : la sortie papier contient le cours et les exercices, pas les graphiques d'entraînement.
+- Aucun emoji dans le cours ni dans l'entraîneur ; aucune ressource distante (polices système, icônes vectorielles dessinées par l'application).
+
+La formation **explique** le plan, elle ne le remplace pas : le plan reste la référence en séance, la formation sert à le comprendre et à s'entraîner dessus.
+
+Recette dédiée : `node tools/formation-test.js` (70 contrôles — contenu, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression).
 
 ---
 
@@ -262,6 +315,13 @@ Plan rédigé sur la méthode **SMV** : les 4 lois (structure, offre/demande, ca
 - **2 contrôles de discipline supplémentaires** dans le suivi : part des trades dont le ratio visé atteint 1:7 et respect du stop à 15 pips maximum.
 - Bouton **Imprimer / PDF** avec une feuille de style dédiée (fond clair, lisible sur papier).
 
+### 🎓 Formation
+- **Le cours complet, chapitre par chapitre** : l'essentiel, les leçons, la lecture sur le graphique, les étapes à suivre, les erreurs fréquentes et **52 exercices notés** (dont le calcul de risque).
+- **L'entraîneur** : graphiques de bougies générés par l'application et corrigés immédiatement, sur **6 concepts** — tendance, cassure de structure, zones d'offre et de demande, liquidité, Wyckoff, révision mélangée.
+- **Progression enregistrée** : chapitres étudiés, score des exercices, bilan de l'entraîneur (série, meilleure série, détail par concept), conservée avec le journal et sauvegardée dans votre dépôt.
+- **Sources et manques** : la source de chaque chapitre, et les points du plan non couverts par les documents fournis.
+- Utilisable **hors ligne** et **imprimable** (l'entraîneur est masqué à l'impression).
+
 ### ⚙️ Paramètres
 Capital, devise, risque par trade, valeur du pip, limites (jour/semaine/drawdown), objectif mensuel, listes d'instruments, de setups et de sessions ; **sécurité** (verrouillage, chiffrement, code de secours, biométrie, verrouillage automatique) ; **sauvegarde cloud (dépôt GitHub)** : dépôt, branche, fichier, jeton, test de connexion, journal des dernières opérations ; **rappels du plan** (notifications de la tablette aux heures des fenêtres de tir, avec aperçu des prochains rappels) ; import/export ; effacement des données.
 
@@ -410,6 +470,9 @@ trading/
 │       ├── metrics.js            Statistiques, agrégats, drawdown, objectifs, garde-fous
 │       ├── charts.js             Graphiques SVG sans dépendance (ligne, barres, donut, calendrier)
 │       ├── plan.js               Contenu du plan + contrôles de discipline
+│       ├── formation-contenu.js  Cours de la vue Formation (12 chapitres, sources, manques)
+│       ├── entraineur.js         Générateur de scénarios et correction (structure, zones, liquidité, Wyckoff)
+│       ├── formation.js          Vue Formation : cours, exercices, entraîneur, progression
 │       ├── ui.js                 Formatage FR, modales, toasts, icônes SVG
 │       ├── views.js              Vues Calendrier, Analyses, Plan, Paramètres
 │       ├── sync.js               Sauvegarde cloud GitHub (états, conflits, fusion, hors ligne)
@@ -425,6 +488,7 @@ trading/
     ├── lock-test.js              Recette du verrouillage : chiffrement, code, secours, biométrie (jsdom)
     ├── offline-test.js           Recette du mode hors ligne : service worker, cache, réseau coupé
     ├── notify-test.js            Recette des rappels : heures du plan, anti-doublon, rattrapage
+    ├── formation-test.js         Recette de la formation : cours, scénarios, correction, progression
     ├── style-check.js            Recette du thème : contrastes AA, jetons, cibles tactiles, impression
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
@@ -444,6 +508,7 @@ npm i -D jsdom && node tools/sync-test.js                # sauvegarde cloud : é
 npm i -D jsdom && node tools/lock-test.js                # verrouillage : chiffrement, code, secours, biométrie
 node tools/offline-test.js                              # hors ligne : service worker et cache (aucune dépendance)
 node tools/notify-test.js                               # rappels du plan : heures, doublons, autorisation
+npm i -D jsdom && node tools/formation-test.js           # formation : cours, entraîneur, correction, progression
 node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
@@ -455,6 +520,10 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.5 | **Vue Formation — apprendre la méthode et s'entraîner** : le plan est expliqué dans l'ordre de ses **12 chapitres** (essentiel, leçons, lecture sur le graphique, étapes, erreurs fréquentes) avec **52 exercices notés**, dont le calcul de risque. |
+| 2.5 | **Entraîneur interactif** : l'application **dessine ses propres graphiques de bougies** (SVG, aucune image, aucun réseau) et corrige la réponse en **dessinant la zone et le niveau de cassure** sur le graphique. **6 concepts** d'entraînement, dont « identifier la tendance ». Recette dédiée `tools/formation-test.js` — cohérence vérifiée sur **1 400 scénarios**. |
+| 2.5 | **Progression conservée** : chapitres étudiés, score des exercices, série et détail par concept, enregistrés avec le journal (donc chiffrés par le verrouillage et sauvegardés dans votre dépôt). Sources de chaque chapitre citées, et **modules absents des documents signalés** au lieu d'être inventés. |
+| 2.5 | **Défaut corrigé au passage** : la recette des rappels figeait encore le numéro de version du cache (`trading-desk-v9`) — même faux échec que `lock-test` et `sync-test` en 2.4 ; elle lit désormais la version du fichier. |
 | 2.4 | **Rappels du plan en notifications de la tablette** : préparation avant l'ouverture, ouverture, fermeture (rappel de saisie) et revue du dimanche, aux heures des fenêtres de tir du plan. Heures lues dans le plan lui-même — plus aucun risque de divergence. Application en arrière-plan comprise ; rappels manqués regroupés et signalés à la réouverture ; jamais deux fois le même rappel. |
 | 2.4 | **Rien sans votre accord** : rappels éteints par défaut, autorisation demandée par un appui explicite, refus respecté, `http://` et iPhone/iPad non installé détectés et expliqués au lieu d'échouer en silence. Rien ne sort de l'appareil, aucun service tiers, aucune donnée de trading dans le message. |
 | 2.4 | **Deux défauts corrigés au passage** : un rappel était consommé même quand l'appareil ne pouvait pas l'afficher (autorisation absente) — il reste désormais en attente ; et les recettes `lock-test` / `sync-test` figeaient le numéro de version du cache, ce qui provoquait un faux échec à chaque incrément. |

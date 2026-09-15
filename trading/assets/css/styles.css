@@ -1060,6 +1060,143 @@ body.verrouille>#app,body.verrouille>.mobile-nav{filter:blur(9px) saturate(.5);p
 
 
 /* =========================================================
+   FORMATION — cours, exercices et entraîneur de graphiques
+   ========================================================= */
+.form-entete .card-body,.form-card .card-body{display:block}
+.form-entete{background:linear-gradient(180deg,rgba(237,187,82,.05),transparent 42%),linear-gradient(180deg,var(--panel),var(--bg-2))}
+.form-entete-titre h2{margin:0 0 6px;font-size:1.16rem;letter-spacing:-.01em}
+.form-entete-titre p{margin:0 0 16px;font-size:.88rem;line-height:1.55;max-width:78ch}
+.form-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.form-score{
+  display:flex;flex-direction:column;gap:7px;padding:14px 15px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent),var(--panel-2)
+}
+.fs-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.fs-valeur{font-size:1.3rem;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.prog{height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.prog span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--gold-3),var(--gold-2))}
+.form-suivant{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;padding:12px 14px;
+  border:1px dashed rgba(237,187,82,.32);border-radius:var(--radius-xs);background:var(--gold-dim);font-size:.88rem
+}
+.form-suivant b{font-weight:650}
+
+/* ---- chapitres ---- */
+.chap{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:10px;background:var(--panel);overflow:hidden}
+.chap[open]{border-color:var(--line-2);background:linear-gradient(180deg,var(--panel-3),var(--panel))}
+.chap > summary{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;list-style:none;
+  min-height:52px;font-weight:600
+}
+.chap > summary::-webkit-details-marker{display:none}
+.chap > summary:hover{background:rgba(255,255,255,.02)}
+.chap-num{
+  font-variant-numeric:tabular-nums;font-weight:700;font-size:.82rem;color:var(--gold-2);
+  border:1px solid rgba(237,187,82,.3);border-radius:8px;padding:3px 8px;flex:0 0 auto
+}
+.chap-titre{flex:1 1 auto;font-size:.95rem}
+.chap-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.chap-corps{padding:4px 16px 18px;border-top:1px solid var(--line)}
+.chap-source{font-size:.74rem;color:var(--muted-2);margin:12px 0 0}
+.chap-essentiel{
+  margin:12px 0 16px;padding:12px 14px;border-left:2px solid var(--gold);border-radius:0 var(--radius-xs) var(--radius-xs) 0;
+  background:rgba(237,187,82,.06);font-size:.9rem;line-height:1.6
+}
+.lecon{margin:0 0 16px}
+.lecon h4,.bloc h4,.quiz h4,.calculs h4{margin:0 0 8px;font-size:.86rem;letter-spacing:.01em;color:var(--gold-2)}
+.lecon p,.bloc p{margin:0 0 8px;font-size:.9rem;line-height:1.65;color:var(--text)}
+.lecon ul,.bloc ul,.bloc ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.lecon li,.bloc li{font-size:.88rem;line-height:1.55;color:var(--muted)}
+.bloc{margin:0 0 16px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--panel-2)}
+.bloc.graphique{border-left:2px solid var(--blue)}
+.bloc.etapes{border-left:2px solid var(--gold)}
+.bloc.erreurs{border-left:2px solid var(--red)}
+.bloc.etapes ol{counter-reset:etape;list-style:none;padding-left:0}
+.bloc.etapes li{display:flex;gap:10px;counter-increment:etape}
+.bloc.etapes li:before{
+  content:counter(etape);flex:0 0 auto;width:20px;height:20px;border-radius:50%;
+  display:grid;place-items:center;font-size:.7rem;font-weight:700;color:var(--gold-2);background:var(--gold-dim)
+}
+.chap-action{margin-top:6px}
+
+/* ---- quiz ---- */
+.quiz{margin:0 0 16px;padding:14px 16px;border:1px solid var(--line-2);border-radius:var(--radius-xs);background:var(--panel-2)}
+.quiz-q{margin-bottom:16px}
+.quiz-q:last-child{margin-bottom:0}
+.quiz-intitule{margin:0 0 10px;font-size:.9rem;font-weight:600;line-height:1.5}
+.quiz-choix{display:grid;gap:8px}
+.quiz-btn,.ent-choix-btn{
+  text-align:left;padding:11px 14px;min-height:44px;border-radius:var(--radius-xs);cursor:pointer;
+  border:1px solid var(--line-2);background:var(--panel);color:var(--text);font:inherit;font-size:.87rem;line-height:1.45;
+  transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease),transform var(--dur) var(--ease)
+}
+.quiz-btn:hover:not(:disabled),.ent-choix-btn:hover:not(:disabled){border-color:var(--line-3);background:var(--panel-3);transform:translateY(-1px)}
+.quiz-btn.bonne,.ent-choix-btn.bonne{border-color:rgba(46,211,160,.5);background:var(--green-dim);color:#bff3e2}
+.quiz-btn.mauvaise,.ent-choix-btn.mauvaise{border-color:rgba(255,100,112,.5);background:var(--red-dim);color:#ffc7cd}
+.quiz-btn.neutre,.ent-choix-btn.neutre{opacity:.55}
+.quiz-btn:disabled,.ent-choix-btn:disabled{cursor:default}
+.quiz-correction{margin-top:10px;padding:11px 13px;border-radius:var(--radius-xs);font-size:.86rem;line-height:1.55;
+  border:1px solid var(--line-2);background:rgba(255,255,255,.03)}
+.quiz-correction.ok{border-color:rgba(46,211,160,.4);background:var(--green-dim)}
+.quiz-correction.ko{border-color:rgba(237,187,82,.4);background:var(--gold-dim)}
+
+/* ---- exercices de calcul ---- */
+.calculs{margin:0 0 16px;padding:14px 16px;border:1px solid var(--line-2);border-radius:var(--radius-xs);background:var(--panel-2)}
+.calcul-enonce{font-size:.88rem;margin:0 0 12px;line-height:1.6}
+.calcul-lignes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:12px}
+.calcul-lignes label{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
+.calcul-lignes .input{width:110px}
+
+/* ---- entraîneur ---- */
+.entraineur .seg.concept{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 16px}
+.ent-vide{padding:22px;border:1px dashed var(--line-2);border-radius:var(--radius-sm);text-align:center;background:var(--panel-2)}
+.ent-vide p{margin:0 0 12px;color:var(--muted);font-size:.88rem}
+.ent-barre{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;font-size:.86rem}
+.ent-nom{font-weight:650}
+.ent-points{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:650;color:var(--gold-2)}
+.ent-graphique-boite{
+  position:relative;border:1px solid var(--line-2);border-radius:var(--radius-sm);overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.015),transparent),var(--bg-2)
+}
+.ent-graphique{display:block;width:100%;height:clamp(220px,42vw,340px);touch-action:manipulation}
+.ent-grille{stroke:rgba(255,255,255,.05);stroke-width:1}
+.ent-axe{fill:var(--muted-2);font-size:10px;font-variant-numeric:tabular-nums}
+.ent-meche{stroke-width:1.2}
+.ent-meche.haut,.ent-corps.haut{stroke:var(--green);fill:var(--green)}
+.ent-meche.bas,.ent-corps.bas{stroke:var(--red);fill:var(--red)}
+.ent-corps.haut{fill:rgba(46,211,160,.9)}
+.ent-corps.bas{fill:rgba(255,100,112,.9)}
+.ent-zone{fill:rgba(237,187,82,.1);stroke:rgba(237,187,82,.55);stroke-width:1.2;stroke-dasharray:4 3}
+.ent-zone.offre{fill:rgba(255,100,112,.1);stroke:rgba(255,100,112,.5)}
+.ent-niveau{stroke-dasharray:6 4;stroke-width:1.4}
+.ent-niveau.bos{stroke:rgba(99,176,255,.85)}
+.ent-niveau.eq{stroke:rgba(173,146,251,.7)}
+.ent-etiquette{font-size:10px;font-weight:700;letter-spacing:.02em}
+.ent-etiquette.zone{fill:var(--gold-2)}
+.ent-etiquette.bos{fill:#9ecbff}
+.ent-etiquette.sommet{fill:var(--muted-2);text-anchor:middle}
+.ent-clic{fill:none;stroke:var(--gold);stroke-width:2}
+.ent-clic-croix{stroke:var(--gold);stroke-width:2}
+.ent-consigne{margin:0;padding:10px 14px;font-size:.82rem;color:var(--gold-2);background:rgba(237,187,82,.08);border-top:1px solid var(--line)}
+.ent-question{margin-top:14px}
+.ent-intitule{margin:0 0 10px;font-size:.92rem;font-weight:600;line-height:1.5}
+.ent-choix{display:grid;gap:8px;margin-bottom:12px}
+.ent-retour{margin:10px 0;padding:12px 14px;border-radius:var(--radius-xs);font-size:.88rem;line-height:1.6;
+  border:1px solid var(--line-2);background:rgba(255,255,255,.03)}
+.ent-retour.ok{border-color:rgba(46,211,160,.42);background:var(--green-dim)}
+.ent-retour.ko{border-color:rgba(237,187,82,.42);background:var(--gold-dim)}
+.ent-fin{margin:12px 0;padding:12px 14px;border-radius:var(--radius-xs);border:1px solid var(--line-2);background:var(--panel-2);font-size:.88rem}
+.ent-actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 10px}
+
+/* ---- impression : le cours part sur papier, l'entraîneur reste à l'écran ---- */
+@media print{
+  .entraineur,.form-scores,#fConcepts,.chap-action{display:none!important}
+  .chap{border-color:#ccc;break-inside:avoid}
+  .chap-corps{display:block!important}
+  .bloc,.quiz,.chap-essentiel{background:#fff!important;border-color:#ccc!important}
+}
+
+/* =========================================================
    RAPPELS DU PLAN — notifications de la tablette
    ========================================================= */
 .notif-card .card-body{display:flex;flex-direction:column;gap:16px}

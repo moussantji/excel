@@ -1,6 +1,6 @@
 {
   "name": "journal-trading",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "private": true,
   "description": "Journal de trading, plan écrit et tableau de bord de performance — application statique sans dépendance (forex & indices).",
   "scripts": {
@@ -8,9 +8,11 @@
     "test": "node tools/smoke-test.js",
     "test:style": "node tools/style-check.js",
     "test:rappels": "node tools/notify-test.js",
+    "test:formation": "node tools/formation-test.js",
     "test:cloud": "node tools/sync-test.js",
     "test:verrou": "node tools/lock-test.js",
     "test:hors-ligne": "node tools/offline-test.js",
+    "test:tout": "npm run test:style && npm run test:rappels && npm run test:hors-ligne && npm run test && npm run test:verrou && npm run test:cloud && npm run test:formation",
     "zip": "node tools/make-site-zip.js",
     "tablette": "node tools/tablet-check.js"
   },

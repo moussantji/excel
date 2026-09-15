@@ -125,6 +125,7 @@
     { id: 'calendrier', label: 'Calendrier', icon: 'calendrier' },
     { id: 'analyses', label: 'Analyses', icon: 'analyses' },
     { id: 'plan', label: 'Plan de trading', icon: 'plan' },
+    { id: 'formation', label: 'Formation', icon: 'ecole' },
     { id: 'params', label: 'Paramètres', icon: 'params' }
   ];
 

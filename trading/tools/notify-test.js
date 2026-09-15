@@ -342,7 +342,9 @@ console.log('\n10. Intégration');
   verif('le module est chargé après le plan (dont il tire les heures)',
     html.indexOf('assets/js/plan.js') < html.indexOf('assets/js/notify.js'));
   verif('le module est mis en cache par le service worker', /'\.\/assets\/js\/notify\.js'/.test(sw));
-  verif('la version du cache a été relevée', /trading-desk-v9/.test(sw));
+  // la version du cache ne doit pas être figée : elle change à chaque livraison
+  const vCache = (sw.match(/const VERSION = 'trading-desk-v(\d+)'/) || [])[1];
+  verif('la version du cache a été relevée', Number(vCache) >= 9);
   verif('l\'application démarre les rappels', /global\.Notify\)\s*global\.Notify\.demarrer\(\)/.test(app));
   verif('les rappels sont éteints par défaut', /notifications:\s*\{[\s\S]*?actif:\s*false/.test(store));
   verif('les fenêtres du plan sont la source unique des heures',
