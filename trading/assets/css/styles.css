@@ -1259,6 +1259,9 @@ body.verrouille>#app,body.verrouille>.mobile-nav{filter:blur(9px) saturate(.5);p
 .etude-tableau td.doux{color:var(--muted)}
 .etude-oui{color:var(--green);font-weight:700;white-space:nowrap}
 .etude-non{color:var(--red);font-weight:700;white-space:nowrap}
+.etude-quiz-pied{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:10px 0 18px;padding-top:10px;border-top:1px solid var(--line)}
+.etude-quiz-score{font-size:.84rem;color:var(--muted)}
+.etude-quiz-score b{color:var(--gold-2)}
 .etude-verdict{margin:12px 0 16px;padding:12px 14px;border:1px solid var(--line-2);border-left:3px solid var(--red);border-radius:var(--radius-xs);background:var(--red-dim);font-size:.85rem;line-height:1.6}
 .etude-note-cellule{font-size:.76rem;color:var(--muted-2)}
 .etude-source{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:.76rem;line-height:1.65;color:var(--muted-2)}

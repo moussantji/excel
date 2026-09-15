@@ -625,8 +625,9 @@
       'Vous venez de lire, heure par heure, ce qu\'elle contient.</li>' +
       '<li>Passez en horaire, remontez à la nuit du 20 au 21. Cherchez les deux sommets, le plus bas de structure, ' +
       'puis la bougie qui casse.</li>' +
-      '<li>Refaites l\'exercice à l\'envers : sur la nuit du 21 au 22, le plus bas de 4 021,2 a été pris dans la même zone. ' +
-      'Le retournement de la semaine suivante, vous le verrez seul — c\'est le même schéma, dans l\'autre sens.</li>' +
+      '<li>Regardez ce qui suit, pour ne pas se raconter d\'histoire : après le plus bas de 4 021,2, le prix est remonté à 4 175,0 ' +
+      '(23 octobre), puis <b>est retombé plus bas encore</b> — 3 901,3 le 28 octobre — avant de repartir vers 4 250,0 le 13 novembre. ' +
+      'Un plus bas ne fait pas un retournement : il faut la même preuve que dans cette étude, une cassure de structure, dans l\'autre sens.</li>' +
       '</ol>';
     html += '<p class="etude-source">Cours réels : relevé ' + esc(D.nom) + ', du 16 septembre au 14 novembre 2025 (journalier) ' +
       'et du 17 au 22 octobre 2025 (horaire), source Yahoo Finance, arrêté le ' + esc(D.releve) + '. ' +
@@ -637,6 +638,7 @@
       'stop, les objectifs) est pédagogique, et il est recalculé par la recette <span class="etude-code">tools/etude-test.js</span> ' +
       'à partir des bougies elles-mêmes.</p>';
 
+    html += quizHTML();
     html += '</div></section>';
     return html;
 
@@ -644,10 +646,178 @@
   }
 
   /* ---------------------------------------------------------
+     Le questionnaire — les cinq décisions du trade, notées
+     (rangé avec la progression, comme les exercices du cours)
+     --------------------------------------------------------- */
+  var CLE = 'etude';
+
+  var QUIZ = [
+    {
+      q: 'Le lundi 20 octobre à 19:00, le prix touche 4 398,0 pour la première fois. Que fait le plan ?',
+      choix: [
+        'Il vend immédiatement : un sommet pareil ne tient jamais.',
+        'Il attend une cassure de structure confirmée sous 4 370,2.',
+        'Il achète la cassure du record : la tendance est haussière.',
+        'Il attend que le RSI redescende sous 50.'
+      ],
+      bonne: 1,
+      explication: 'Un sommet n\'est pas un signal, et un record encore moins. Le livre demande d\'attendre que la hausse se casse : ' +
+        'ici la cassure arrive la nuit suivante, à 01:00, par une clôture à 4 367,7 sous le plus bas de structure.'
+    },
+    {
+      q: 'Quelle bougie confirme l\'entrée ?',
+      choix: [
+        'La mèche qui dépasse 4 398,0 le lundi soir.',
+        'La clôture horaire du mardi à 01:00 : 4 367,7, sous le plus bas de structure 4 370,2.',
+        'La bougie verte de 22:00 le lundi.',
+        'Le franchissement de 4 300 par le prix.'
+      ],
+      bonne: 1,
+      explication: 'La règle est une clôture, pas une mèche. La bougie de 01:00 ouvre à 4 385,9, descend à 4 348,4 et clôture à ' +
+        '4 367,7 : c\'est elle qui met le prix sous le plus bas de structure et confirme le retournement.'
+    },
+    {
+      q: 'Où se place le stop de ce trade ?',
+      choix: [
+        'À 4 402,00, juste au-dessus du sommet balayé.',
+        'À 4 375,00, juste au-dessus de l\'entrée, pour risquer moins.',
+        'À 4 371,00, au ras du plus bas de structure.',
+        'Nulle part : on surveille et on coupe à la main.'
+      ],
+      bonne: 0,
+      explication: 'Le stop se pose là où la lecture devient fausse, pas là où le risque est confortable : au-dessus du sommet ' +
+        'balayé, le scénario n\'est plus valable. C\'est ce placement — et non un stop serré — qui donne le ratio de 1 pour 7.'
+    },
+    {
+      q: 'Le trade a rapporté 7 fois le risque. Est-il conforme au plan ?',
+      choix: [
+        'Oui : un trade qui rapporte 7R respecte forcément toutes les règles.',
+        'Non : il rapporte bien 7R, mais le risque engagé (3,4 % d\'un compte de 1 000 $) viole la règle du 1 %.',
+        'Oui, puisque le résultat est bon.',
+        'Non : il viole aussi la fenêtre de tir.'
+      ],
+      bonne: 1,
+      explication: 'La relecture note le respect des règles, jamais le résultat. Ici : 4 règles sur 5 — le stop, le ratio (1:7 ' +
+        'exactement), la fenêtre (02:00, dernière heure de la fenêtre Asie) et la limite du jour sont bons ; le risque ne l\'est pas.'
+    },
+    {
+      q: 'Compte de 1 000 $, plus petit lot possible sur l\'or : que faites-vous ?',
+      choix: [
+        'J\'entre avec 0,01 lot : c\'est le minimum, je ne peux pas faire moins.',
+        'J\'entre avec 0,05 lot : plus le lot est gros, plus le gain est grand.',
+        'Je laisse passer ce trade et je travaille l\'EUR/USD, où 0,06 lot respecte les 1 %.',
+        'J\'entre sans stop, pour ne pas être sorti par le bruit.'
+      ],
+      bonne: 2,
+      explication: 'Sur l\'or, 0,01 lot = 1 once et engage 34 $, soit 3,4 % d\'un compte de 1 000 $. Le plan plafonne à 1 % : ' +
+        'soit 3 400 $ de capital, soit une paire où la taille respecte la règle — 0,06 lot sur EUR/USD, 9,00 $.'
+    }
+  ];
+
+  function etat() {
+    var checks = {};
+    try { checks = (global.Plan && global.Plan.loadChecks()) || {}; } catch (e) { checks = {}; }
+    var e = checks[CLE];
+    return {
+      quiz: (e && e.quiz && typeof e.quiz === 'object') ? e.quiz : {},
+      dernier: e && e.dernier !== undefined ? e.dernier : null
+    };
+  }
+  function enregistrer(e) {
+    try {
+      var checks = (global.Plan && global.Plan.loadChecks()) || {};
+      checks[CLE] = { quiz: e.quiz, dernier: e.dernier };
+      if (global.Plan) global.Plan.saveChecks(checks);
+      if (global.App && global.App.persist) global.App.persist();
+    } catch (err) { /* sans journal, le questionnaire marche quand même : rien n'est enregistré */ }
+    return e;
+  }
+  function scoreQuiz(e) {
+    var bonnes = 0, faites = 0;
+    QUIZ.forEach(function (q, i) { if (e.quiz[i] !== undefined) { faites++; if (e.quiz[i] === true) bonnes++; } });
+    return { bonnes: bonnes, faites: faites, total: QUIZ.length };
+  }
+
+  function quizHTML() {
+    var e = etat(), s = scoreQuiz(e);
+    var html = '<h4 class="etude-titre">11. À vous de juger — ' + QUIZ.length + ' décisions du trade</h4>';
+    html += '<p class="muted small">Répondez de mémoire, sans remonter : la correction est immédiate et expliquée. ' +
+      'Le score est enregistré avec votre progression, comme les exercices des chapitres.</p>';
+    html += '<div class="quiz" id="etudeQuiz">';
+    QUIZ.forEach(function (q, i) {
+      var repondu = e.quiz[i];
+      html += '<div class="quiz-q" data-q="' + i + '">' +
+        '<p class="quiz-intitule">' + (i + 1) + '. ' + esc(q.q) + '</p>' +
+        '<div class="quiz-choix">' + q.choix.map(function (ch, k) {
+          var classe = 'quiz-btn';
+          if (repondu !== undefined) {
+            if (k === q.bonne) classe += ' bonne';
+            else if (repondu === false && e.dernier === k) classe += ' mauvaise';
+            else classe += ' neutre';
+          }
+          return '<button type="button" class="' + classe + '" data-choix="' + k + '"' + (repondu !== undefined ? ' disabled' : '') + '>' +
+            esc(ch) + '</button>';
+        }).join('') + '</div>' +
+        '<div class="quiz-correction"' + (repondu !== undefined ? '' : ' hidden') + '>' +
+        '<b>' + (repondu ? 'Juste.' : 'À revoir.') + '</b> ' + esc(q.explication) + '</div></div>';
+    });
+    html += '</div>';
+    html += '<div class="etude-quiz-pied"><span id="etudeQuizScore" class="etude-quiz-score">' + ligneScore(s) + '</span>' +
+      (s.faites ? '<button type="button" class="btn ghost small" id="etudeQuizRemise">Recommencer ce questionnaire</button>' : '') +
+      '</div>';
+    return html;
+  }
+
+  function ligneScore(s) {
+    if (!s.faites) return 'Aucune réponse pour l\'instant — ' + s.total + ' questions.';
+    return '<b>' + s.bonnes + ' / ' + s.faites + '</b> juste(s) sur ' + s.faites + ' réponse(s)' +
+      (s.faites === s.total ? (s.bonnes === s.total ? ' — sans faute, le trade est compris.' : ' — relisez les points manqués.') : '');
+  }
+
+  /* ---------------------------------------------------------
      Le câblage des boutons
      --------------------------------------------------------- */
   function cabler(host, App) {
-    if (!host || !global.Graphe) return;
+    if (!host) return;
+    /* le questionnaire : correction immédiate, score rangé avec la progression */
+    var quiz = host.querySelector('#etudeQuiz');
+    if (quiz) {
+      var majScore = function () {
+        var cible = host.querySelector('#etudeQuizScore');
+        if (cible) cible.innerHTML = ligneScore(scoreQuiz(etat()));
+      };
+      quiz.querySelectorAll('.quiz-q').forEach(function (bloc) {
+        var i = Number(bloc.dataset.q), q = QUIZ[i];
+        bloc.querySelectorAll('.quiz-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var e = etat();
+            if (e.quiz[i] !== undefined) return;             // une seule réponse par question
+            var choix = Number(btn.dataset.choix);
+            e.quiz[i] = choix === q.bonne;
+            e.dernier = choix;
+            enregistrer(e);
+            var bonnes = e.quiz[i];
+            bloc.querySelectorAll('.quiz-btn').forEach(function (b2, k) {
+              b2.disabled = true;
+              b2.className = 'quiz-btn ' + (k === q.bonne ? 'bonne' : (k === choix && !bonnes ? 'mauvaise' : 'neutre'));
+            });
+            var corr = bloc.querySelector('.quiz-correction');
+            corr.hidden = false;
+            corr.innerHTML = '<b>' + (bonnes ? 'Juste.' : 'À revoir.') + '</b> ' + esc(q.explication);
+            majScore();
+          });
+        });
+      });
+      var remise = host.querySelector('#etudeQuizRemise');
+      if (remise) remise.addEventListener('click', function () {
+        var e = etat();
+        e.quiz = {};
+        e.dernier = null;
+        enregistrer(e);
+        if (App && App.render) App.render();                 // on redessine la carte à zéro
+      });
+    }
+    if (!global.Graphe) return;
     var ouvrir = function (intervalle) {
       var s = copier((global.Store && global.Store.state && global.Store.state.settings) || {});
       s.graphique = copier(s.graphique || {});
@@ -666,6 +836,9 @@
     cabler: cabler,
     dessiner: dessiner,
     calculs: calculs,
+    QUIZ: QUIZ,
+    etat: etat,
+    scoreQuiz: scoreQuiz,
     TRADE: TRADE,
     donnees: D
   };

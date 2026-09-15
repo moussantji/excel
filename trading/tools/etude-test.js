@@ -46,7 +46,7 @@ function bac() {
   const dom = new JSDOM('<!doctype html><html><body><div id="h"></div></body></html>',
     { url: 'https://x.test/', runScripts: 'dangerously' });
   const w = dom.window;
-  ['plan.js', 'etude-or-donnees.js', 'etude-or.js'].forEach((f) => {
+  ['store.js', 'plan.js', 'etude-or-donnees.js', 'etude-or.js'].forEach((f) => {
     const sc = w.document.createElement('script');
     sc.textContent = lire('assets/js/' + f);
     w.document.head.appendChild(sc);
@@ -271,8 +271,52 @@ const heure = (t) => new Date(t * 1000).toISOString().slice(11, 16);
   verif('la recette est déclarée dans les scripts', /"test:etude": "node tools\/etude-test\.js"/.test(lire('package.json')));
   verif('l\'étude est annoncée dans le README', /[Éé]tude de cas/.test(lire('README.md')) && /4 398/.test(lire('README.md')));
 
-  /* ---- 9. la carte dans la vraie vue Formation, en bac complet ---- */
-  console.log('\n9. La carte dans la vue Formation');
+  console.log('\n9. Le questionnaire noté');
+  verif('cinq décisions sont posées', (E.QUIZ || []).length === 5, (E.QUIZ || []).length + ' questions');
+  verif('chaque question a ses choix, sa bonne réponse et son explication',
+    (E.QUIZ || []).every((q) => q.choix && q.choix.length >= 3 && q.bonne >= 0 && q.bonne < q.choix.length && q.explication.length > 60));
+  verif('la bonne réponse du stop est bien le stop de l\'étude',
+    /4 402,00, juste au-dessus du sommet balayé/.test(E.QUIZ[2].choix[E.QUIZ[2].bonne]));
+  verif('la question du risque fait choisir la règle du 1 %, pas le résultat',
+    /viole la règle du 1 %/.test(E.QUIZ[3].choix[E.QUIZ[3].bonne]));
+  verif('la dernière question fait laisser passer le trade sur un compte de 1 000 $',
+    /Je laisse passer ce trade/.test(E.QUIZ[4].choix[E.QUIZ[4].bonne]));
+  verif('la correction renvoie aux chiffres réels',
+    /3 400 \$/.test(E.QUIZ[4].explication) && /4 367,7/.test(E.QUIZ[1].explication));
+  const e0 = E.etat(), s0 = E.scoreQuiz(e0);
+  verif('aucune réponse n\'est enregistrée au départ', s0.faites === 0 && s0.total === 5);
+
+  /* le questionnaire dans le bac : on répond, on vérifie la note et l'enregistrement */
+  console.log('\n10. Le questionnaire, cliqué pour de vrai');
+  const domQ = w.document.querySelector('#h');
+  domQ.innerHTML = E.carte({});
+  E.cabler(w.document.body);
+  const q0 = w.document.querySelector('#etudeQuiz .quiz-q[data-q="0"]');
+  verif('les boutons de réponse sont rendus', !!q0 && q0.querySelectorAll('.quiz-btn').length === 4);
+  q0.querySelectorAll('.quiz-btn')[0].click();          // la mauvaise réponse (vendre au sommet)
+  const corr0 = q0.querySelector('.quiz-correction');
+  verif('une mauvaise réponse est corrigée et expliquée',
+    corr0 && !corr0.hidden && /À revoir/.test(corr0.textContent) && /cassure arrive la nuit suivante/.test(corr0.textContent));
+  verif('les bons choix sont montrés après la réponse',
+    q0.querySelector('.quiz-btn.bonne') && /Il attend une cassure de structure/.test(q0.querySelector('.quiz-btn.bonne').textContent));
+  verif('la réponse est enregistrée dans la progression',
+    w.Plan.loadChecks().etude && w.Plan.loadChecks().etude.quiz[0] === false);
+  verif('le score est mis à jour sous le questionnaire',
+    /0 \/ 1/.test(w.document.querySelector('#etudeQuizScore').textContent));
+  const q1 = w.document.querySelector('#etudeQuiz .quiz-q[data-q="1"]');
+  q1.querySelectorAll('.quiz-btn')[1].click();          // la bonne réponse
+  verif('une bonne réponse est comptée',
+    w.Plan.loadChecks().etude.quiz[1] === true && /1 \/ 2/.test(w.document.querySelector('#etudeQuizScore').textContent));
+  verif('une question déjà répondue ne se répond pas deux fois',
+    (function () {
+      q0.querySelectorAll('.quiz-btn')[2].click();
+      return w.Plan.loadChecks().etude.quiz[0] === false;   // la note n\'a pas changé
+    })());
+  verif('le questionnaire est repris dans la progression existante',
+    w.Plan.loadChecks().formation === undefined || typeof w.Plan.loadChecks().formation === 'object');
+
+  /* ---- 11. la carte dans la vraie vue Formation, en bac complet ---- */
+  console.log('\n11. La carte dans la vue Formation');
   const erreurs = [];
   const vc = new VirtualConsole();
   // jsdom ne sait pas faire défiler la page : « Not implemented » n'est pas une erreur de l'application

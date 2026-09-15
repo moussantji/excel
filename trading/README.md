@@ -215,6 +215,7 @@ Quatre graphiques, dix étapes :
 | 8 | **Le contre-exemple** : l'achat du nouveau record (4 398,0) → −305 $ l'once, **−6,9 %**, soit −30,5 % du compte avec le plus petit lot |
 | 9 | **La taille de position** : la vraie leçon (ci-dessous) |
 | 10 | **À vous** : deux boutons ouvrent l'or en journalier et en horaire sur TradingView |
+| 11 | **À vous de juger — 5 décisions notées** : où vendre, quelle bougie confirme, où placer le stop, le trade est-il conforme, que faire avec 1 000 $ — correction immédiate et expliquée, score enregistré avec la progression |
 
 **La relecture n'est pas complaisante : le trade obtient 4 règles sur 5.** Il respecte le ratio (1:7 exactement), la fenêtre de tir (02:00, dernière heure de la fenêtre Asie) et la limite du jour (1 trade). Il viole la règle la plus importante : le risque. Sur l'or, le plus petit lot possible (0,01 lot = 1 once) engage **34 $ = 3,4 %** d'un compte de 1 000 $, très au-dessus du plafond de 1 % du plan.
 
@@ -230,9 +231,13 @@ La conclusion est écrite noir sur blanc dans l'application : **sur un compte de
 
 Les quatre graphiques sont dessinés par un moteur qui **place ses propres étiquettes** : chaque texte cherche une position libre (il glisse sur le côté, monte ou descend), une étiquette de niveau reste collée à sa ligne pour qu'on sache toujours quel prix elle nomme, et une étiquette posée au-dessus d'une bougie reçoit une plaque de fond pour rester lisible. Deux textes ne se chevauchent jamais, et jamais une pastille numérotée n'est recouverte — c'est vérifié par la recette, pas à l'œil.
 
+**Le questionnaire ferme l'étude** : cinq décisions du trade à prendre de mémoire (où vendre, quelle bougie confirme l'entrée, où poser le stop, le trade est-il conforme au plan, que faire avec 1 000 $), avec **correction immédiate, explication chiffrée** et score enregistré avec la progression de la Formation. Un bouton *Recommencer ce questionnaire* le remet à zéro.
+
+**La suite du marché est dite honnêtement** : après le plus bas de 4 021,2, le prix est remonté à 4 175,0 (23 octobre) **puis est retombé plus bas encore** — 3 901,3 le 28 octobre — avant de repartir vers 4 250,0 le 13 novembre. Un plus bas ne fait pas un retournement : il faut la même preuve que dans l'étude, une cassure de structure dans l'autre sens.
+
 **Deux précisions d'honnêteté**, écrites dans la page : le contrat à terme cote quelques dollars au-dessus du cours « spot » cité dans la presse (4 398,0 ici contre 4 381,21 le 20 octobre), et les mouvements se recoupent (−5,7 % sur la clôture du 21 octobre, jusqu'à −6,9 % depuis le sommet — décrit par Reuters comme la plus forte baisse quotidienne de l'or en cinq ans). Les cours sont réels ; **le montage est pédagogique** (où placer l'entrée, le stop, les objectifs) — et il est recalculé par la recette à partir des bougies elles-mêmes, jamais recopié à la main.
 
-Recette dédiée : `node tools/etude-test.js` (**81 contrôles** — intégrité des cours encodés, recoupement journalier/horaire, position réelle de chaque repère sur sa bougie, arithmétique du trade recalculée, stop jamais touché, trois objectifs réellement atteints avec l'heure, taille de position, jugement de relecture, dessin SVG, placement automatique des étiquettes (aucun texte ne se chevauche, aucune pastille numérotée n'est recouverte), cache hors ligne, rendu dans la vue Formation et ouverture du vrai graphique).
+Recette dédiée : `node tools/etude-test.js` (**96 contrôles** — intégrité des cours encodés, recoupement journalier/horaire, position réelle de chaque repère sur sa bougie, arithmétique du trade recalculée, stop jamais touché, trois objectifs réellement atteints avec l'heure, taille de position, jugement de relecture, dessin SVG, placement automatique des étiquettes (aucun texte ne se chevauche, aucune pastille numérotée n'est recouverte), questionnaire cliqué pour de vrai et score enregistré, cache hors ligne, rendu dans la vue Formation et ouverture du vrai graphique).
 
 ### Hors ligne, tablette, impression
 
@@ -242,7 +247,7 @@ Recette dédiée : `node tools/etude-test.js` (**81 contrôles** — intégrité
 
 La formation **explique** le plan, elle ne le remplace pas : le plan reste la référence en séance, la formation sert à le comprendre et à s'entraîner dessus.
 
-Recettes dédiées : `node tools/formation-test.js` (77 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression) et `node tools/relecture-test.js` (61 contrôles — règles chiffrées et leur notation, masquage du résultat avant la révélation, jugements séparés du score, bilan enregistré, cas particuliers) et `node tools/etude-test.js` (81 contrôles — l'étude de cas réelle sur l'or).
+Recettes dédiées : `node tools/formation-test.js` (77 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression) et `node tools/relecture-test.js` (61 contrôles — règles chiffrées et leur notation, masquage du résultat avant la révélation, jugements séparés du score, bilan enregistré, cas particuliers) et `node tools/etude-test.js` (96 contrôles — l'étude de cas réelle sur l'or).
 
 ---
 
