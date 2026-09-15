@@ -88,9 +88,20 @@
   /* ---------------------------------------------------------
      États
      --------------------------------------------------------- */
+  /** Le journal est-il chiffré et fermé ? Dans ce cas, on ne touche à rien. */
+  function ferme() {
+    return !!(global.Lock && global.Lock.actif() && !global.Lock.deverrouille());
+  }
+  function refusVerrou() {
+    return { ok: false, error: { code: 'locked', message: 'journal verrouillé : saisissez votre code' } };
+  }
+
   function status() {
     var c = loadConfig();
     var code = 'off';
+    if (c.enabled && ferme()) {
+      return Object.assign({}, etatRepos, { code: 'locked', label: LIBELLES.locked.label(resume()), tone: LIBELLES.locked.tone });
+    }
     if (c.enabled) {
       if (!global.navigator || global.navigator.onLine === false) {
         code = (etatRepos.pending || etatRepos.remoteUpdatedAt === null) ? 'offline' : 'ok';
@@ -127,6 +138,7 @@
 
   var LIBELLES = {
     off:      { tone: 'flat', label: function () { return 'Sauvegarde cloud désactivée'; } },
+    locked:   { tone: 'info', label: function () { return 'Journal verrouillé — sauvegarde en pause'; } },
     empty:    { tone: 'warn', label: function () { return 'Configuré, aucune sauvegarde envoyée pour l\'instant'; } },
     offline:  { tone: 'warn', label: function (r) { return r.pending ? 'Hors ligne — ' + r.pending + ' modification' + (r.pending > 1 ? 's' : '') + ' en attente' : 'Hors ligne — les données restent sur cet appareil'; } },
     pending:  { tone: 'warn', label: function (r) { return (r.pending || 0) + ' modification' + ((r.pending || 0) > 1 ? 's' : '') + ' à sauvegarder'; } },
@@ -144,6 +156,7 @@
   /* Ce que chaque état signifie, en clair (affiché dans les Paramètres). */
   var EXPLICATIONS = {
     off: 'Aucun dépôt configuré : tout reste sur cet appareil.',
+    locked: 'Le journal est verrouillé : rien n\'est envoyé ni récupéré tant que le code n\'a pas été saisi (aucune donnée ne peut être écrasée par erreur).',
     empty: 'Le dépôt et le jeton sont enregistrés ; le premier envoi se fera à la prochaine modification.',
     offline: 'Pas de réseau : les trades continuent d\'être enregistrés ici et partiront tout seuls au retour de la connexion.',
     pending: 'Des modifications attendent leur envoi (envoi automatique 45 s après la dernière).',
@@ -273,6 +286,7 @@
 
   function construireCharge() {
     var App = global.App;
+    if (ferme()) return null;      // jamais d'envoi d'un journal verrouillé (il apparaîtrait vide)
     var st = (App && App.state) || {};
     var checks = {};
     try { checks = global.Plan ? global.Plan.loadChecks() : {}; } catch (e) { checks = {}; }
@@ -289,6 +303,19 @@
   }
 
   function nombreTrades(charge) { return (charge && charge.trades ? charge.trades.length : 0); }
+
+  /** Ouvre une sauvegarde distante (elle peut être chiffrée par le verrou). */
+  function ouvrirCharge(charge) {
+    if (!charge) return Promise.resolve(charge);
+    if (!charge.chiffre) return Promise.resolve(charge);
+    if (!global.Lock || !global.Lock.deverrouille()) {
+      return Promise.reject({ code: 'locked', message: 'sauvegarde chiffrée : saisissez votre code pour la lire' });
+    }
+    return global.Lock.dechiffrerPourCloud(charge).catch(function (e) {
+      throw { code: e && e.code === 'mauvais-code' ? 'auth' : 'error', message: (e && e.message) || 'déchiffrement impossible' };
+    });
+  }
+  function verrouActif() { return !!(global.Lock && global.Lock.actif()); }
 
   /* ---------------------------------------------------------
      Lecture / écriture du fichier dans le dépôt
@@ -316,8 +343,18 @@
     });
   }
 
-  function ecrireFichier(charge, sha) {
+  function ecrireFichier(charge, sha, dejaChiffre) {
     var c = loadConfig();
+    if (verrouActif() && !dejaChiffre) {
+      // le fichier du dépôt ne doit pas contenir le journal en clair
+      if (!global.Lock.deverrouille()) return Promise.resolve(refusVerrou());
+      return global.Lock.chiffrerPourCloud(charge).then(function (enveloppe) {
+        return ecrireFichier(enveloppe, sha, true);
+      }).catch(function (e) {
+        return { ok: false, error: { code: 'error', message: 'chiffrement impossible : ' + (e && e.message) } };
+      });
+    }
+    charge = charge;
     var contenu = JSON.stringify(charge);
     var b64 = b64encode(contenu);
     if (!b64) return Promise.resolve({ ok: false, error: { code: 'error', message: 'encodage impossible' } });
@@ -325,7 +362,7 @@
       return Promise.resolve({ ok: false, error: { code: 'error', message: 'sauvegarde trop lourde pour l\'API (max ≈ 950 Ko) — exportez en JSON' } });
     }
     var corps = {
-      message: 'Sauvegarde du journal — ' + nombreTrades(charge) + ' trade' + (nombreTrades(charge) > 1 ? 's' : '') + ' (' + appareil() + ')',
+      message: 'Sauvegarde du journal — ' + (charge.chiffre ? 'chiffrée' : nombreTrades(charge) + ' trade' + (nombreTrades(charge) > 1 ? 's' : '')) + ' (' + appareil() + ')',
       content: b64,
       branch: c.branch
     };
@@ -398,7 +435,7 @@
      --------------------------------------------------------- */
   function appliquer(charge) {
     var App = global.App;
-    if (!App || !App.state) return false;
+    if (!App || !App.state || ferme()) return false;
     var st = App.state;
     if (charge.settings && Object.keys(charge.settings).length) st.settings = charge.settings;
     // la démonstration locale, si elle est chargée, n'est pas écrasée par la sauvegarde distante
@@ -421,7 +458,7 @@
      Actions publiques
      --------------------------------------------------------- */
   function markDirty() {
-    if (!isConfigured()) return;
+    if (!isConfigured() || ferme()) return;
     etatRepos.pending = true;
     etatRepos.remoteNeuf = false;
     saveEtat();
@@ -460,13 +497,24 @@
         etatRepos.remoteSha = f.sha || null;
         etatRepos.remoteUpdatedAt = f.charge ? f.charge.updatedAt : null;
         etatRepos.error = null;
-        journaliser('Connexion réussie — ' + (prive ? 'dépôt privé' : 'dépôt public') + (f.charge ? ', sauvegarde du ' + dateCourte(f.charge.updatedAt) : ', aucune sauvegarde encore'), 'ok');
+        journaliser('Connexion réussie — ' + (prive ? 'dépôt privé' : 'dépôt public') + (f.charge ? (f.charge.chiffre ? ', sauvegarde chiffrée du ' + dateCourte(f.charge.updatedAt) : ', sauvegarde du ' + dateCourte(f.charge.updatedAt)) : ', aucune sauvegarde encore'), 'ok');
         saveEtat(); emit();
-        return {
-          ok: true, prive: prive, pousse: pousse, existe: !!f.charge,
-          trades: nombreTrades(f.charge), updatedAt: f.charge ? f.charge.updatedAt : null,
-          depose: infos.full_name || (c.owner + '/' + c.repo)
-        };
+        if (!f.charge) {
+          return { ok: true, prive: prive, pousse: pousse, existe: false, trades: 0, updatedAt: null, depose: infos.full_name || (c.owner + '/' + c.repo) };
+        }
+        return ouvrirCharge(f.charge).then(function (claire) {
+          return {
+            ok: true, prive: prive, pousse: pousse, existe: true, chiffre: !!f.charge.chiffre,
+            trades: nombreTrades(claire), updatedAt: f.charge.updatedAt,
+            depose: infos.full_name || (c.owner + '/' + c.repo)
+          };
+        }).catch(function (e) {
+          return {
+            ok: true, prive: prive, pousse: pousse, existe: true, chiffre: true, illisible: e,
+            trades: null, updatedAt: f.charge.updatedAt,
+            depose: infos.full_name || (c.owner + '/' + c.repo)
+          };
+        });
       });
     }).catch(function (e) {
       return echec({ code: 'error', message: e && e.message ? e.message : 'erreur inconnue' });
@@ -478,6 +526,7 @@
     options = options || {};
     var c = loadConfig();
     if (!c.enabled) return Promise.resolve({ ok: false, error: { code: 'off', message: 'sauvegarde cloud désactivée' } });
+    if (ferme()) return Promise.resolve(refusVerrou());
     if (global.navigator && global.navigator.onLine === false) {
       etatRepos.pending = true; saveEtat(); emit();
       return Promise.resolve({ ok: false, error: { code: 'offline', message: 'hors ligne' } });
@@ -498,6 +547,7 @@
         return { ok: false, conflict: true, distant: f.charge };
       }
       var charge = construireCharge();
+      if (!charge) { etatRepos.busy = false; saveEtat(); emit(); return refusVerrou(); }
       charge.deleted = (global.App && global.App.state && global.App.state.deleted) || [];
       return ecrireFichier(charge, f.sha).then(function (r) {
         if (!r.ok) { return echec(r.error); }
@@ -512,6 +562,7 @@
     options = options || {};
     var c = loadConfig();
     if (!c.enabled) return Promise.resolve({ ok: false, error: { code: 'off', message: 'sauvegarde cloud désactivée' } });
+    if (ferme()) return Promise.resolve(refusVerrou());
     if (global.navigator && global.navigator.onLine === false) {
       return Promise.resolve({ ok: false, error: { code: 'offline', message: 'hors ligne' } });
     }
@@ -525,18 +576,20 @@
         saveEtat(); emit();
         return { ok: false, vide: true };
       }
-      if (!f.charge.trades || (f.charge.app && f.charge.app !== 'journal-trading')) {
-        return echec({ code: 'error', message: 'le fichier distant n\'est pas une sauvegarde de cette application' });
-      }
-      appliquer(f.charge);
-      etatRepos.lastSyncAt = f.charge.updatedAt;
-      etatRepos.remoteUpdatedAt = f.charge.updatedAt;
-      etatRepos.remoteSha = f.sha;
-      etatRepos.pending = false;
-      etatRepos.conflict = false;
-      etatRepos.remoteNeuf = false;
-      reussite('Sauvegarde récupérée — ' + nombreTrades(f.charge) + ' trade' + (nombreTrades(f.charge) > 1 ? 's' : ''));
-      return { ok: true, charge: f.charge };
+      return ouvrirCharge(f.charge).then(function (claire) {
+        if (!claire || !claire.trades || (claire.app && claire.app !== 'journal-trading')) {
+          return echec({ code: 'error', message: 'le fichier distant n\'est pas une sauvegarde de cette application' });
+        }
+        appliquer(claire);
+        etatRepos.lastSyncAt = f.charge.updatedAt;
+        etatRepos.remoteUpdatedAt = f.charge.updatedAt;
+        etatRepos.remoteSha = f.sha;
+        etatRepos.pending = false;
+        etatRepos.conflict = false;
+        etatRepos.remoteNeuf = false;
+        reussite('Sauvegarde récupérée — ' + nombreTrades(claire) + ' trade' + (nombreTrades(claire) > 1 ? 's' : '') + (f.charge.chiffre ? ' (chiffrée)' : ''));
+        return { ok: true, charge: claire, chiffre: !!f.charge.chiffre };
+      }).catch(function (e) { return echec(e && e.code ? e : { code: 'error', message: (e && e.message) || 'déchiffrement impossible' }); });
     });
   }
 
@@ -544,21 +597,25 @@
   function fusionnerAvecDistant() {
     var c = loadConfig();
     if (!c.enabled) return Promise.resolve({ ok: false, error: { code: 'off', message: 'désactivé' } });
+    if (ferme()) return Promise.resolve(refusVerrou());
     etatRepos.busy = true; emit();
     return lireFichier().then(function (f) {
       if (f.panne) { return echec(f.panne); }
       var local = construireCharge();
+      if (!local) { etatRepos.busy = false; saveEtat(); emit(); return refusVerrou(); }
       if (!f.charge) {
         etatRepos.busy = false; emit();
         return pousser({ force: true });
       }
-      var melange = fusionner(local, f.charge);
+      return ouvrirCharge(f.charge).then(function (claire) {
+      var melange = fusionner(local, claire);
       appliquer(melange);
       return ecrireFichier(melange, f.sha).then(function (r) {
         if (!r.ok) { return echec(r.error); }
         reussite('Fusion effectuée — ' + nombreTrades(melange) + ' trades au total');
         return { ok: true, trades: nombreTrades(melange) };
       });
+      }).catch(function (e) { return echec(e && e.code ? e : { code: 'error', message: (e && e.message) || 'déchiffrement impossible' }); });
     });
   }
 
@@ -566,6 +623,7 @@
   function syncNow(options) {
     options = options || {};
     if (!isConfigured()) return Promise.resolve({ ok: false, error: { code: 'off', message: 'désactivé' } });
+    if (ferme()) return Promise.resolve(refusVerrou());
     if (!etatRepos.pending && !options.force) {
       // rien de neuf en local : on regarde simplement si le cloud a bougé
       if (global.navigator && global.navigator.onLine === false) return Promise.resolve({ ok: false, error: { code: 'offline', message: 'hors ligne' } });
@@ -580,7 +638,7 @@
             etatRepos.remoteNeuf = true;
             journaliser('Sauvegarde distante détectée (' + dateCourte(f.charge.updatedAt) + ')', 'info');
             saveEtat(); emit();
-            return { ok: true, distant: true, charge: f.charge };
+            return { ok: true, distant: true, charge: f.charge, chiffre: !!f.charge.chiffre };
           }
           etatRepos.conflict = true;
           etatRepos.remoteUpdatedAt = f.charge.updatedAt;
@@ -633,7 +691,11 @@
         if (etatRepos.pending) { try { global.navigator.sendBeacon && null; } catch (e) { /* ignore */ } syncNow({ silent: true }); }
       });
     }
-    if (isConfigured()) { syncNow({ silent: true }); }
+    if (isConfigured() && !ferme()) { syncNow({ silent: true }); }
+    if (global.Lock && global.Lock.actif()) {
+      // au déverrouillage : on rattrape ce qui a pu être modifié entre-temps
+      global.Lock.surDeverrouillage(function () { if (isConfigured()) syncNow({ silent: true }); });
+    }
   }
 
   /* ---------------------------------------------------------

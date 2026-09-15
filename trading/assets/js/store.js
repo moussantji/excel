@@ -327,6 +327,23 @@
   var memoryFallback = null;
 
   function loadState() {
+    // verrou actif : le contenu déchiffré vit dans lock.js, jamais en clair sur le disque
+    if (global.Lock && global.Lock.actif()) {
+      var memoire = global.Lock.memoireDe('etat');
+      if (memoire) {
+        try { return hydrate(JSON.parse(memoire)); }
+        catch (e) { /* on retombe sur l'état vide */ }
+      }
+      // coffre ouvert mais compartiment illisible : on le signale plutôt que de repartir de zéro
+      try {
+        var brutVerrou = global.localStorage.getItem(STORAGE_KEY);
+        if (brutVerrou) {
+          var env = JSON.parse(brutVerrou);
+          if (env && env.chiffre) return Object.assign(emptyState(), { illisible: true });
+        }
+      } catch (e) { /* ignore */ }
+      return emptyState();
+    }
     var raw = null;
     if (storageAvailable()) {
       try { raw = global.localStorage.getItem(STORAGE_KEY); } catch (e) { raw = null; }
@@ -362,6 +379,12 @@
       version: 1, settings: state.settings, trades: state.trades.map(toRaw), demo: state.demo,
       deleted: state.deleted || [], updatedAt: state.updatedAt
     }, null, 0);
+    if (global.Lock && global.Lock.actif()) {
+      // chiffré par lock.js (écriture différée comprise)
+      var r = global.Lock.ecrireCompartiment('etat', json);
+      if (r === 'local') return 'local';
+      if (r === 'verrouille') return 'memory';
+    }
     if (storageAvailable()) {
       try { global.localStorage.setItem(STORAGE_KEY, json); return 'local'; } catch (e) { /* quota */ }
     }

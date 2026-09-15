@@ -12,7 +12,7 @@ Contenu du dépôt :
 
 ## Journal & plan de trading
 
-Application statique (HTML/CSS/JS, aucune dépendance) : saisie des trades, métriques en **R** et en devise, courbe d'équité, drawdown, calendrier annuel, analyses par setup / instrument / session / émotion, plan de trading complet et score de discipline. Données sauvegardées localement, export CSV et JSON, **sauvegarde cloud automatique dans votre propre dépôt GitHub** (avec états d'erreur affichés en clair) — l'application reste pleinement utilisable **hors ligne**.
+Application statique (HTML/CSS/JS, aucune dépendance) : saisie des trades, métriques en **R** et en devise, courbe d'équité, drawdown, calendrier annuel, analyses par setup / instrument / session / émotion, plan de trading complet et score de discipline. Données sauvegardées localement, export CSV et JSON, **sauvegarde cloud automatique dans votre propre dépôt GitHub** (avec états d'erreur affichés en clair) et **verrouillage chiffré optionnel** (code, code de secours imprimable, biométrie) — l'application reste pleinement utilisable **hors ligne**.
 
 **Application installable (PWA)** : utilisable sur ordinateur **et sur tablette**, en plein écran, **hors ligne**, avec une ergonomie tactile (journal en cartes, navigation en bas d'écran).
 

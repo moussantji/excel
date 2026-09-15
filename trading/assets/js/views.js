@@ -453,6 +453,276 @@
   /* =========================================================
      VUE : PARAMÈTRES
      ========================================================= */
+  /* ---------- verrouillage et chiffrement ---------- */
+  function forceCode(code) {
+    var c = code || '';
+    var points = 0;
+    if (c.length >= 6) points++;
+    if (c.length >= 10) points++;
+    if (/[a-zA-Z]/.test(c) && /[0-9]/.test(c)) points++;
+    if (/[^a-zA-Z0-9]/.test(c) || c.length >= 16) points++;
+    if (!c) return { niveau: '', pct: 0 };
+    if (points <= 1) return { niveau: 'faible', pct: 33 };
+    if (points === 2) return { niveau: 'moyen', pct: 66 };
+    return { niveau: 'solide', pct: 100 };
+  }
+
+  function carteSecurite(App) {
+    var L = global.Lock;
+    if (!L) return '';
+    var i = L.infos();
+    var corps = '';
+
+    if (!L.cryptoDisponible() || !L.contexteSecurise()) {
+      corps = '<p class="sec-note">Le chiffrement n\'est pas disponible ici : il demande une adresse <b>https</b> (celle de l\'application publiée) et un navigateur à jour. Ouvert depuis un fichier local ou une adresse <code>http://</code>, le navigateur refuse de chiffrer — utilisez alors la sauvegarde cloud ou l\'export JSON.</p>';
+      return App.card('Sécurité — verrouiller le journal', corps, { class: 'sec-card' });
+    }
+
+    if (!i.actif) {
+      corps = '<div class="sec-bloc">' +
+        '<p class="sec-note"><b>Vos données sont actuellement en clair</b> sur cet appareil (et dans le fichier du dépôt). Le verrouillage chiffre tout avec un code que vous seul connaissez : ni les autres applications, ni quelqu\'un qui fouille le navigateur, ni un dépôt compromis ne peuvent lire le journal.</p>' +
+        '<ol class="sec-etapes">' +
+        '<li>Choisissez un code : <b>6 chiffres minimum</b>, ou mieux quelques mots faciles à retenir (une phrase de 4 mots est bien plus solide qu\'un code court).</li>' +
+        '<li>Un <b>code de secours</b> vous est affiché une seule fois : imprimez-le et rangez-le avec votre matériel. Il est le seul moyen de récupérer le journal si vous oubliez le code.</li>' +
+        '<li>La sauvegarde cloud continue de fonctionner : le fichier du dépôt devient lui aussi illisible sans le code.</li>' +
+        '</ol>' +
+        '<div class="cloud-grid">' +
+        champSecurite('Code de déverrouillage', 'secCode', 'password') +
+        champSecurite('Répéter le code', 'secCode2', 'password') +
+        '</div>' +
+        '<div class="sec-jauge faible" id="secJauge"><i style="width:0%"></i></div>' +
+        '<span class="muted small" id="secJaugeTxt">Force du code : —</span>' +
+        '<div class="cloud-actions">' +
+        '<button class="btn primary" id="secActiver">Activer le verrouillage</button>' +
+        '<button class="btn ghost" id="secVoirBio">Biométrie disponible sur cet appareil ?</button>' +
+        '</div>' +
+        '<div id="secResult" class="cloud-result" hidden></div>' +
+        '</div>';
+      return App.card('Sécurité — verrouiller le journal', corps, { class: 'sec-card' });
+    }
+
+    var reste = i.essais && i.essais.jusqua > Date.now()
+      ? '<span class="muted small">Tentatives ralenties : ' + Math.ceil((i.essais.jusqua - Date.now()) / 1000) + ' s d\'attente.</span>' : '';
+    corps = '<div class="sec-bloc">' +
+      '<div class="sec-etat">' +
+      '<span class="sec-pill ' + (i.deverrouille ? 'on' : 'ou') + '"><span class="sec-dot"></span>' + (i.deverrouille ? 'Journal déverrouillé' : 'Journal verrouillé') + '</span>' +
+      '<span class="muted small">Chiffrement AES-GCM 256 · ' + (i.iterations || 0).toLocaleString('fr-FR') + ' tours de dérivation' + (i.cree ? ' · activé le ' + esc(Store.fmtDateFR(String(i.cree).slice(0, 10))) : '') + '</span>' +
+      reste +
+      '</div>' +
+      '<p class="sec-note">Le contenu du navigateur et le fichier de votre dépôt GitHub ne contiennent plus que du texte chiffré. ' +
+      (i.bio ? 'Face ID / empreinte est actif sur cet appareil.' : 'La biométrie n\'est pas active sur cet appareil (Windows Hello ne sait pas fournir de clé : utilisez le code).') + '</p>' +
+      '<div class="cloud-actions">' +
+      '<button class="btn ghost" id="secVerrou">Verrouiller maintenant</button>' +
+      '<button class="btn ghost" id="secBio">' + (i.bio ? 'Désactiver la biométrie' : 'Activer la biométrie') + '</button>' +
+      '<button class="btn ghost" id="secChanger">Changer le code</button>' +
+      '<button class="btn ghost" id="secSecours">Nouveau code de secours</button>' +
+      '<button class="btn ghost danger" id="secDesactiver">Désactiver le verrouillage</button>' +
+      '</div>' +
+      '<label class="cloud-toggle"><input type="checkbox" id="secRester"' + (i.resterOnglet ? ' checked' : '') + '><span>Rester ouvert tant que l\'onglet est ouvert (sinon : code demandé à chaque rechargement)</span></label>' +
+      '<label class="cloud-toggle"><span>Verrouillage automatique après inactivité :</span>' +
+      '<select class="input" id="secDelai" style="width:auto">' +
+      [['0', 'jamais'], ['5', '5 minutes'], ['15', '15 minutes'], ['30', '30 minutes'], ['60', '1 heure']].map(function (o) {
+        return '<option value="' + o[0] + '"' + (String(i.delaiMin) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+      }).join('') + '</select></label>' +
+      '<div id="secResult" class="cloud-result" hidden></div>' +
+      '<details class="cloud-help"><summary>À savoir avant d\'activer (ou de changer quoi que ce soit)</summary>' +
+      '<ul class="cloud-etats">' +
+      '<li class="warn"><b>Code oublié et code de secours perdu = journal illisible pour toujours</b><span>Personne ne peut le reconstituer, ni moi, ni GitHub : c\'est ce qui rend le chiffrement réel. Le journal n\'est pas effacé pour autant, mais il faut le code pour l\'ouvrir.</span></li>' +
+      '<li class="info"><b>La sauvegarde cloud continue de marcher</b><span>Le fichier du dépôt contient les données chiffrées : elles se synchronisent entre vos appareils, mais chaque appareil a besoin du code pour les lire. Sur un nouvel appareil, la sauvegarde sera téléchargée puis déchiffrée avec le même code.</span></li>' +
+      '<li class="warn"><b>Un code court, même chiffré, se casse</b><span>Le chiffrement est solide, mais un code de 4 chiffres (10 000 combinaisons) se teste en quelques minutes hors ligne. Prenez 6 chiffres minimum, ou une phrase de 4 mots.</span></li>' +
+      '<li class="info"><b>Sur une adresse http://, le verrouillage est refusé</b><span>Le navigateur ne fournit le chiffrement que sur https (ou localhost). Ouvrez l\'application depuis son adresse GitHub Pages.</span></li>' +
+      '</ul></details>' +
+      '</div>';
+    return App.card('Sécurité — journal chiffré', corps, { class: 'sec-card' });
+  }
+
+  function champSecurite(label, id, type) {
+    return '<div class="form-field"><label>' + esc(label) + '</label>' +
+      '<input class="input" type="' + (type || 'text') + '" id="' + id + '" autocomplete="new-password" spellcheck="false"></div>';
+  }
+
+  function cableSecurite(App) {
+    var L = global.Lock;
+    if (!L) return;
+    var doc = document;
+    function zone(html, ton) {
+      var el = doc.getElementById('secResult');
+      if (!el) return;
+      el.hidden = false;
+      el.className = 'cloud-result ' + (ton || '');
+      el.innerHTML = html;
+    }
+    function liste(e) {
+      if (e && e.message) return e.message;
+      return 'L\'appareil a refusé : ' + ((e && e.name) || 'erreur');
+    }
+
+    // --- activation ---
+    var activer = doc.getElementById('secActiver');
+    if (activer) activer.addEventListener('click', function () {
+      var c1 = doc.getElementById('secCode'), c2 = doc.getElementById('secCode2');
+      var p = L.infos();
+      zone('Chiffrement en cours — l\'opération prend une à deux secondes sur cet appareil…', '');
+      L.activer({ code: c1 ? c1.value : '', confirmation: c2 ? c2.value : '', delaiMin: 15 })
+        .then(function (r) {
+          if (!r.ok) { zone(esc(r.message), 'ko'); return; }
+          var texte = '<b>Verrouillage activé.</b> Vos données sont maintenant chiffrées sur cet appareil et dans le dépôt.' +
+            (r.bio && r.bio.etat === 'ok' ? ' Face ID / empreinte est actif sur cet appareil.' :
+             r.bio && r.bio.etat === 'sans-prf' ? ' Cet appareil ne fournit pas de clé biométrique : le code sera demandé.' :
+             r.bio && r.bio.etat === 'indisponible' ? ' La biométrie n\'est pas disponible sur cet appareil.' : '');
+          texte += '<div class="code-secours" id="secCodeAffiche">' + esc(r.codeSecours) + '</div>' +
+            '<p class="sec-note"><b>Notez ce code de secours maintenant</b> (bouton ci-contre) : il ne sera plus jamais affiché. Sans lui et sans votre code, le journal devient illisible.</p>' +
+            '<div class="cloud-actions"><button class="btn primary" id="secImprimer">Imprimer / enregistrer le code de secours</button>' +
+            '<button class="btn ghost" id="secCopier">Copier le code</button></div>';
+          zone(texte, 'ok');
+          var imp = doc.getElementById('secImprimer');
+          if (imp) imp.addEventListener('click', function () { imprimerCodeSecours(r.codeSecours); });
+          var cop = doc.getElementById('secCopier');
+          if (cop) cop.addEventListener('click', function () {
+            try { navigator.clipboard.writeText(r.codeSecours); UI.toast('Code de secours copié.', 'success'); }
+            catch (e) { UI.toast('Copie impossible : notez le code à la main.', 'warn'); }
+          });
+          App.persist(true);
+          App.render();
+        });
+    });
+
+    var jauge = doc.getElementById('secCode');
+    if (jauge) jauge.addEventListener('input', function () {
+      var f = forceCode(jauge.value);
+      var barre = doc.getElementById('secJauge'), txt = doc.getElementById('secJaugeTxt');
+      if (barre) {
+        barre.className = 'sec-jauge ' + f.niveau;
+        var i = barre.querySelector('i');
+        if (i) i.style.width = f.pct + '%';
+      }
+      if (txt) txt.textContent = 'Force du code : ' + (f.niveau || '—') +
+        (f.niveau === 'faible' ? ' — 6 chiffres minimum, une phrase de 4 mots est bien meilleure' : '');
+    });
+
+    var voirBio = doc.getElementById('secVoirBio');
+    if (voirBio) voirBio.addEventListener('click', function () {
+      zone('Vérification…', '');
+      L.biometriePossible().then(function (ok) {
+        zone(ok ? 'Cet appareil sait utiliser Face ID / empreinte pour ouvrir le journal, en plus du code.'
+                : 'Cet appareil ne fournit pas de clé biométrique utilisable par un site web (fréquent sur Windows : Windows Hello ne l\'autorise pas encore). Le code reste la solution.', ok ? 'ok' : 'warn');
+      });
+    });
+
+    // --- gestion quand le verrou est actif ---
+    var verrou = doc.getElementById('secVerrou');
+    if (verrou) verrou.addEventListener('click', function () {
+      L.verrouillerApplication('manuel').then(function () { App.effacerMemoire(); });
+    });
+
+    var bio = doc.getElementById('secBio');
+    if (bio) bio.addEventListener('click', function () {
+      if (L.infos().bio) {
+        L.oublierBiometrie();
+        UI.toast('Biométrie désactivée : le code sera demandé.', 'warn', 6000);
+        App.render();
+        return;
+      }
+      // la clé maîtresse n'est pas exportable : on redemande le code et on inscrit la biométrie à ce moment-là
+      zone('Le journal va se verrouiller : saisissez votre code avec « Activer Face ID / empreinte » coché.', '');
+      L.regler({ demanderBio: true });
+      L.verrouillerApplication('biometrie').then(function () { App.effacerMemoire(); });
+    });
+
+    var changer = doc.getElementById('secChanger');
+    if (changer) changer.addEventListener('click', function () {
+      UI.openModal({
+        title: 'Changer le code de déverrouillage',
+        content: '<div class="form-field"><label>Code actuel</label><input class="input" type="password" id="secActuel"></div>' +
+          '<div class="form-field"><label>Nouveau code</label><input class="input" type="password" id="secNew"></div>' +
+          '<div class="form-field"><label>Répéter le nouveau code</label><input class="input" type="password" id="secNew2"></div>' +
+          '<p class="muted small" id="secErrModal"></p>',
+        footerButtons: [{
+          label: 'Changer', class: 'primary', onClick: function (overlay, close) {
+            var a = overlay.querySelector('#secActuel'), n = overlay.querySelector('#secNew'), n2 = overlay.querySelector('#secNew2');
+            L.changerCode(a.value, n.value, n2.value).then(function (r) {
+              if (!r.ok) { overlay.querySelector('#secErrModal').innerHTML = '<b>' + esc(r.message) + '</b>'; return; }
+              close();
+              UI.toast('Code changé : le code de secours reste valable.', 'success', 6000);
+              App.render();
+            });
+          }
+        }, { label: 'Annuler', class: 'ghost', onClick: function (o, close) { close(); } }]
+      });
+    });
+
+    var secours = doc.getElementById('secSecours');
+    if (secours) secours.addEventListener('click', function () {
+      var champ = doc.getElementById('secResult');
+      zone('<div class="form-field"><label>Code actuel</label><input class="input" type="password" id="secActuel2"></div>' +
+        '<button class="btn primary" id="secSecoursGo">Générer un nouveau code de secours</button>', '');
+      var go = doc.getElementById('secSecoursGo');
+      if (go) go.addEventListener('click', function () {
+        L.nouveauCodeSecours(doc.getElementById('secActuel2').value).then(function (r) {
+          if (!r.ok) { zone(esc(r.message), 'ko'); return; }
+          zone('<b>Nouveau code de secours.</b><div class="code-secours">' + esc(r.codeSecours) + '</div>' +
+            '<div class="cloud-actions"><button class="btn primary" id="secImprimer">Imprimer / enregistrer</button></div>' +
+            '<p class="sec-note">L\'ancien code de secours ne fonctionne plus.</p>', 'ok');
+          var imp = doc.getElementById('secImprimer');
+          if (imp) imp.addEventListener('click', function () { imprimerCodeSecours(r.codeSecours); });
+        });
+      });
+    });
+
+    var desactiver = doc.getElementById('secDesactiver');
+    if (desactiver) desactiver.addEventListener('click', function () {
+      UI.confirmDialog({
+        title: 'Désactiver le verrouillage ?',
+        message: 'Le journal sera de nouveau stocké <b>en clair</b> sur cet appareil et dans le fichier du dépôt GitHub (à la prochaine sauvegarde).',
+        confirmLabel: 'Désactiver', danger: true
+      }).then(function (ok) {
+        if (!ok) return;
+        zone('<div class="form-field"><label>Code actuel</label><input class="input" type="password" id="secActuel3"></div>' +
+          '<button class="btn danger" id="secDesactiverGo">Confirmer la désactivation</button>', 'warn');
+        var go = doc.getElementById('secDesactiverGo');
+        if (go) go.addEventListener('click', function () {
+          L.desactiver(doc.getElementById('secActuel3').value).then(function (r) {
+            if (!r.ok) { zone(esc(r.message), 'ko'); return; }
+            UI.toast('Verrouillage désactivé : données de nouveau en clair.', 'warn', 7000);
+            App.persist(true);
+            App.render();
+          });
+        });
+      });
+    });
+
+    var rester = doc.getElementById('secRester');
+    if (rester) rester.addEventListener('change', function () { L.regler({ resterOnglet: rester.checked }); });
+
+    var delai = doc.getElementById('secDelai');
+    if (delai) delai.addEventListener('change', function () {
+      L.regler({ delaiMin: parseInt(delai.value, 10) || 0 });
+      UI.toast(delai.value === '0' ? 'Verrouillage automatique désactivé.' : 'Verrouillage automatique réglé.', 'success');
+    });
+  }
+
+  /** Imprime (ou enregistre en PDF) le code de secours avec la marche à suivre. */
+  function imprimerCodeSecours(code) {
+    var w = global.open('', '_blank', 'width=640,height=520');
+    if (!w) { UI.toast('Autorisez les fenêtres surgissantes pour imprimer.', 'warn'); return; }
+    var date = Store.fmtDateFR(Store.todayISO());
+    w.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Code de secours — Journal de trading</title>' +
+      '<style>body{font-family:Georgia,serif;color:#111;padding:40px;line-height:1.6}' +
+      'h1{font-size:20px;margin:0 0 6px}.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:20px;letter-spacing:.12em;' +
+      'border:1px dashed #888;padding:16px;border-radius:8px;text-align:center;margin:18px 0;word-break:break-all}' +
+      'ol{padding-left:20px}small{color:#555}</style></head><body>' +
+      '<h1>Code de secours — Journal de trading</h1>' +
+      '<p><small>Imprimé le ' + date + '. À conserver hors ligne, avec votre matériel.</small></p>' +
+      '<div class="code">' + code + '</div>' +
+      '<ol><li>Ce code ouvre le journal si vous oubliez votre code principal.</li>' +
+      '<li>Il permet de choisir un nouveau code une fois ouvert.</li>' +
+      '<li>Sans ce code ni votre code principal, les données chiffrées restent illisibles pour toujours.</li>' +
+      '<li>Ne le laissez pas dans le même endroit que l\'appareil.</li></ol>' +
+      '<p><small>Journal de trading — sauvegarde locale chiffrée (AES-GCM 256).</small></p>' +
+      '<script>window.onload=function(){window.print();};<\/script></body></html>');
+    w.document.close();
+  }
+
   /* ---------- sauvegarde cloud (dépôt GitHub) ---------- */
   function carteNuage(App) {
     var S = global.Sync;
@@ -559,6 +829,7 @@
       '</form>');
 
     html += carteNuage(App);
+    html += carteSecurite(App);
 
     html += '<div class="grid-2">';
     html += App.card('Données & sauvegarde',
@@ -642,6 +913,7 @@
     });
 
     cableNuage(App);
+    cableSecurite(App);
   }
 
   /* ---------- actions de la carte « Sauvegarde cloud » ---------- */

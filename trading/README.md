@@ -146,7 +146,7 @@ Un indicateur dans la barre du haut rappelle en permanence **« Mode démonstrat
 
 ### Vos données sur tablette
 
-Elles sont stockées **dans le navigateur de la tablette** et, si vous l'activez, **sauvegardées automatiquement dans votre dépôt GitHub privé** (voir *Sauvegarde cloud automatique*).
+Elles sont stockées **dans le navigateur de la tablette** et, si vous l'activez, **sauvegardées automatiquement dans votre dépôt GitHub privé** (voir *Sauvegarde cloud automatique*). Vous pouvez en plus les **chiffrer avec un code** (voir *Verrouillage et chiffrement*), avec Face ID sur iPad.
 
 - Pour **retrouver le même journal sur l'ordinateur et la tablette** : activez la *Sauvegarde cloud* sur les deux appareils (même dépôt, même fichier) — la fusion se fait par trade. Sinon, *Exporter → Sauvegarde JSON* sur l'un puis *Importer* sur l'autre.
 - Un vidage du navigateur, une réinstallation ou une navigation privée effacent le stockage local : avec la sauvegarde cloud, il suffit de reconfigurer le dépôt pour tout retrouver. Sans elle, gardez la **sauvegarde JSON hebdomadaire**.
@@ -200,7 +200,7 @@ Plan rédigé sur la méthode **SMV** : les 4 lois (structure, offre/demande, ca
 - Bouton **Imprimer / PDF** avec une feuille de style dédiée (fond clair, lisible sur papier).
 
 ### ⚙️ Paramètres
-Capital, devise, risque par trade, valeur du pip, limites (jour/semaine/drawdown), objectif mensuel, listes d'instruments, de setups et de sessions ; **sauvegarde cloud (dépôt GitHub)** : dépôt, branche, fichier, jeton, test de connexion, journal des dernières opérations ; import/export ; effacement des données.
+Capital, devise, risque par trade, valeur du pip, limites (jour/semaine/drawdown), objectif mensuel, listes d'instruments, de setups et de sessions ; **sécurité** (verrouillage, chiffrement, code de secours, biométrie, verrouillage automatique) ; **sauvegarde cloud (dépôt GitHub)** : dépôt, branche, fichier, jeton, test de connexion, journal des dernières opérations ; import/export ; effacement des données.
 
 ---
 
@@ -251,7 +251,23 @@ Les données sont stockées **dans votre navigateur**. L'application fonctionne 
 - Videz le cache du navigateur sans sauvegarde = données perdues. Faites la sauvegarde JSON en même temps que la revue hebdomadaire.
 - Un export CSV est également disponible (séparateur `;`, virgules décimales : ouvrable directement dans Excel français).
 
-### 2. Sauvegarde cloud automatique (votre dépôt GitHub)
+### 2. Verrouillage et chiffrement du journal (optionnel)
+
+*Paramètres → **Sécurité*** : le journal est chiffré avec un code que vous seul connaissez.
+
+- **Ce qui est chiffré** : les trades, les paramètres et les cases des checklists — sur l'appareil **et** dans le fichier du dépôt GitHub. Le fichier du dépôt ne contient plus que du texte chiffré (AES-GCM 256, clé dérivée du code par PBKDF2).
+- **Code de secours** : affiché **une seule fois** à l'activation, imprimable (bouton *Imprimer / enregistrer*). Il ouvre le même journal si vous oubliez le code, et permet ensuite d'en choisir un nouveau.
+- **Biométrie** : Face ID / empreinte (passkey + dérivation de clé) sur les appareils qui savent le faire — iPadOS 18+, Android, macOS récents. Sur Surface/PC Windows, Windows Hello ne fournit pas encore cette clé : le code est demandé.
+- **Verrouillage automatique** réglable (jamais, 5, 15, 30, 60 minutes sans activité), option « rester ouvert tant que l'onglet est ouvert », et bouton *Verrouiller maintenant*.
+- **Précautions** : utilisez un code de **6 chiffres minimum** (le chiffrement est solide, un code de 4 chiffres ne l'est pas), et rangez le code de secours ailleurs que sur l'appareil.
+
+> 🔴 **Code oublié + code de secours perdu = journal illisible définitivement.** Personne ne peut le reconstituer (ni l'hébergeur, ni GitHub, ni ce dépôt). Rien n'est effacé pour autant : les données chiffrées restent en place, il faut juste le code pour les ouvrir.
+>
+> La sauvegarde cloud continue de fonctionner avec le verrouillage : le fichier du dépôt est chiffré, chaque appareil doit saisir le même code pour le lire. Pendant que le journal est verrouillé, **aucune synchronisation n'a lieu** (impossible d'écraser la sauvegarde avec un journal vide par erreur).
+>
+> Le chiffrement demande une adresse **https** (l'adresse GitHub Pages de l'application). Ouvert depuis un fichier local en `http://`, le navigateur refuse de chiffrer : l'application le dit et propose la sauvegarde cloud ou l'export JSON.
+
+### 3. Sauvegarde cloud automatique (votre dépôt GitHub)
 
 *Paramètres → **Sauvegarde cloud (GitHub)*** : l'application écrit vos données dans **un fichier de votre dépôt GitHub**. Gratuit, sans service tiers, sans abonnement. Dès qu'une donnée change, la sauvegarde part toute seule (45 secondes après la dernière modification, et au retour du réseau).
 
@@ -280,6 +296,7 @@ Ce qui est sauvegardé : **tous les trades réels**, les paramètres du compte e
 | État | Ce que ça veut dire | Ce que fait l'application |
 |---|---|---|
 | Sauvegarde cloud désactivée | Aucun dépôt configuré | Rien, tout reste local |
+| Journal verrouillé — sauvegarde en pause | Le verrouillage est actif et le code n'a pas été saisi | N'envoie ni ne récupère rien (protection contre l'écrasement) |
 | Configuré, aucune sauvegarde envoyée | Premier envoi pas encore fait | Envoie à la première modification |
 | Hors ligne — modifications en attente | Réseau coupé (ou avion) | Garde tout en local, repart au retour du réseau |
 | *n* modification(s) à sauvegarder | Envoi différé en cours | Envoie après 45 s |
@@ -333,6 +350,7 @@ trading/
 │       ├── ui.js                 Formatage FR, modales, toasts, icônes SVG
 │       ├── views.js              Vues Calendrier, Analyses, Plan, Paramètres
 │       ├── sync.js               Sauvegarde cloud GitHub (états, conflits, fusion, hors ligne)
+│       ├── lock.js               Verrouillage, chiffrement AES-GCM, code de secours, biométrie
 │       ├── app.js                Navigation, tableau de bord, journal, formulaire, import/export
 │       └── pwa.js                Installation, hors ligne, synchronisation entre onglets
 ├── exemples/                     Modèles CSV, jeu de démonstration, modèle de workflow Pages
@@ -340,7 +358,8 @@ trading/
     ├── serve.js                  Serveur local + QR code pour la tablette (node tools/serve.js)
     ├── make-site-zip.js          Archive prête à publier (trading-site.zip)
     ├── smoke-test.js             Contrôle automatique de tous les écrans (jsdom)
-    ├── sync-test.js              Recette de la sauvegarde cloud : 12 états, conflits, fusion (jsdom)
+    ├── sync-test.js              Recette de la sauvegarde cloud : états, conflits, fusion (jsdom)
+    ├── lock-test.js              Recette du verrouillage : chiffrement, code, secours, biométrie (jsdom)
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
 ```
@@ -356,6 +375,7 @@ node tools/serve.js                                    # serveur local + QR code
 node trading/tools/make-site-zip.js                     # régénérer l'archive de publication
 npm i -D jsdom && node tools/smoke-test.js              # chaque vue se rend sans erreur JS
 npm i -D jsdom && node tools/sync-test.js                # sauvegarde cloud : états, conflits, fusion
+npm i -D jsdom && node tools/lock-test.js                # verrouillage : chiffrement, code, secours, biométrie
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
 ```
@@ -366,6 +386,10 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.2 | **Journal chiffré et verrouillé (optionnel)** : code de déverrouillage, chiffrement AES-GCM 256 avec clé dérivée par PBKDF2, **code de secours imprimable** et **biométrie Face ID / empreinte** (passkey + PRF) quand l'appareil le permet. Le fichier du dépôt GitHub devient illisible lui aussi. |
+| 2.2 | **Sécurité dans les Paramètres** : activation en trois étapes expliquées, jauge de force du code, changement de code, nouveau code de secours, désactivation, verrouillage automatique réglable, bouton *Verrouiller maintenant*. |
+| 2.2 | **Aucune écriture pendant le verrouillage** : ni sauvegarde locale, ni envoi vers le dépôt, ni récupération — impossible d'écraser la sauvegarde avec un journal vide (état *Journal verrouillé — sauvegarde en pause*). |
+| 2.2 | **Défenses contre la devinette** : ralentissement progressif après 5 essais (5 s, 15 s, 60 s, 5 min), chiffrement refusé sur les codes trop courts, avertissements explicites sur les codes de 4 chiffres. |
 | 2.1 | **Sauvegarde cloud automatique dans votre dépôt GitHub** : envoi différé (45 s), reprise au retour du réseau, récupération sur un nouvel appareil, **fusion par trade** entre la tablette et l'ordinateur, suppressions conservées. Gratuit, aucun service tiers. |
 | 2.1 | **États de la sauvegarde affichés en clair** : hors ligne, en attente, à jour, conflit, clé refusée, quota, GitHub injoignable, échec — pastille dans la barre du haut et bandeau avec les boutons utiles (*Réessayer*, *Fusionner les deux*, *Récupérer la sauvegarde*). |
 | 2.1 | **Configuration dans les Paramètres** : dépôt, branche, fichier, jeton (fine-grained, *Contents : Read and write*), bouton *Tester la connexion*, journal des dernières opérations. Le jeton reste dans le navigateur de l'appareil. |
@@ -394,5 +418,8 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 - Le multi-comptes n'est pas géré (un seul journal par navigateur).
 - La sauvegarde cloud passe par l'API GitHub : un fichier au-delà de ~950 Ko doit être exporté en JSON (le nombre de trades nécessaire est très largement supérieur à un usage normal).
 - La première activation de la sauvegarde cloud demande un jeton GitHub (voir *Sauvegarde & vie privée*) ; sans elle, tout continue de fonctionner en local.
+- Le verrouillage n'est pas une authentification en ligne : il protège les données (elles sont chiffrées), pas l'accès au site. Ouvrir l'application sans le code ne montre rien, c'est le but.
+- La biométrie dépend de l'appareil : elle fonctionne sur iPadOS 18+, Android et macOS récents ; Windows Hello ne fournit pas encore de clé exploitable par un site web — le code reste la solution universelle.
+- Verrouillage actif + code oublié + code de secours perdu : les données sont définitivement illisibles (c'est le principe même du chiffrement de bout en bout).
 - Les captures d'écran sont référencées par URL/chemin (pas d'upload de fichier, pour rester sans serveur).
 - Les frais de swap ne sont pas modélisés séparément : à inclure dans la colonne « Frais ».

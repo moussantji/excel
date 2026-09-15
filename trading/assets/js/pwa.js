@@ -117,10 +117,13 @@
      --------------------------------------------------------- */
   function refreshFromStorage(silent) {
     if (document.querySelector('.modal-overlay')) return; // ne pas casser une saisie en cours
+    // journal chiffré et fermé : rien à relire (et surtout rien à afficher)
+    if (global.Lock && global.Lock.actif() && !global.Lock.deverrouille()) return;
     var saved = global.Store.loadState();
     App.state.trades = saved.trades;
     App.state.settings = saved.settings;
     App.state.demo = saved.demo;
+    App.state.deleted = saved.deleted || [];
     App.state.checks = global.Plan.loadChecks();
     UI.setCurrency(App.state.settings.currency);
     App.render();

@@ -310,11 +310,13 @@ const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
   console.log('\n16. États définis');
   const styles = fs.readFileSync(path.join(RACINE, 'assets/css/styles.css'), 'utf8');
   const etats = ['off', 'empty', 'offline', 'pending', 'syncing', 'ok', 'remote', 'conflict', 'auth', 'quota', 'server', 'error'];
-  const manquants = etats.filter((e) => !new RegExp("^\\s*" + e + ":\\s*\\{", 'm').test(fs.readFileSync(path.join(RACINE, 'assets/js/sync.js'), 'utf8')));
-  verif('12 états déclarés', manquants.length === 0, manquants.join(','));
+  const etats2 = etats.concat(['locked']);   // « locked » : journal verrouillé, sauvegarde en pause
+  const manquants2 = etats2.filter((e) => !new RegExp("^\\s*" + e + ":\\s*\\{", 'm').test(fs.readFileSync(path.join(RACINE, 'assets/js/sync.js'), 'utf8')));
+  verif('13 états déclarés (12 + journal verrouillé)', manquants2.length === 0, manquants2.join(','));
   verif('bandeau stylé pour chaque ton', /\.sync-banner\.warn/.test(styles) && /\.sync-banner\.ko/.test(styles) && /\.sync-banner\.info/.test(styles));
   verif('pastille stylée', /\.sync-chip\.ok/.test(styles) && /\.sync-chip\.ko/.test(styles));
-  verif('service worker en v5', /trading-desk-v5/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
+  verif('service worker en v6', /trading-desk-v6/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
+  verif('lock.js en cache hors ligne', /assets\/js\/lock\.js/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
   verif('sync.js dans le cache hors ligne', /assets\/js\/sync\.js/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
   verif('aucune erreur JS sur toute la session', erreurs.length === 0, erreurs.join(' | '));
 

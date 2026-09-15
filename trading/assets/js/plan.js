@@ -458,13 +458,20 @@
      --------------------------------------------------------- */
   var KEY = 'journal-trading:plan:v1';
   function loadChecks() {
+    if (global.Lock && global.Lock.actif()) {
+      var memoire = global.Lock.memoireDe('checks');
+      if (memoire) { try { return JSON.parse(memoire) || {}; } catch (e) { return {}; } }
+      return {};
+    }
     try {
       var raw = global.localStorage && global.localStorage.getItem(KEY);
       return raw ? JSON.parse(raw) : {};
     } catch (e) { return {}; }
   }
   function saveChecks(state) {
-    try { global.localStorage && global.localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+    var json = JSON.stringify(state);
+    if (global.Lock && global.Lock.actif()) { global.Lock.ecrireCompartiment('checks', json); return; }
+    try { global.localStorage && global.localStorage.setItem(KEY, json); } catch (e) { /* ignore */ }
   }
 
   /* ---------------------------------------------------------

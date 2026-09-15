@@ -36,10 +36,10 @@
     <div class="sidebar-foot">
       <button class="btn ghost install-btn" id="btnInstall" hidden>⬇️ Installer sur cet appareil</button>
       <div class="foot-card">
-        <b>Données locales</b>
-        <p>Vos trades restent dans cet appareil. Exportez une sauvegarde JSON chaque semaine.</p>
+        <b>Sauvegarde cloud</b>
+        <p>Vos trades partent dans votre dépôt GitHub et reviennent tout seuls. Paramètres → Sauvegarde cloud.</p>
       </div>
-      <p class="ver">v2.1 · SMV · sauvegarde cloud</p>
+      <p class="ver">v2.2 · SMV · sauvegarde cloud · verrou</p>
     </div>
   </aside>
 
@@ -84,6 +84,43 @@
 <nav id="mobileNav" class="mobile-nav"></nav>
 <div id="toasts"></div>
 
+<!-- ============ ÉCRAN DE VERROUILLAGE (chiffrement) ============ -->
+<div id="ecranVerrou" class="lock-screen" hidden role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="lock-card">
+    <div class="lock-head">
+      <span class="lock-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.6" width="14" height="9.4" rx="2.4"/><path d="M8.4 10.6V7.8a3.6 3.6 0 0 1 7.2 0v2.8"/><path d="M12 14.6v2.2"/></svg></span>
+      <div>
+        <h2 id="lockTitle">Journal verrouillé</h2>
+        <p class="lock-lead" id="lockLead">Vos trades sont chiffrés sur cet appareil et dans votre dépôt. Saisissez votre code pour ouvrir le journal.</p>
+      </div>
+    </div>
+
+    <form id="lockForm" class="lock-form" autocomplete="off">
+      <label for="lockCode">Code de déverrouillage</label>
+      <input class="input lock-input" id="lockCode" type="password" inputmode="text" autocomplete="current-password" spellcheck="false" placeholder="votre code">
+      <div class="lock-actions">
+        <button class="btn primary" id="lockGo" type="submit">Déverrouiller</button>
+        <button class="btn ghost" id="lockBio" type="button" hidden>Déverrouiller avec Face ID / empreinte</button>
+      </div>
+      <label class="cloud-toggle" id="lockBioWrap"><input type="checkbox" id="lockBioOn" hidden><span>Activer Face ID / empreinte sur cet appareil (proposé une seule fois)</span></label>
+      <div id="lockMsg" class="lock-msg" role="status" aria-live="polite"></div>
+    </form>
+
+    <details class="lock-secours">
+      <summary>Code oublié ? Utiliser le code de secours</summary>
+      <p class="muted small">Le code de secours est celui affiché (et imprimé) à l'activation du verrouillage. Il ouvre le même journal et permet de choisir un nouveau code.</p>
+      <div class="lock-actions">
+        <input class="input lock-input" id="lockSecours" type="password" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">
+        <button class="btn ghost" id="lockSecoursGo" type="button">Ouvrir avec ce code</button>
+      </div>
+      <p class="muted small">Sans code ni code de secours, les données restent <b>définitivement illisibles</b> — c'est le prix du chiffrement. Elles ne sont pas perdues pour autant : rien n'est effacé tant que vous ne le demandez pas.</p>
+      <button class="btn ghost danger small" id="lockReset" type="button">Effacer le journal de cet appareil</button>
+    </details>
+
+    <p class="lock-foot">Chiffrement AES-GCM 256 · clé dérivée par PBKDF2 · tout se passe dans le navigateur, aucun compte, aucun serveur.</p>
+  </div>
+</div>
+
 <script src="assets/js/store.js"></script>
 <script src="assets/js/metrics.js"></script>
 <script src="assets/js/charts.js"></script>
@@ -91,6 +128,7 @@
 <script src="assets/js/ui.js"></script>
 <script src="assets/js/views.js"></script>
 <script src="assets/js/sync.js"></script>
+<script src="assets/js/lock.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/pwa.js"></script>
 </body>
