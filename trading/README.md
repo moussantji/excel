@@ -64,7 +64,7 @@ L'application **fonctionne entièrement sans connexion** une fois ouverte une pr
 Deux précisions utiles :
 
 - **Tablette en Wi-Fi local** (`http://192.168.x.x`) : l'application marche, mais le mode hors ligne **et** l'installation sur l'écran d'accueil exigent **https** — donc l'adresse GitHub Pages (ou Netlify/Cloudflare). C'est la seule raison de préférer cette adresse au Wi-Fi local.
-- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v13`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
+- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v14`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
 
 Recette automatique du mode hors ligne : `node tools/offline-test.js` (service worker réel simulé, réseau coupé, serveur en panne, fichiers manquants).
 
@@ -177,6 +177,20 @@ L'entraîneur est illimité et hors ligne, mais ses graphiques sont générés. 
 | 03 et 09 — Risque, routine | **MetaTrader 5 pour Android**, compte démo gratuit | Le geste en conditions réelles : fenêtre de tir, taille de position, stop, breakeven, prises partielles, arrêt après deux stop loss |
 | 08 — Tri des configurations | **QuizTraders** (navigateur, en anglais) | Décider « acheter / vendre / ne rien faire » sur de vrais graphiques SMC, correction immédiate (offre gratuite limitée) |
 
+#### Applications du Play Store (Android) qui font vraiment réviser
+
+La Formation liste aussi, **dans l'application et hors ligne**, les applications Android d'entraînement qui valent le détour — avec leur langue et leur limite, pour ne pas perdre du temps sur celles qui n'apprennent rien :
+
+| Application | Ce qu'elle fait | Prix / langue | La limite |
+|---|---|---|---|
+| **Candle Master : Trading Game** | Prédire la prochaine bougie, quiz de chandeliers (180+ questions), précision et séries suivies | Gratuit · français | Petit éditeur (peu de téléchargements) ; l'application partage l'identifiant de l'appareil. Muet sur le SMC |
+| **Chart Quiz — Stock & Crypto** | Vrais graphiques (crypto, actions, indices) : prédire le mouvement suivant, correction immédiate | Gratuit · anglais | Marchés surtout américains, aucune notion SMC |
+| **Trading Game (GoForex)** | Simulateur temps réel, plus de 400 questions de quiz, leçons courtes | Gratuit, sans pub ni inscription · français | Orienté débutant et forex classique ; la partie « signaux » n'a rien à voir avec le plan |
+| **Forex Smart Money Concept** (Appnovasi) | Fiches SMC : order blocks, FVG, premium/discount, cassures de structure, plans de trade | Gratuit · anglais | Lecture seule, sans exercices corrigés ni score |
+| **Forex Trading : Learn SMC & ICT (GTS)** | SMC et ICT, simulateur papier, calcul de position, journal | Gratuit + offres payantes · anglais | Beaucoup de contenu verrouillé en premium, sources non citées |
+
+**Mise en garde écrite dans l'application** : une grande partie des applications « trading » du Play Store sont des **vitrines de courtiers** qui poussent au dépôt d'argent réel (certaines accumulent les avis de retraits en échec). Aucune n'est nécessaire pour s'entraîner ; pour passer des ordres sans risque, un **compte démo** chez un courtier régulé suffit.
+
 **La limite à connaître** : chez TradingView, le replay **intraday** (15 min, 1 h) n'est plus gratuit (offre payante depuis 2026). En gratuit, le replay s'arrête au **journalier** — ce qui couvre exactement la partie HTF du plan. L'intraday, c'est l'entraîneur de l'application qui le couvre, hors ligne, avec 50 à 60 bougies par scénario. **Les deux ensemble couvrent tout le plan.**
 
 **Si un jour vous avez un ordinateur** : MetaTrader 5 dispose d'un mode de test **visuel** gratuit qui rejoue n'importe quelle période en intraday, bougie par bougie, avec des ordres placés à la main (Espace pour mettre en pause, F12 pour avancer d'une bougie, F9 pour passer un ordre). C'est la seule façon gratuite de s'entraîner en intraday sur des données réelles — dites-le-moi ce jour-là, j'ajouterai la procédure pas à pas dans la Formation.
@@ -189,7 +203,7 @@ L'entraîneur est illimité et hors ligne, mais ses graphiques sont générés. 
 
 La formation **explique** le plan, elle ne le remplace pas : le plan reste la référence en séance, la formation sert à le comprendre et à s'entraîner dessus.
 
-Recettes dédiées : `node tools/formation-test.js` (72 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression) et `node tools/relecture-test.js` (61 contrôles — règles chiffrées et leur notation, masquage du résultat avant la révélation, jugements séparés du score, bilan enregistré, cas particuliers).
+Recettes dédiées : `node tools/formation-test.js` (76 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression) et `node tools/relecture-test.js` (61 contrôles — règles chiffrées et leur notation, masquage du résultat avant la révélation, jugements séparés du score, bilan enregistré, cas particuliers).
 
 ---
 
@@ -604,12 +618,13 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.8 | **Applications d'entraînement du Play Store listées dans la Formation** : les trois qui corrigent et notent (Candle Master, Chart Quiz, Trading Game/GoForex) et les deux qui expliquent (Forex Smart Money Concept, GTS), avec leur langue, leur prix et **leur limite**. Plus une mise en garde explicite : beaucoup d'applications « trading » du Play Store sont des **vitrines de courtiers** poussant au dépôt d'argent réel — aucune n'est nécessaire pour s'entraîner. La liste est écrite **dans l'application, hors ligne**, sans aucun lien externe ajouté. |
 | 2.7 | **Relire ses vrais trades** : l'application reprend vos trades du journal et vous repose les questions du plan — règles chiffrées (stop 15 pips, ratio 1:7, risque 1 %, fenêtre de tir, limite du jour) corrigées automatiquement avec la mesure affichée, jugements de lecture enregistrés séparément et non notés. **Le résultat du trade reste masqué jusqu'à la révélation**, pour que la lecture ne soit pas influencée. La règle des 15 pips n'est posée que sur les paires forex. Recette `tools/relecture-test.js` (61 contrôles). |
 | 2.7 | **Pratiquer sur de vrais graphiques** : la Formation indique désormais, chapitre par chapitre, ce qui est réellement gratuit et utilisable **depuis une tablette Android** — replay journalier TradingView, compte démo MT5 pour l'exécution, quiz SMC dans le navigateur — avec la limite constatée en 2026 (le replay **intraday** TradingView n'est plus gratuit) et l'annexe ordinateur (testeur visuel MT5 + FX Blue) pour le jour où vous en auriez un. |
 | 2.6 | **Graphique TradingView à côté du journal** : bouton sur chaque trade, dans l'en-tête du journal, dans la fiche de saisie et dans l'entraîneur. L'application ouvre **le bon symbole et la bonne unité de temps** — et rien d'autre : aucun script externe n'est chargé dans la page, aucune donnée du journal ne part avec le lien. Correspondance des symboles corrigeable (le symbole de votre courtier gagne sur le défaut), bouton désactivable, et message explicite hors ligne. Recette dédiée `tools/graphe-test.js` (57 contrôles). |
 | 2.6 | **Journal → place à côté (Android)** : procédure écrite pour l'écran partagé, avec le **piège connu** de l'application TradingView pour tablette Android (écran partagé refusé depuis une mise à jour de 2026 — passer par tradingview.com dans le navigateur). Limite assumée et écrite noir sur blanc : **vos tracés ne sont pas lisibles** par l'application, ils restent dans votre compte. |
 | 2.5 | **Vue Formation — apprendre la méthode et s'entraîner** : le plan est expliqué dans l'ordre de ses **12 chapitres** (essentiel, leçons, lecture sur le graphique, étapes, erreurs fréquentes) avec **52 exercices notés**, dont le calcul de risque. |
-| 2.5 | **Entraîneur interactif** : l'application **dessine ses propres graphiques de bougies** (SVG, aucune image, aucun réseau) et corrige la réponse en **dessinant la zone et le niveau de cassure** sur le graphique. **6 concepts** d'entraînement, dont « identifier la tendance ». Recette dédiée `tools/formation-test.js` (72 contrôles) — cohérence vérifiée sur **1 400 scénarios**. |
+| 2.5 | **Entraîneur interactif** : l'application **dessine ses propres graphiques de bougies** (SVG, aucune image, aucun réseau) et corrige la réponse en **dessinant la zone et le niveau de cassure** sur le graphique. **6 concepts** d'entraînement, dont « identifier la tendance ». Recette dédiée `tools/formation-test.js` (76 contrôles) — cohérence vérifiée sur **1 400 scénarios**. |
 | 2.5 | **Progression conservée** : chapitres étudiés, score des exercices, série et détail par concept, enregistrés avec le journal (donc chiffrés par le verrouillage et sauvegardés dans votre dépôt). Sources de chaque chapitre citées, et **modules absents des documents signalés** au lieu d'être inventés. |
 | 2.5 | **Défaut corrigé au passage** : la recette des rappels figeait encore le numéro de version du cache (`trading-desk-v9`) — même faux échec que `lock-test` et `sync-test` en 2.4 ; elle lit désormais la version du fichier. |
 | 2.4 | **Rappels du plan en notifications de la tablette** : préparation avant l'ouverture, ouverture, fermeture (rappel de saisie) et revue du dimanche, aux heures des fenêtres de tir du plan. Heures lues dans le plan lui-même — plus aucun risque de divergence. Application en arrière-plan comprise ; rappels manqués regroupés et signalés à la réouverture ; jamais deux fois le même rappel. |

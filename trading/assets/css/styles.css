@@ -1226,6 +1226,13 @@ body.verrouille>#app,body.verrouille>.mobile-nav{filter:blur(9px) saturate(.5);p
 .rel-expl.ok{color:var(--green)}
 .rel-expl.ko{color:var(--muted)}
 .rel-actions{display:flex;gap:8px;flex-wrap:wrap}
+.vrais-titre{margin:18px 0 6px;font-size:.92rem;letter-spacing:.01em}
+.applis{display:flex;flex-direction:column;gap:10px;margin:10px 0 14px}
+.appli{border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:var(--panel-2)}
+.appli-tete{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.appli-tete b{font-size:.87rem}
+.appli p{margin:.4em 0 0;line-height:1.5}
+.appli-langue{display:inline-block;margin-left:4px;font-size:.7rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:.05em}
 .vrais-table{display:flex;flex-direction:column;gap:12px;margin:12px 0}
 .vrais-ligne{border-left:2px solid var(--gold-dim);padding-left:12px}
 .vrais-quoi{display:flex;flex-direction:column;gap:2px}

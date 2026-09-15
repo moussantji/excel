@@ -380,7 +380,19 @@ console.log('\n5. Vue et progression');
     /Plan\.loadChecks/.test(lire('assets/js/formation.js')) && /Plan\.saveChecks/.test(lire('assets/js/formation.js')));
   verif('aucun appel réseau dans la formation',
     !/fetch\(|XMLHttpRequest/.test(lire('assets/js/formation.js') + lire('assets/js/entraineur.js')));
-  verif('la formation est annoncée dans le README', /Formation/.test(lire('README.md')));
+  // les applications du Play Store : listées avec leurs limites, sans lien externe
+const formation = lire('assets/js/formation.js');
+verif('les applications d\'entraînement du Play Store sont listées',
+  /Play Store/.test(formation) && /Candle Master/.test(formation) && /Chart Quiz/.test(formation) && /GoForex/.test(formation),
+  '3 applications qui corrigent et notent');
+verif('chaque application porte sa langue et sa limite',
+  /application partage l\'identifiant|sans exercices corrigés|verrouillé en premium|signaux quotidiens/.test(formation));
+verif('la mise en garde contre les fausses applications éducatives est écrite',
+  /vitrines de courtiers/.test(formation) && /retraits en échec/.test(formation) && /compte démo/.test(formation));
+verif('le guide n\'ajoute aucun lien externe (il reste utilisable hors ligne)',
+  !/https?:\/\//.test(formation), 'aucune adresse dans la vue Formation');
+
+verif('la formation est annoncée dans le README', /Formation/.test(lire('README.md')));
 
   console.log('\n' + (ko === 0 ? '✅ ' + ok + ' contrôles passés, formation vérifiée.' : '❌ ' + ko + ' échec(s) sur ' + (ok + ko) + ' contrôles.'));
   process.exit(ko === 0 ? 0 : 1);

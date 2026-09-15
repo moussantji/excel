@@ -234,8 +234,64 @@
       '<p class="muted small"><b>Si un jour vous avez un ordinateur :</b> MetaTrader 5 dispose d\'un mode de test <i>visuel</i> gratuit qui rejoue ' +
       'n\'importe quelle période en intraday, bougie par bougie, avec des ordres placés à la main — c\'est la seule façon gratuite de s\'entraîner ' +
       'en intraday sur des données réelles. Dites-le moi ce jour-là : j\'ajouterai la procédure pas à pas.</p>' +
+      applisHTML() +
       '</div></section>';
     return html;
+  }
+
+  /* ---------------------------------------------------------
+     Les applications du Play Store : ce qu'elles font vraiment
+     --------------------------------------------------------- */
+  function applisHTML() {
+    var APPLIS = [
+      {
+        nom: 'Candle Master : Trading Game', editeur: 'Aman33kh',
+        fait: 'Prédire la prochaine bougie, quiz de chandeliers (180+ questions), précision et séries suivies, RSI/MACD sur le graphique.',
+        prix: 'Gratuit', langue: 'Français',
+        piege: 'Petit éditeur (peu de téléchargements) et l\'application partage l\'identifiant de votre appareil. Excellent pour le réflexe bougie, muet sur la méthode SMV.'
+      },
+      {
+        nom: 'Chart Quiz — Stock & Crypto', editeur: 'chartquizamerica',
+        fait: 'Vrais graphiques (crypto, actions, indices) : prédire le mouvement suivant, correction immédiate, série suivie.',
+        prix: 'Gratuit', langue: 'Anglais',
+        piege: 'Marchés surtout américains, aucune notion SMC. Utile pour le coup d\'œil sur la tendance, pas pour vos 12 chapitres.'
+      },
+      {
+        nom: 'Trading Game (GoForex)', editeur: 'tiim',
+        fait: 'Simulateur en temps réel, plus de 400 questions de quiz et des leçons courtes, sans pub ni inscription.',
+        prix: 'Gratuit', langue: 'Français',
+        piege: 'Orienté débutant et forex classique. La partie « signaux quotidiens » n\'a rien à voir avec votre plan : à ignorer.'
+      },
+      {
+        nom: 'Forex Smart Money Concept', editeur: 'Appnovasi',
+        fait: 'Fiches SMC : order blocks, FVG, premium/discount, cassures de structure, plans de trade avec entrée, stop et objectifs.',
+        prix: 'Gratuit', langue: 'Anglais',
+        piege: 'C\'est de la lecture, sans exercices corrigés ni score. Vocabulaire SMC/ICT générique, pas celui de votre livre.'
+      },
+      {
+        nom: 'Forex Trading : Learn SMC & ICT (GTS)', editeur: 'Golden Trading Strategies',
+        fait: 'SMC et ICT, simulateur papier, calcul de position, journal de trades, préparation aux challenges de prop firms.',
+        prix: 'Gratuit + offres payantes', langue: 'Anglais',
+        piege: 'Beaucoup de contenu verrouillé en premium, sources non citées. À prendre comme complément, jamais comme référence.'
+      }
+    ];
+    return '<h4 class="vrais-titre">Applications du Play Store (Android) qui font vraiment réviser</h4>' +
+      '<p class="muted small">Ce sont des applications d\'entraînement, pas des courtiers. Les trois premières corrigent et notent ; les deux suivantes ' +
+      'expliquent sans interroger. Aucune ne suit l\'ordre de vos 12 chapitres — c\'est le rôle de cette formation — mais elles font travailler le coup d\'œil, ' +
+      'ce qui se complète bien.</p>' +
+      '<div class="applis">' + APPLIS.map(function (a) {
+        return '<article class="appli">' +
+          '<div class="appli-tete"><b>' + esc(a.nom) + '</b>' +
+          '<span class="badge ' + (a.prix === 'Gratuit' ? 'ok' : 'flat') + '">' + esc(a.prix) + '</span></div>' +
+          '<p class="small"><b>Ce qu\'elle fait :</b> ' + esc(a.fait) + '</p>' +
+          '<p class="muted small"><b>La limite :</b> ' + esc(a.piege) + ' <span class="appli-langue">' + esc(a.langue) + ' · ' + esc(a.editeur) + '</span></p>' +
+          '</article>';
+      }).join('') + '</div>' +
+      '<div class="alert warn"><span class="alert-ico">' + UI.icon('warn') + '</span><span><b>Attention aux fausses applications éducatives.</b> ' +
+      'Une grande partie des applications « trading » du Play Store sont des <b>vitrines de courtiers</b> : elles poussent à déposer de l\'argent réel, ' +
+      'et certaines accumulent les avis de retraits en échec. Aucune n\'est nécessaire pour s\'entraîner : les applications ci-dessus suffisent, et pour ' +
+      'passer des ordres sans argent réel, utilisez un <b>compte démo</b> d\'un courtier régulé. Ne déposez jamais d\'argent sur une application découverte ' +
+      'par hasard, même si elle se présente comme éducative.</span></div>';
   }
 
   function carteEntraineur(p, App) {
