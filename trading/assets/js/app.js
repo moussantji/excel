@@ -887,7 +887,8 @@
       }).join('') + '</div>' +
       '<button class="btn ghost" id="btnImport">Importer CSV</button>' +
       '<button class="btn ghost" id="btnExport">Exporter</button>' +
-      (boutonGraphique() ? '<button class="btn ghost" id="btnGraph">' + UI.icon('link') + ' Graphique</button>' : '') +
+      (boutonGraphique() ? '<button class="btn ghost" id="btnGraph" title="Ouvrir un graphique TradingView : choisir l\'instrument et l\'unité de temps">' +
+        UI.icon('link') + ' Graphique</button>' : '') +
       '<button class="btn primary" id="btnAdd">+ Nouveau trade</button>' +
       '</div>';
 

@@ -144,6 +144,9 @@ async function bac() {
   await tick(); await tick();
   const vueJournal = doc.querySelector('#view-journal') || doc.body;
   verif('le bouton « Graphique » est dans l\'en-tête du journal', !!doc.querySelector('#btnGraph'));
+  verif('le bouton de l\'en-tête est expliqué et accessible',
+    !!doc.querySelector('#btnGraph').getAttribute('title') && /Graphique/.test(doc.querySelector('#btnGraph').textContent),
+    doc.querySelector('#btnGraph').textContent.trim());
   const lignes = vueJournal.querySelectorAll('[data-action="graph"]');
   verif('chaque trade porte son bouton de graphique', lignes.length > 0, lignes.length + ' bouton(s)');
   verif('le bouton du trade indique l\'instrument',

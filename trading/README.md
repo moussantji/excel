@@ -201,7 +201,7 @@ Sur iPad, la fonction s'appelle **Split View / Slide Over** (glisser une applica
 - **Correspondance des symboles** : l'application propose un symbole par instrument (les paires forex chez **FX**, l'or et l'argent chez **OANDA**, les indices chez **TVC**, les cryptos chez **BITSTAMP**). **Votre courtier a peut-être les mêmes références sous un autre fournisseur** : écrivez le vôtre une fois (exemple `CAPITALCOM:US30`, `FOREXCOM:XAUUSD`, `OANDA:XAUUSD`), il est réutilisé partout. Videz un champ pour revenir au symbole par défaut.
 - **Tester l'ouverture** : ouvre le graphique de l'instrument le plus tradé, sans rien enregistrer.
 
-Recette dédiée : `node tools/graphe-test.js` (56 contrôles — symboles et corrections, adresse produite, confidentialité, hors ligne, boutons présents/éteints, click-through, cache hors ligne et impression).
+Recette dédiée : `node tools/graphe-test.js` (57 contrôles — symboles et corrections, adresse produite, confidentialité, hors ligne, boutons présents/éteints, click-through, cache hors ligne et impression).
 
 ---
 
@@ -569,7 +569,7 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
-| 2.6 | **Graphique TradingView à côté du journal** : bouton sur chaque trade, dans l'en-tête du journal, dans la fiche de saisie et dans l'entraîneur. L'application ouvre **le bon symbole et la bonne unité de temps** — et rien d'autre : aucun script externe n'est chargé dans la page, aucune donnée du journal ne part avec le lien. Correspondance des symboles corrigeable (le symbole de votre courtier gagne sur le défaut), bouton désactivable, et message explicite hors ligne. Recette dédiée `tools/graphe-test.js` (56 contrôles). |
+| 2.6 | **Graphique TradingView à côté du journal** : bouton sur chaque trade, dans l'en-tête du journal, dans la fiche de saisie et dans l'entraîneur. L'application ouvre **le bon symbole et la bonne unité de temps** — et rien d'autre : aucun script externe n'est chargé dans la page, aucune donnée du journal ne part avec le lien. Correspondance des symboles corrigeable (le symbole de votre courtier gagne sur le défaut), bouton désactivable, et message explicite hors ligne. Recette dédiée `tools/graphe-test.js` (57 contrôles). |
 | 2.6 | **Journal → place à côté (Android)** : procédure écrite pour l'écran partagé, avec le **piège connu** de l'application TradingView pour tablette Android (écran partagé refusé depuis une mise à jour de 2026 — passer par tradingview.com dans le navigateur). Limite assumée et écrite noir sur blanc : **vos tracés ne sont pas lisibles** par l'application, ils restent dans votre compte. |
 | 2.5 | **Vue Formation — apprendre la méthode et s'entraîner** : le plan est expliqué dans l'ordre de ses **12 chapitres** (essentiel, leçons, lecture sur le graphique, étapes, erreurs fréquentes) avec **52 exercices notés**, dont le calcul de risque. |
 | 2.5 | **Entraîneur interactif** : l'application **dessine ses propres graphiques de bougies** (SVG, aucune image, aucun réseau) et corrige la réponse en **dessinant la zone et le niveau de cassure** sur le graphique. **6 concepts** d'entraînement, dont « identifier la tendance ». Recette dédiée `tools/formation-test.js` (72 contrôles) — cohérence vérifiée sur **1 400 scénarios**. |
