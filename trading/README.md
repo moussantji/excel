@@ -448,8 +448,25 @@ Plan rédigé sur la méthode **SMV** : les 4 lois (structure, offre/demande, ca
 - Règles de risque chiffrées : **1 % maximum par trade, stop 15 pips maximum, ratio minimum 1:7, 2 stop loss par jour maximum**, mise à breakeven à la cassure, prises partielles 30 % / 50 % / solde.
 - Fenêtres de tir : Asie 1h–2h, Europe 8h–9h, USA 13h–14h (heure de Bamako).
 - **4 checklists interactives** (pré-trade, gestion de position, post-trade, revue hebdomadaire) dont l'état est sauvegardé.
+- **4 moments de routine dont les cases sont datées, jour par jour** — voir la section suivante.
 - **2 contrôles de discipline supplémentaires** dans le suivi : part des trades dont le ratio visé atteint 1:7 et respect du stop à 15 pips maximum.
 - Bouton **Imprimer / PDF** avec une feuille de style dédiée (fond clair, lisible sur papier).
+
+### 🗓️ Ma routine, jour par jour (bloc 14 du plan)
+
+Les quatre moments de la routine (avant la séance, pendant, après, revue du dimanche) sont **cochables et datés** : chaque case enregistrée porte la date du jour où elle a été faite. C'est la réponse à « est-ce que j'ai vraiment suivi ma routine ? ».
+
+- **Le jour en cours**, avec ses 17 cases : 13 en semaine (avant 4, pendant 5, après 4) et 17 le dimanche, la revue hebdomadaire ne comptant que ce jour-là.
+- **Une journée est « complète »** quand toutes ses cases du jour sont cochées ; « entamée » dès qu'une seule l'est. Les deux états se voient d'un coup d'œil.
+- **Navigation par jour** : *Jour précédent*, *Jour suivant* (bloqué sur le futur : on ne coche pas demain) et *revenir à aujourd'hui*.
+- **Deux boutons de confort** : *Cocher ce moment* (les 4 ou 5 cases d'un bloc) et *Tout cocher aujourd'hui* / *Vider cette journée*.
+- **Le mois entier en grille** : chaque case porte son numéro et une petite barre de progression — verte (complète), dorée (entamée), vide (rien de coché). Le dimanche est signalé, aujourd'hui est encadré, les jours à venir sont grisés. Un appui sur une case affiche cette journée.
+- **Les bilans** : jours complets du mois sur les jours écoulés (et le pourcentage), jours entamés, **jours ouvrés complets de la semaine**, et **la série en cours** de jours complets d'affilée. Une journée entamée mais non finie arrête la série ; une journée pas encore commencée laisse compter jusqu'à hier — on n'est pas puni avant d'avoir commencé.
+- **Tout est enregistré avec le journal** : la routine vit dans les mêmes données que le plan (donc **chiffrée quand le verrou est actif**, **sauvegardée dans votre dépôt** et **fusionnée entre appareils, jour par jour**). Une journée vidée disparaît du fichier : rien ne s'accumule inutilement.
+- **Rien n'est recopié** : les moments et leurs cases sont lus directement dans `plan.js`. Le jour où vous modifiez votre routine dans le plan, la page de suivi suit sans qu'une ligne soit à réécrire.
+- Utilisable **hors ligne**, sans emoji, sans ressource distante, pensé pour le doigt (cibles de 42 px) et **imprimable**.
+
+Recette dédiée : `node tools/routine-test.js` (**77 contrôles** — source unique des moments, calcul des dates et du dimanche, score d'une journée, enregistrement daté et isolation entre les jours, série, grille du mois, bilans, affichage sans ressource externe, et parcours réel dans la vue Plan : cocher, décocher, tout cocher, naviguer d'un jour à l'autre).
 
 ### 🎓 Formation
 - **Le cours complet, chapitre par chapitre** : l'essentiel, les leçons, la lecture sur le graphique, les étapes à suivre, les erreurs fréquentes et **52 exercices notés** (dont le calcul de risque).
@@ -652,6 +669,7 @@ npm i -D jsdom && node tools/formation-test.js           # formation : cours, en
 npm i -D jsdom && node tools/graphe-test.js              # graphique TradingView : lien, hors ligne, boutons
 npm i -D jsdom && node tools/relecture-test.js           # relecture des vrais trades : règles, notation, bilan
 npm i -D jsdom && node tools/etude-test.js                # étude de cas réelle : cours encodés, trade, dessin SVG
+npm i -D jsdom && node tools/routine-test.js              # routine : cases datées, série, grille du mois
 node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
@@ -663,6 +681,7 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 3.0 | **Ma routine, jour par jour** (bloc 14 du plan) : les quatre moments de la routine deviennent **cochables et datés** — 13 cases en semaine, 17 le dimanche (la revue ne compte que ce dimanche-là). Une journée est **complète** quand tout est coché, **entamée** dès la première case. Navigation *jour précédent / jour suivant / aujourd'hui* (le futur est bloqué), boutons *cocher ce moment* et *tout cocher / vider la journée*, **grille du mois** avec l'état de chaque jour (verte, dorée, vide, dimanche signalé, aujourd'hui encadré, futur grisé), **bilans** du mois et de la semaine et **série de jours complets** (une journée entamée mais non finie arrête la série, une journée pas encore commencée laisse compter jusqu'à hier). Les moments et leurs cases sont **lus dans `plan.js`**, jamais recopiés. Tout s'enregistre **avec le journal** : chiffré par le verrou, sauvegardé dans votre dépôt, fusionné entre appareils **jour par jour**. Recette `tools/routine-test.js` : 77 contrôles |
 | 2.9 | **Étude de cas réelle : l'or, 17 → 22 octobre 2025** — un trade complet du début à la fin, dans la vue Formation : le contexte journalier, la veille, le **balayage de liquidité** au-dessus des records (4 398,0 puis 4 393,6), le scénario écrit avant d'entrer, la cassure confirmée (clôture 4 367,7 sous 4 370,2), l'entrée à 4 368, le stop 4 402 jamais approché, trois objectifs touchés (1:2 à 08:00, 1:4 à 12:00, 1:7 à 14:00) pour +238 $ l'once en douze heures, puis la **relecture des 5 règles du plan** — qui rend **4 sur 5** : le risque de 3,4 % sur un compte de 1 000 $ viole la règle du 1 %, et la page conclut qu'il fallait **laisser passer ce trade** ou attendre 3 400 $. Le contre-exemple (acheter le record : −6,9 % par once, −30,5 % du compte) est chiffré à côté. Les 44 bougies journalières et 69 bougies horaires sont **réelles** (relevé figé, source citée) et **dessinées en SVG par l'application** : aucune image, aucun appel réseau, l'étude marche hors ligne et s'imprime. Deux boutons ouvrent l'or en journalier et en horaire sur TradingView. Recette `tools/etude-test.js` : 78 contrôles, cache `trading-desk-v15` |
 | 2.8 | **Applications d'entraînement du Play Store listées dans la Formation** : les trois qui corrigent et notent (Candle Master, Chart Quiz, Trading Game) et les deux qui expliquent (Forex Smart Money Concept, GTS), avec leur langue, leur prix et **leur limite**. Plus une mise en garde explicite : beaucoup d'applications « trading » du Play Store sont des **vitrines de courtiers** poussant au dépôt d'argent réel — aucune n'est nécessaire pour s'entraîner. La liste est écrite **dans l'application, hors ligne**, sans aucun lien externe ajouté. |
 | 2.7 | **Relire ses vrais trades** : l'application reprend vos trades du journal et vous repose les questions du plan — règles chiffrées (stop 15 pips, ratio 1:7, risque 1 %, fenêtre de tir, limite du jour) corrigées automatiquement avec la mesure affichée, jugements de lecture enregistrés séparément et non notés. **Le résultat du trade reste masqué jusqu'à la révélation**, pour que la lecture ne soit pas influencée. La règle des 15 pips n'est posée que sur les paires forex. Recette `tools/relecture-test.js` (61 contrôles). |

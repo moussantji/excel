@@ -1267,6 +1267,67 @@ body.verrouille>#app,body.verrouille>.mobile-nav{filter:blur(9px) saturate(.5);p
 .etude-source{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:.76rem;line-height:1.65;color:var(--muted-2)}
 .etude-code{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
 @media print{.etude-figure,.etude-tableau,.etude-carnet,.etude-verdict{break-inside:avoid}}
+/* ---- routine quotidienne cochée jour par jour (vue Plan) ---- */
+.rt-jour{margin:14px 0 18px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
+.rt-jour-tete{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rt-date{text-align:center;flex:1;min-width:190px}
+.rt-date b{font-size:.98rem;text-transform:capitalize}
+.rt-aujourd{margin-left:8px;padding:2px 8px;border-radius:999px;background:var(--gold-dim);color:var(--gold-2);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+.rt-lien{margin-left:8px;background:none;border:0;color:var(--blue);font-size:.78rem;cursor:pointer;text-decoration:underline}
+.rt-score{display:flex;align-items:center;gap:12px;margin-top:10px}
+.rt-score .rt-barre{flex:1}
+.rt-score-texte{font-size:.8rem;color:var(--muted);white-space:nowrap}
+.rt-barre{height:8px;border-radius:999px;background:var(--panel-3);overflow:hidden}
+.rt-barre span{display:block;height:100%;width:0;background:var(--muted-2);transition:width var(--dur) var(--ease)}
+.rt-barre.warn span{background:var(--gold)}
+.rt-barre.ok span{background:var(--green)}
+.rt-moment{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
+.rt-moment.complet{border-color:rgba(46,211,160,.35)}
+.rt-moment.facultatif{opacity:.85;border-style:dashed}
+.rt-moment>header{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.rt-moment h4{margin:0;font-size:.88rem}
+.rt-compte{font-family:var(--mono);font-size:.78rem;color:var(--muted);white-space:nowrap}
+.rt-moment ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rt-moment li label{display:flex;align-items:flex-start;gap:10px;padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius-xs);cursor:pointer;min-height:42px;line-height:1.45}
+.rt-moment li label:hover{border-color:var(--line-2);background:var(--panel-3)}
+.rt-moment li input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--gold)}
+.rt-moment li input:checked+span{color:var(--muted)}
+.rt-moment li span{font-size:.85rem}
+.rt-moment>footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap}
+.rt-note{font-size:.74rem;color:var(--muted-2)}
+.rt-jour-pied{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px;padding-top:10px;border-top:1px solid var(--line)}
+.rt-resume{font-size:.8rem;color:var(--muted)}
+.rt-mois{margin:16px 0 8px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
+.rt-mois header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rt-mois h4{margin:0;font-size:.9rem;text-transform:capitalize}
+.rt-mois-bilan{font-size:.78rem;color:var(--muted)}
+.rt-grille{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:10px}
+.rt-tete-col{text-align:center;font-size:.7rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:.06em}
+.rt-tete-col.we{color:var(--gold-3)}
+.rt-vide{height:0}
+.rt-case{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:46px;padding:4px 2px;border:1px solid var(--line);border-radius:var(--radius-xs);background:var(--panel-3);color:var(--text);cursor:pointer}
+.rt-case.we{border-color:rgba(237,187,82,.18)}
+.rt-case.auj{box-shadow:0 0 0 2px var(--gold-glow) inset;border-color:var(--gold-3)}
+.rt-case.choisi{outline:2px solid var(--gold)}
+.rt-case.futur{opacity:.4;cursor:default}
+.rt-case.complet{background:var(--green-dim);border-color:rgba(46,211,160,.4)}
+.rt-case.partiel{background:var(--gold-dim)}
+.rt-num{font-family:var(--mono);font-size:.78rem}
+.rt-mini{display:block;width:80%;height:3px;border-radius:2px;background:rgba(255,255,255,.07)}
+.rt-mini i{display:block;height:100%;border-radius:2px;background:var(--muted-2)}
+.rt-case.complet .rt-mini i{background:var(--green)}
+.rt-case.partiel .rt-mini i{background:var(--gold)}
+.rt-legende{margin:10px 0 0;font-size:.74rem;color:var(--muted-2);line-height:1.6}
+.rt-puce{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 10px;background:var(--panel-3);border:1px solid var(--line-2);vertical-align:middle}
+.rt-puce:first-child{margin-left:0}
+.rt-puce.complet{background:var(--green-dim);border-color:rgba(46,211,160,.4)}
+.rt-puce.partiel{background:var(--gold-dim);border-color:var(--gold-3)}
+@media (max-width:520px){
+  .rt-score{flex-direction:column;align-items:stretch}
+  .rt-score-texte{white-space:normal}
+  .rt-case{min-height:42px}
+}
+@media print{.rt-case{min-height:38px}.rt-moment,.rt-mois,.rt-jour{break-inside:avoid}}
 .vrais-table{display:flex;flex-direction:column;gap:12px;margin:12px 0}
 .vrais-ligne{border-left:2px solid var(--gold-dim);padding-left:12px}
 .vrais-quoi{display:flex;flex-direction:column;gap:2px}

@@ -347,6 +347,8 @@
       '<p class="lead">Cases à cocher conservées dans le navigateur. Chaque case non cochée est une raison de ne pas cliquer.</p>' +
       '<div class="checklists">' + p.checklists.map(checklistHTML).join('') + '</div>' +
       '</section>';
+    // Routine quotidienne cochée jour par jour
+    if (global.Routine) html += global.Routine.carte(App);
     html += '</div>';
 
     html += '<p class="muted small">Ce plan est un document vivant : il se modifie une fois par mois maximum, jamais après une perte. Les modifications se font dans <code>trading/assets/js/plan.js</code>.</p>';
@@ -374,6 +376,9 @@
       });
     });
     $('#planPrint').addEventListener('click', function () { global.print(); });
+
+    // routine : cases datées, navigation, mois
+    if (global.Routine) global.Routine.cabler(host, App);
   }
 
   function renderBlock(item) {
