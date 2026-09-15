@@ -70,12 +70,36 @@ verif('les chapitres visuels renvoient vers l\'entraîneur',
   chapitres.filter((c) => c.entraineur).length >= 4,
   chapitres.filter((c) => c.entraineur).map((c) => c.num + '→' + c.entraineur).join(' '));
 
-// leçons complètes
+// leçons complètes : le fond compte autant que le texte d'amorce — on mesure
+// le texte PLUS les puces (c'est là que vivent les chiffres et les définitions)
 const sansTexte = [];
+let puces = 0;
 chapitres.forEach((c) => c.lecons.forEach((l) => {
-  if (!l.titre || !l.texte || l.texte.length < 60) sansTexte.push(c.num + ' / ' + l.titre);
+  const pts = l.points || [];
+  puces += pts.length;
+  const poids = (l.texte || '').length + pts.join(' ').length;
+  if (!l.titre || !l.texte || l.texte.length < 60 || poids < 220 || (l.texte.length < 120 && pts.length < 2)) {
+    sansTexte.push(c.num + ' / ' + l.titre + ' (' + poids + ' car., ' + pts.length + ' puce(s))');
+  }
 }));
-verif('chaque leçon a un titre et un texte développé', sansTexte.length === 0, sansTexte.slice(0, 3).join(' | ') || 'toutes complètes');
+verif('chaque leçon a un titre, un texte et un contenu développé', sansTexte.length === 0,
+  sansTexte.slice(0, 3).join(' | ') || 'toutes complètes');
+verif('les leçons apportent des points concrets, pas seulement une amorce', puces >= 100, puces + ' puces');
+
+// le fond de la méthode est enseigné (au-delà de la simple présence des mots)
+const fondAttendu = [
+  ['les trois types de BOS', /BOS classique/i, /BOS de continuation/i, /BOS piège|BOS trap/i],
+  ["la lecture d'une tendance (HH/HL, LH/LL)",  /Higher High|HH/, /Higher Low|HL/, /Lower High|LH/, /Lower Low|LL/],
+  ['la formule de risque en trois lignes', /capital × 1 %|capital × 1%/i, /Taille \(lots\)|taille en lots/i],
+  ['les conditions d\'arrêt', /2 stop loss dans la journée|[Dd]eux stop loss dans la journée/, /6 % de perte sur la semaine/, /10 % de perte depuis le plus haut/, /48 h|48 heures/],
+  ['les seuils de KPI et leurs décisions', /inférieur à 85 %|sous 85 %/, /1:3/, /0 R sur 20 trades|inférieure à 0 R/, /15 pips/],
+  ['les quatre setups autorisés', /Golden Setup/i, /Complexe Pull Back/i, /Market Shift/i, /ODF/],
+  ['les fenêtres de tir en heure de Bamako', /Asie 1h|Asie 01|Asie 1 h/, /Europe 8h|Europe 08/, /USA 13h|USA 13/],
+  ['les phases de Wyckoff et l\'entrée en phase C', /phase C/i, /SPRING/, /UTAD/]
+];
+const fondManquant = fondAttendu.filter(([, ...motifs]) => !motifs.every((m) => m.test(texteComplet))).map(([n]) => n);
+verif('le fond de chaque notion clé est enseigné (définitions, pas seulement les mots)',
+  fondManquant.length === 0, fondManquant.join(' | ') || fondAttendu.length + ' notions développées');
 
 // exercices bien formés
 const mauvaisEx = [];

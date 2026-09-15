@@ -231,8 +231,13 @@
         },
         {
           titre: 'Les 4 interdits absolus',
-          texte: 'Élargir un stop. Prendre un troisième trade après deux stop loss. Entrer sans ChoCh ni prise de liquidité. Trader en dehors des fenêtres de tir. Aucune de ces erreurs n\'a de circonstance atténuante.',
-          points: []
+          texte: 'Quatre erreurs font sortir du plan quelle que soit la conviction du moment. Aucune n\'a de circonstance atténuante : elles sont la cause directe des comptes qui meurent.',
+          points: [
+            'Élargir un stop : la perte n\'est plus celle qui avait été acceptée, elle devient subie.',
+            'Prendre un troisième trade après deux stop loss : la journée est finie, même si une configuration parfaite apparaît.',
+            'Entrer sans ChoCh ni prise de liquidité : sans les deux, il n\'y a pas de cause à effet, seulement une intuition.',
+            'Trader en dehors des fenêtres de tir : la liquidité n\'y est pas, et le plan n\'a pas été écrit pour ces heures-là.'
+          ]
         }
       ],
       graphique: 'Le risque se lit sur le graphique avant tout calcul : où se place l\'invalidation logique (derrière le point A ou B du complexe, sous le plus bas du SPRING, au-delà du niveau balayé) ? Si cette distance dépasse 15 pips, le trade est trop cher : on ne le prend pas.',
@@ -1003,8 +1008,13 @@
         },
         {
           titre: 'La phrase d\'ancrage',
-          texte: 'Elle se relit avant chaque séance, et surtout après une perte : « Je gagne avec un ratio, pas avec un taux de réussite. Attendre la confirmation n\'est pas perdre du temps, c\'est le métier. »',
-          points: []
+          texte: 'Une phrase écrite à l\'avance, à relire avant chaque séance et surtout après une perte. Elle rappelle pourquoi la méthode est patiente : « Je gagne avec un ratio, pas avec un taux de réussite. Attendre la confirmation n\'est pas perdre du temps, c\'est le métier. »',
+          points: [
+            'Elle s\'écrit à froid, puis se relit à voix haute avant la fenêtre de tir.',
+            'Elle se relit après chaque perte, avant de regarder la suivante : c\'est là qu\'elle sert.',
+            'Elle peut être affichée dans le journal (champ note) ou imprimée avec la page du plan.',
+            'Un setup ne s\'abandonne qu\'après 20 trades mesurés : une phrase d\'ancrage empêche de changer de méthode sur une impression.'
+          ]
         },
         {
           titre: 'Récupérer après une série de pertes',
