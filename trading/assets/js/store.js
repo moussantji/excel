@@ -216,7 +216,19 @@
       sessions: SESSION_LIST.slice(),
       setups: SETUP_LIST.slice(),
       symbols: ['EURUSD', 'GBPUSD', 'XAUUSD', 'US30', 'NAS100'],
-      currencySymbol: '€'
+      currencySymbol: '€',
+      /* Rappels du plan (notify.js) — éteints par défaut : jamais de demande
+         d'autorisation sans un geste volontaire. */
+      notifications: {
+        actif: false,
+        fenetres: ['asie', 'europe', 'usa'],
+        avance: 15,
+        preparation: true,
+        ouverture: true,
+        cloture: true,
+        revue: false,
+        revueHeure: '18:00'
+      }
     };
   }
 

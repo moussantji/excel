@@ -1502,6 +1502,9 @@
       global.Sync.onChange(function () { renderSyncBadge(); renderSyncBanner(); });
       global.Sync.autoStart();
     }
+    // Rappels du plan : reprogramme les alertes aux heures des fenêtres de tir
+    // et signale les rappels manqués depuis la dernière ouverture.
+    if (global.Notify) global.Notify.demarrer();
     // Notifications de démarrage (une seule à la fois, et pas au premier lancement :
     // l'état vide du journal explique déjà quoi faire).
     if (!Store.storageAvailable()) {

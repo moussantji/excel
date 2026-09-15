@@ -6,6 +6,23 @@
   'use strict';
 
   /* ---------------------------------------------------------
+     Fenêtres de tir du plan — SOURCE UNIQUE
+     Le texte du plan ci-dessous et les rappels programmés
+     (notify.js) sont tous deux construits à partir de cette
+     liste : modifier une heure ici la change partout.
+     Heure de Bamako (fuseau du Mali, UTC+0 toute l'année).
+     --------------------------------------------------------- */
+  var FENETRES = [
+    { id: 'asie',   nom: 'Asie',   court: 'Asie 1h–2h',    debut: '01:00', fin: '02:00' },
+    { id: 'europe', nom: 'Europe', court: 'Europe 8h–9h',  debut: '08:00', fin: '09:00' },
+    { id: 'usa',    nom: 'USA',    court: 'USA 13h–14h',   debut: '13:00', fin: '14:00' }
+  ];
+  /** « Asie 1h–2h · Europe 8h–9h · USA 13h–14h » */
+  function fenetresTexte() {
+    return FENETRES.map(function (f) { return f.court; }).join(' · ');
+  }
+
+  /* ---------------------------------------------------------
      Contenu du plan (modifiable directement ici)
      --------------------------------------------------------- */
   var PLAN = {
@@ -28,7 +45,7 @@
             ['Marché', 'Forex majeurs, or (XAUUSD), indices (US30, NAS100)'],
             ['Style', 'Intraday sur les fenêtres de tir, swing court en complément sur les prises de position Wyckoff'],
             ['Lecture', 'HTF = biais directionnel et zones majeures · LTF = prise de liquidité, ChoCh, BOS, entrée'],
-            ['Fenêtres de tir', 'Asie 1h–2h · Europe 8h–9h · USA 13h–14h (heure de Bamako, fuseau du Mali)'],
+            ['Fenêtres de tir', fenetresTexte() + ' (heure de Bamako, fuseau du Mali)'],
             ['Instrument type', '1 à 3 instruments suivis par semaine, pas plus'],
             ['Unité de risque', 'R = 1 % du capital maximum par trade']
           ]},
@@ -262,7 +279,7 @@
             ['Price delivery', "Lecture algorithmique du parcours du prix (IPDA) : le marché livre le prix d'un niveau à un autre."],
             ['Décompte 0-1-2-3', "0 = tentative d'arrêt qui échoue · 1 = arrêt effectif et création du failed · 2 = prise de liquidité · 3 = test de la prise de liquidité."],
             ['Vagues d\'Elliott', "4 à 5 vagues d'impulsion, avec une perte de puissance des impulsions : signe de fin de mouvement."],
-            ['Fenêtres de tir', 'Asie 1h–2h · Europe 8h–9h · USA 13h–14h (heure de Bamako). Hors de ces fenêtres, je ne cherche pas d\'entrée.']
+            ['Fenêtres de tir', fenetresTexte() + ' (heure de Bamako). Hors de ces fenêtres, je ne cherche pas d\'entrée.']
           ]},
           { type: 'table',
             head: ['Étape', 'Ce que je fais'],
@@ -668,6 +685,8 @@
 
   global.Plan = {
     data: PLAN,
+    fenetres: FENETRES,
+    fenetresTexte: fenetresTexte,
     loadChecks: loadChecks,
     saveChecks: saveChecks,
     control: control,

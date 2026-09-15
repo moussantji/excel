@@ -7,7 +7,7 @@
    ========================================================= */
 'use strict';
 
-const VERSION = 'trading-desk-v8';
+const VERSION = 'trading-desk-v9';
 const CORE = [
   './',
   './index.html',
@@ -23,12 +23,30 @@ const CORE = [
   './assets/js/pwa.js',
   './assets/js/sync.js',
   './assets/js/lock.js',
+  './assets/js/notify.js',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
   './assets/icons/icon-maskable-512.png',
   './assets/icons/apple-touch-icon.png',
   './assets/icons/favicon-32.png'
 ];
+
+/* ---- rappels du plan : un appui sur la notification ouvre l'application ---- */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const cible = (event.notification.data && event.notification.data.url) || './';
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clients) {
+      if ('focus' in client) {
+        try { await client.focus(); } catch (e) { /* fenêtre déjà active */ }
+        if ('navigate' in client) { try { await client.navigate(cible); } catch (e) { /* ignore */ } }
+        return;
+      }
+    }
+    if (self.clients.openWindow) await self.clients.openWindow(cible);
+  })());
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {

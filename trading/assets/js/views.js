@@ -808,6 +808,189 @@
       '<input class="input" id="' + id + '" value="' + attr(value || '') + '" placeholder="' + attr(placeholder) + '" spellcheck="false"></div>';
   }
 
+  /* ---------------------------------------------------------
+     Rappels du plan — notifications de la tablette
+     --------------------------------------------------------- */
+  var JOURS_COURTS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+
+  function carteRappels(App) {
+    if (!global.Notify) return '';
+    var N = global.Notify;
+    var brut = (App.state.settings && App.state.settings.notifications) || {};
+    var r = N.reglages(brut);
+    var e = N.etat();
+
+    var pastille = '<span class="badge ' + (e.prets && r.actif ? 'ok' : e.prets ? 'flat' : (e.support ? 'warn' : 'ko')) + '">' +
+      (e.prets && r.actif ? 'Actifs' : e.prets ? 'Autorisés, éteints' : e.support ? 'À autoriser' : 'Indisponibles') + '</span>';
+
+    /* --- état de l'appareil --- */
+    var etatHTML = '<div class="notif-etat ' + (e.prets ? 'ok' : 'warn') + '">' +
+      '<span class="notif-ico">' + UI.icon(e.prets && r.actif ? 'cloche' : 'clocheOff') + '</span>' +
+      '<div><p><b>' + esc(nomEtat(e, r)) + '</b></p><p class="muted small">' + esc(e.raison) + '</p></div></div>';
+
+    /* --- prochains rappels --- */
+    var suite = prochainsRappels(N, r);
+    var listeHTML = suite.length
+      ? '<ul class="rappels-liste">' + suite.map(function (ev) {
+          var jourEv = N.jourMali(ev.at), jourAuj = N.jourMali();
+        var jourTxt = jourEv.cle === jourAuj.cle ? ''
+          : (jourEv.cle === N.jourSuivant(jourAuj).cle ? 'demain' : JOURS_COURTS[jourEv.jourSemaine] + ' ' + jourEv.jour + '/' + (jourEv.mois + 1));
+        return '<li><time>' + esc(N.heureAppareil(ev.at)) + '</time><span>' + esc(ev.titre) + '</span>' +
+          (jourTxt ? '<i class="jour">' + esc(jourTxt) + '</i>' : '') +
+          (N.decalageAppareil(ev.at) === 0 ? '' : '<em>' + esc(N.heureMali(ev.at)) + ' Mali</em>') + '</li>';
+        }).join('') + '</ul>'
+      : '<p class="muted small">Aucun rappel programmé pour aujourd\'hui : choisissez vos fenêtres ci-dessous.</p>';
+
+    /* --- formulaire --- */
+    var casesFenetres = N.fenetres().map(function (f) {
+      var coche = r.fenetres.indexOf(f.id) > -1;
+      return '<label class="case"><input type="checkbox" name="fenetres" value="' + attr(f.id) + '"' + (coche ? ' checked' : '') + '>' +
+        '<span><b>' + esc(f.nom) + '</b><em>' + esc(f.debut + ' – ' + f.fin + ' (Mali)') + '</em></span></label>';
+    }).join('');
+
+    var formHTML = '<form id="notifForm" class="notif-form">' +
+      '<div class="form-field wide"><label>Fenêtres de tir du plan suivies</label>' +
+      '<div class="case-liste">' + casesFenetres + '</div>' +
+      '<span class="field-hint">Heures du plan SMV, en heure de Bamako.</span></div>' +
+
+      '<div class="form-field"><label>Prévenir avant l\'ouverture</label>' +
+      '<select class="input" name="avance">' + N.AVANCES.map(function (m) {
+        return '<option value="' + m + '"' + (m === r.avance ? ' selected' : '') + '>' + (m === 0 ? 'Ne pas prévenir' : 'Oui, ' + m + ' min avant') + '</option>';
+      }).join('') + '</select></div>' +
+
+      '<div class="form-field"><label>Revue hebdomadaire (dimanche)</label>' +
+      '<div class="notif-ligne">' +
+      '<label class="case compact"><input type="checkbox" name="revue"' + (r.revue ? ' checked' : '') + '><span><b>Activer</b></span></label>' +
+      '<input class="input input-sm" type="time" name="revueHeure" value="' + attr(r.revueHeure) + '">' +
+      '</div></div>' +
+
+      '<div class="form-field wide"><label>Alertes</label><div class="case-liste">' +
+      '<label class="case"><input type="checkbox" name="ouverture"' + (r.ouverture ? ' checked' : '') + '>' +
+      '<span><b>À l\'ouverture</b><em>La fenêtre s\'ouvre : cherchez la prise de liquidité</em></span></label>' +
+      '<label class="case"><input type="checkbox" name="cloture"' + (r.cloture ? ' checked' : '') + '>' +
+      '<span><b>À la fermeture</b><em>Rappel de noter les trades dans le journal</em></span></label>' +
+      '</div></div>' +
+
+      '<div class="form-actions">' +
+      '<label class="case compact actif"><input type="checkbox" name="actif"' + (r.actif ? ' checked' : '') + '><span><b>Rappels activés</b></span></label>' +
+      '<button class="btn primary" type="submit">Enregistrer</button>' +
+      '<button class="btn ghost" type="button" id="notifEssai">Envoyer un essai</button>' +
+      (e.permission === 'default' && e.support
+        ? '<button class="btn" type="button" id="notifAutoriser">Autoriser les notifications</button>'
+        : '') +
+      '</div></form>';
+
+    var limites = '<p class="muted small notif-note">Les rappels partent de la tablette elle-même : rien ne sort de l\'appareil. ' +
+      'Ils fonctionnent quand l\'application est ouverte, y compris en arrière-plan ; application fermée, la tablette ne peut pas les déclencher seule — ' +
+      'les rappels manqués vous sont alors signalés à la réouverture. ' +
+      (e.apple && !e.installe ? 'Sur iPhone et iPad : installez d\'abord l\'application (Safari → Partager → Sur l\'écran d\'accueil).' : '') + '</p>';
+
+    var rearm = '<p class="small"><button class="btn ghost" type="button" id="notifRearmer">Réarmer les rappels du jour</button></p>';
+
+    return App.card('Rappels du plan (notifications de la tablette)',
+      etatHTML + listeHTML + formHTML + rearm + limites, { tools: pastille, class: 'notif-card' });
+  }
+
+  function nomEtat(e, r) {
+    if (!e.support) return e.apple && !e.installe ? 'Notifications indisponibles : application non installée' : 'Notifications indisponibles sur ce navigateur';
+    if (!e.securise) return 'Notifications indisponibles en http://';
+    if (e.permission === 'denied') return 'Notifications refusées';
+    if (e.permission === 'default') return 'Autorisation à donner';
+    return r.actif ? 'Rappels actifs' : 'Autorisation accordée, rappels éteints';
+  }
+
+  /** Les prochains rappels (huit jours d'avance au maximum), pour l'aperçu. */
+  function prochainsRappels(N, r) {
+    var actifs = Object.assign({}, r, { actif: true });
+    var t = Date.now(), jour = N.jourMali();
+    var liste = [];
+    for (var i = 0; i < 8 && liste.length < 4; i++) {
+      liste = liste.concat(N.evenementsDuJour(jour, actifs).filter(function (ev) { return ev.at > t; }));
+      if (liste.length >= 4) break;
+      jour = N.jourSuivant(jour);
+    }
+    return liste.slice(0, 4);
+  }
+
+  /* --- câblage des boutons de la carte --- */
+  function brancherRappels(App) {
+    var N = global.Notify;
+    if (!N) return;
+    var form = $('#notifForm');
+    var autoriser = $('#notifAutoriser');
+    var essai = $('#notifEssai');
+    var rearm = $('#notifRearmer');
+
+    function enregistrer(extra) {
+      var s = App.state.settings;
+      var f = form;
+      function cochee(n) { return !!(f && f.elements[n] && f.elements[n].checked); }
+      function fenetresCochees() {
+        if (!f) return N.DEFAUT.fenetres.slice();
+        return Array.prototype.slice.call(f.querySelectorAll('input[name="fenetres"]'))
+          .filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+      }
+      var choix = Object.assign({
+        actif: cochee('actif'),
+        fenetres: fenetresCochees(),
+        avance: Store.num(f && f.elements.avance ? f.elements.avance.value : '') || 0,
+        preparation: true,
+        ouverture: cochee('ouverture'),
+        cloture: cochee('cloture'),
+        revue: cochee('revue'),
+        revueHeure: (f && f.elements.revueHeure && f.elements.revueHeure.value) || N.DEFAUT.revueHeure
+      }, extra || {});
+      s.notifications = choix;
+      UI.toast(choix.actif ? 'Rappels enregistrés.' : 'Rappels éteints.', choix.actif ? 'success' : '', 5000);
+      App.persist();
+      N.rafraichir();
+      App.render();
+    }
+
+    if (form) {
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        if (!N.etat().prets) {
+          // Sans autorisation, activer ne servirait à rien : on explique au lieu de faire semblant
+          enregistrer({ actif: false });
+          UI.toast(N.etat().raison, 'warn', 8000);
+          return;
+        }
+        enregistrer();
+      });
+    }
+    if (autoriser) {
+      autoriser.addEventListener('click', function () {
+        N.demander().then(function (rep) {
+          if (rep === 'granted') {
+            enregistrer({ actif: true });
+            UI.toast('Notifications autorisées : les rappels du plan sont actifs.', 'success', 6000);
+          } else if (rep === 'denied') {
+            UI.toast('Notifications refusées. Vous pouvez les réautoriser dans les réglages de la tablette.', 'warn', 8000);
+            App.render();
+          } else {
+            UI.toast(N.etat().raison, 'warn', 8000);
+            App.render();
+          }
+        });
+      });
+    }
+    if (essai) {
+      essai.addEventListener('click', function () {
+        if (!N.etat().prets) { UI.toast(N.etat().raison, 'warn', 8000); return; }
+        N.tester();
+        UI.toast('Essai envoyé : cherchez la notification de la tablette.', 'success', 6000);
+      });
+    }
+    if (rearm) {
+      rearm.addEventListener('click', function () {
+        N.oublier();
+        N.rafraichir();
+        UI.toast('Rappels du jour réarmés.', 'success', 5000);
+      });
+    }
+  }
+
   function params(host, model, App) {
     var s = App.state.settings;
     var html = '';
@@ -834,6 +1017,7 @@
 
     html += carteNuage(App);
     html += carteSecurite(App);
+    html += carteRappels(App);
 
     html += '<div class="grid-2">';
     html += App.card('Données & sauvegarde',
@@ -892,9 +1076,12 @@
       App.state.trades = App.state.trades.map(function (t) { return Store.normalizeTrade(Store.toRaw(t), s); });
       UI.setCurrency(s.currency);
       App.persist();
+      if (global.Notify) global.Notify.rafraichir();
       App.render();
       UI.toast('Paramètres enregistrés.');
     });
+
+    brancherRappels(App);
 
     $('#stDemo').addEventListener('click', function () { App.loadDemo(); });
     $('#stImport').addEventListener('click', function () { App.openImportDialog(App.buildModel()); });

@@ -67,6 +67,45 @@ Recette automatique du mode hors ligne : `node tools/offline-test.js` (service w
 
 ---
 
+## Rappels du plan (notifications de la tablette)
+
+L'application peut prévenir **aux heures de vos fenêtres de tir**, directement dans la boîte de notifications de la tablette — sans compte, sans serveur, sans service tiers : la notification est fabriquée par l'appareil lui-même.
+
+### Ce qui peut vous être annoncé
+
+| Moment | Message | Heure (plan SMV, heure de Bamako) |
+|---|---|---|
+| Préparation (15 min avant, réglable ou désactivable) | « Fenêtre Europe dans 15 min » — relisez votre biais HTF et vos zones | 07:45 |
+| Ouverture | « Fenêtre Europe ouverte » — attendez la prise de liquidité, le ChoCh, le BOS | 08:00 |
+| Fermeture | « Fenêtre Europe terminée » — notez vos trades tant que c'est frais | 09:00 |
+| Revue hebdomadaire (facultatif) | « Revue hebdomadaire » — 30 min de relecture du journal | dimanche, heure au choix |
+
+Les heures viennent **du plan lui-même** (bloc « Fenêtres de tir » : Asie 01:00–02:00, Europe 08:00–09:00, USA 13:00–14:00, heure du Mali). Modifier une heure dans `assets/js/plan.js` la change à la fois dans le texte du plan et dans les rappels : une seule source, aucune divergence possible. Chaque fenêtre peut être suivie ou ignorée individuellement.
+
+### Activer
+
+**Paramètres → Rappels du plan** :
+
+1. « Autoriser les notifications » (la demande doit venir d'un appui : c'est le cas de ce bouton) ;
+2. cochez les fenêtres voulues, l'avance avant ouverture et les alertes souhaitées ;
+3. « Envoyer un essai » pour vérifier que la tablette affiche bien la notification.
+
+Les rappels sont **éteints par défaut** : rien n'est demandé tant que vous n'appuyez pas sur le bouton. Le réglage suit votre journal (il part dans la sauvegarde cloud comme le reste des paramètres).
+
+### Ce qu'il faut savoir
+
+- **Adresse sécurisée obligatoire** : les notifications n'existent qu'en `https://` (GitHub Pages, Netlify Drop, Cloudflare Pages) ou depuis l'icône installée. En Wi-Fi local `http://192.168.x.x`, elles sont indisponibles — l'écran des Paramètres le dit clairement au lieu de faire semblant.
+- **iPhone / iPad** : les notifications n'existent que pour une application **installée** (Safari → Partager → Sur l'écran d'accueil), à partir d'iOS 16.4. Ouverte dans un onglet Safari, la tablette ne les affiche pas ; l'application explique la marche à suivre dans ce cas.
+- **Application fermée** : sans serveur de push (et il n'y en a pas, c'est le principe), une application fermée ne peut pas se réveiller seule. Les rappels partent donc tant que l'application est ouverte, **y compris en arrière-plan** — le cas qui compte : vous regardez votre plateforme de trading, pas le journal. Les rappels manqués sont signalés **à la réouverture**, regroupés en un seul message.
+- **Pas de rafale** : plusieurs rappels dus en même temps donnent un seul message. Un rappel trop vieux (fenêtre terminée depuis longtemps) est abandonné plutôt que d'arriver hors sujet.
+- **Aucun doublon** : chaque rappel porte une étiquette datée ; un rappel ne part jamais deux fois dans la journée. Le bouton « Réarmer les rappels du jour » remet les compteurs à zéro si besoin.
+- **Vie privée** : aucune donnée de trading n'est transmise. Le message contient seulement l'heure et le nom de la fenêtre. La trace des rappels partis reste dans le navigateur (`journal-trading:notifications`, purgée au bout de huit jours).
+- Si l'application est **au premier plan** au moment du rappel, le message s'affiche dans l'application plutôt que par-dessus : pas de notification redondante pendant que vous lisez déjà l'écran.
+
+Recette dédiée : `node tools/notify-test.js` (83 contrôles — heures du plan, heure du Mali, anti-doublon, rattrapage, refus d'autorisation, `http://`, iPad sans installation, service worker, absence d'appel réseau).
+
+---
+
 ## Sur tablette (iPad / Android)
 
 Trois façons de l'utiliser sur la tablette, de la plus rapide à la plus complète.
@@ -224,7 +263,7 @@ Plan rédigé sur la méthode **SMV** : les 4 lois (structure, offre/demande, ca
 - Bouton **Imprimer / PDF** avec une feuille de style dédiée (fond clair, lisible sur papier).
 
 ### ⚙️ Paramètres
-Capital, devise, risque par trade, valeur du pip, limites (jour/semaine/drawdown), objectif mensuel, listes d'instruments, de setups et de sessions ; **sécurité** (verrouillage, chiffrement, code de secours, biométrie, verrouillage automatique) ; **sauvegarde cloud (dépôt GitHub)** : dépôt, branche, fichier, jeton, test de connexion, journal des dernières opérations ; import/export ; effacement des données.
+Capital, devise, risque par trade, valeur du pip, limites (jour/semaine/drawdown), objectif mensuel, listes d'instruments, de setups et de sessions ; **sécurité** (verrouillage, chiffrement, code de secours, biométrie, verrouillage automatique) ; **sauvegarde cloud (dépôt GitHub)** : dépôt, branche, fichier, jeton, test de connexion, journal des dernières opérations ; **rappels du plan** (notifications de la tablette aux heures des fenêtres de tir, avec aperçu des prochains rappels) ; import/export ; effacement des données.
 
 ---
 
@@ -385,6 +424,7 @@ trading/
     ├── sync-test.js              Recette de la sauvegarde cloud : états, conflits, fusion (jsdom)
     ├── lock-test.js              Recette du verrouillage : chiffrement, code, secours, biométrie (jsdom)
     ├── offline-test.js           Recette du mode hors ligne : service worker, cache, réseau coupé
+    ├── notify-test.js            Recette des rappels : heures du plan, anti-doublon, rattrapage
     ├── style-check.js            Recette du thème : contrastes AA, jetons, cibles tactiles, impression
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
@@ -403,6 +443,7 @@ npm i -D jsdom && node tools/smoke-test.js              # chaque vue se rend san
 npm i -D jsdom && node tools/sync-test.js                # sauvegarde cloud : états, conflits, fusion
 npm i -D jsdom && node tools/lock-test.js                # verrouillage : chiffrement, code, secours, biométrie
 node tools/offline-test.js                              # hors ligne : service worker et cache (aucune dépendance)
+node tools/notify-test.js                               # rappels du plan : heures, doublons, autorisation
 node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
@@ -414,6 +455,9 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.4 | **Rappels du plan en notifications de la tablette** : préparation avant l'ouverture, ouverture, fermeture (rappel de saisie) et revue du dimanche, aux heures des fenêtres de tir du plan. Heures lues dans le plan lui-même — plus aucun risque de divergence. Application en arrière-plan comprise ; rappels manqués regroupés et signalés à la réouverture ; jamais deux fois le même rappel. |
+| 2.4 | **Rien sans votre accord** : rappels éteints par défaut, autorisation demandée par un appui explicite, refus respecté, `http://` et iPhone/iPad non installé détectés et expliqués au lieu d'échouer en silence. Rien ne sort de l'appareil, aucun service tiers, aucune donnée de trading dans le message. |
+| 2.4 | **Deux défauts corrigés au passage** : un rappel était consommé même quand l'appareil ne pouvait pas l'afficher (autorisation absente) — il reste désormais en attente ; et les recettes `lock-test` / `sync-test` figeaient le numéro de version du cache, ce qui provoquait un faux échec à chaque incrément. |
 | 2.3 | **Affichage plus premium** : palette resserrée (fonds bleutés plus profonds, traits fins, or légèrement adouci), **chiffres alignés en colonnes** dans tous les tableaux et cartes (chiffres tabulaires), titres de cartes repérés par une pastille dorée, cartes qui se soulèvent au survol, tableaux avec en-têtes dégradés et survol doré, boutons et champs avec relief discret, notifications et modales en verre dépoli, barres de défilement fines, filet doré en haut de fenêtre. |
 | 2.3 | **Confort et accessibilité** : contraste du texte secondaire remonté (6,8:1 au lieu de 5,6:1, minimum AA respecté partout), anneau de focus doré pour la navigation au clavier, sélection de texte dorée, respect du réglage système « réduire les animations ». |
 | 2.3 | **Un seul thème pour tout** : les graphiques lisent désormais les couleurs de la feuille de style (`Charts.rafraichirPalette()`) au lieu de les coder en dur — un changement de thème se répercute partout. Recette `tools/style-check.js` (41 contrôles) : contrastes, jetons, cibles tactiles, impression, et vérification qu'aucun réglage adaptatif n'est écrasé. |
@@ -456,3 +500,4 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 - Verrouillage actif + code oublié + code de secours perdu : les données sont définitivement illisibles (c'est le principe même du chiffrement de bout en bout).
 - Les captures d'écran sont référencées par URL/chemin (pas d'upload de fichier, pour rester sans serveur).
 - Les frais de swap ne sont pas modélisés séparément : à inclure dans la colonne « Frais ».
+- Les rappels du plan sont des notifications **locales** : elles partent quand l'application est ouverte (même en arrière-plan). Application quittée, la tablette ne peut pas les déclencher — il faudrait un serveur de push, ce que ce projet refuse par principe. Les rappels manqués sont rattrapés à la réouverture, dans la limite du retard toléré (30 min pour une préparation, 1 h pour une ouverture, 3 h pour un rappel de saisie).
