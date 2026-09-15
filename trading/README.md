@@ -228,9 +228,11 @@ Quatre graphiques, dix étapes :
 
 La conclusion est écrite noir sur blanc dans l'application : **sur un compte de 1 000 $, la bonne décision était de laisser passer ce trade** et de travailler une paire où la règle du 1 % tient. Sur un compte de 3 400 $, le même trade risquait 1 % et rapportait **+7 % en douze heures**. En démo, les deux se pratiquent gratuitement.
 
+Les quatre graphiques sont dessinés par un moteur qui **place ses propres étiquettes** : chaque texte cherche une position libre (il glisse sur le côté, monte ou descend), une étiquette de niveau reste collée à sa ligne pour qu'on sache toujours quel prix elle nomme, et une étiquette posée au-dessus d'une bougie reçoit une plaque de fond pour rester lisible. Deux textes ne se chevauchent jamais, et jamais une pastille numérotée n'est recouverte — c'est vérifié par la recette, pas à l'œil.
+
 **Deux précisions d'honnêteté**, écrites dans la page : le contrat à terme cote quelques dollars au-dessus du cours « spot » cité dans la presse (4 398,0 ici contre 4 381,21 le 20 octobre), et les mouvements se recoupent (−5,7 % sur la clôture du 21 octobre, jusqu'à −6,9 % depuis le sommet — décrit par Reuters comme la plus forte baisse quotidienne de l'or en cinq ans). Les cours sont réels ; **le montage est pédagogique** (où placer l'entrée, le stop, les objectifs) — et il est recalculé par la recette à partir des bougies elles-mêmes, jamais recopié à la main.
 
-Recette dédiée : `node tools/etude-test.js` (**78 contrôles** — intégrité des cours encodés, recoupement journalier/horaire, position réelle de chaque repère sur sa bougie, arithmétique du trade recalculée, stop jamais touché, trois objectifs réellement atteints avec l'heure, taille de position, jugement de relecture, dessin SVG, cache hors ligne, rendu dans la vue Formation et ouverture du vrai graphique).
+Recette dédiée : `node tools/etude-test.js` (**81 contrôles** — intégrité des cours encodés, recoupement journalier/horaire, position réelle de chaque repère sur sa bougie, arithmétique du trade recalculée, stop jamais touché, trois objectifs réellement atteints avec l'heure, taille de position, jugement de relecture, dessin SVG, placement automatique des étiquettes (aucun texte ne se chevauche, aucune pastille numérotée n'est recouverte), cache hors ligne, rendu dans la vue Formation et ouverture du vrai graphique).
 
 ### Hors ligne, tablette, impression
 
@@ -240,7 +242,7 @@ Recette dédiée : `node tools/etude-test.js` (**78 contrôles** — intégrité
 
 La formation **explique** le plan, elle ne le remplace pas : le plan reste la référence en séance, la formation sert à le comprendre et à s'entraîner dessus.
 
-Recettes dédiées : `node tools/formation-test.js` (77 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression) et `node tools/relecture-test.js` (61 contrôles — règles chiffrées et leur notation, masquage du résultat avant la révélation, jugements séparés du score, bilan enregistré, cas particuliers) et `node tools/etude-test.js` (78 contrôles — l'étude de cas réelle sur l'or).
+Recettes dédiées : `node tools/formation-test.js` (77 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression) et `node tools/relecture-test.js` (61 contrôles — règles chiffrées et leur notation, masquage du résultat avant la révélation, jugements séparés du score, bilan enregistré, cas particuliers) et `node tools/etude-test.js` (81 contrôles — l'étude de cas réelle sur l'or).
 
 ---
 

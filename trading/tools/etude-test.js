@@ -177,9 +177,16 @@ const heure = (t) => new Date(t * 1000).toISOString().slice(11, 16);
 
   console.log('\n7. Le dessin, fabriqué par l\'application');
   const svgs = (html.match(/<svg/g) || []).length;
-  const bougies = (html.match(/<rect/g) || []).length;
+  /* les bougies, et rien d'autre (les plaques de fond des étiquettes sont aussi des rect) */
+  const bougies = (html.match(/<rect[^>]*fill="var\(--(green|red)\)"/g) || []).length;
   verif('les quatre graphiques sont dessinés', svgs === 4, svgs + ' graphiques');
-  verif('le nombre de bougies correspond aux périodes', bougies === 44 + 17 + 27 + 27 + 3, bougies + ' tracés');
+  const attendues = [[0, 44, D.journalier], [0, 17, H], [42, 69, H], [69, 96, H]]
+    .reduce((a, p) => {
+      let n = 0;
+      for (let i = p[0]; i < p[1]; i++) if (p[2].c[i] !== null && p[2].c[i] !== undefined) n++;   // les heures fermées ne sont pas dessinées
+      return a + n;
+    }, 0);
+  verif('le nombre de bougies correspond aux périodes', bougies === attendues, bougies + ' bougies dessinées');
   verif('l\'échelle des prix et les journées sont étiquetées', /etude-axe/.test(html) && /etude-jour/.test(html));
   verif('la zone des records est mise en évidence', /la zone des records/.test(html));
   const cadre = (html.match(/<svg[^>]*viewBox="0 0 (\d+) (\d+)"/g) || []).map((t) => t.match(/0 0 (\d+) (\d+)/).slice(1).map(Number));
@@ -191,12 +198,49 @@ const heure = (t) => new Date(t * 1000).toISOString().slice(11, 16);
       if (!(v >= 0 && v <= H2)) dehors.push('repère hors cadre: ' + v);
     });
   });
+  /* le placement automatique : deux étiquettes ne doivent jamais se recouvrir,
+     et aucune étiquette ne doit s'écrire sur une pastille numérotée */
+  const chevauchements = [], plaquesCouvertes = [];
+  let plaquesTotal = 0;
+  (html.match(/<svg[\s\S]*?<\/svg>/g) || []).forEach((svg, n) => {
+    const boites = [];
+    [...svg.matchAll(/<text x="([\d.]+)" y="([\d.]+)" class="(etude-repere-texte|etude-niveau|etude-note-champ)" text-anchor="(\w+)">([^<]*)</g)]
+      .forEach((m) => {
+        const x = +m[1], y = +m[2], larg = m[5].length * 6.4 + 12;
+        boites.push({ t: m[5], x0: m[4] === 'start' ? x : x - larg, x1: m[4] === 'start' ? x + larg : x, y0: y - 10, y1: y + 4 });
+      });
+    [...svg.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="9"/g)].forEach((m) => {
+      boites.push({ t: 'pastille', x0: +m[1] - 9, x1: +m[1] + 9, y0: +m[2] - 9, y1: +m[2] + 9 });
+    });
+    /* les plaques de fond des étiquettes ne doivent pas recouvrir une pastille numérotée */
+    const pastillesP = [], plaquesP = [];
+    [...svg.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="9"/g)].forEach((m) => {
+      pastillesP.push({ t: 'pastille ' + m[1] + ',' + m[2], x0: +m[1] - 10, x1: +m[1] + 10, y0: +m[2] - 10, y1: +m[2] + 10 });
+    });
+    [...svg.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="14" rx="3"/g)].forEach((m) => {
+      plaquesP.push({ x0: +m[1], x1: +m[1] + +m[3], y0: +m[2], y1: +m[2] + 14 });
+    });
+    plaquesTotal += plaquesP.length;
+    plaquesP.forEach((p1) => pastillesP.forEach((p2) => {
+      if (p1.x0 < p2.x1 && p1.x1 > p2.x0 && p1.y0 < p2.y1 && p1.y1 > p2.y0)
+        plaquesCouvertes.push('panneau ' + (n + 1) + ' : ' + p2.t);
+    }));
+    for (let a = 0; a < boites.length; a++) for (let b2 = a + 1; b2 < boites.length; b2++) {
+      const A = boites[a], B = boites[b2];
+      if (A.x0 < B.x1 && A.x1 > B.x0 && A.y0 < B.y1 && A.y1 > B.y0)
+        chevauchements.push('panneau ' + (n + 1) + ' : ' + JSON.stringify(A.t) + ' / ' + JSON.stringify(B.t));
+    }
+  });
+  verif('deux étiquettes ne se recouvrent jamais', chevauchements.length === 0,
+    chevauchements.slice(0, 3).join(' ; ') || 'placement automatique vérifié');
+  verif('aucune pastille numérotée n\'est recouverte par une étiquette', plaquesCouvertes.length === 0,
+    plaquesCouvertes.slice(0, 3).join(' ') || plaquesTotal + ' plaques de fond, aucune sur une pastille');
   const deborde = [];
   (html.match(/<svg[\s\S]*?<\/svg>/g) || []).forEach((svg, n) => {
     const fin = cadre[n] ? cadre[n][0] : 0;
     [...svg.matchAll(/<text x="([\d.]+)" y="[\d.]+" class="etude-repere-texte" text-anchor="(start|end)">([^<]*)</g)]
       .forEach((m) => {
-        const x = +m[1], larg = m[3].length * 5.2 + 16;
+        const x = +m[1], larg = m[3].length * 6.4 + 12;
         const b2 = m[2] === 'start' ? x + larg : x, a2 = m[2] === 'start' ? x : x - larg;
         if (a2 < 2 || b2 > fin - 2) deborde.push(m[3]);
       });

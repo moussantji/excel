@@ -121,6 +121,112 @@
    * @param {object} o    options : debut, fin, min, max, largeur, hauteur,
    *                      zones, niveaux, reperes, trade, journees, aria
    */
+  /* ---- placement des étiquettes : jamais l'une sur l'autre ---- */
+  function placeur(x0, x1p, y0, y1, H) {
+    var posees = [];
+    /* toutes les positions voisines, classées du plus près au plus loin */
+    var candidats = (function () {
+      var l = [], dxs = [0, 15, -15, 30, -30, 45, -45], dys = [0, -13, 13, -26, 26, -39, 39, -52, 52];
+      dxs.forEach(function (dx) { dys.forEach(function (dy) { l.push([dx, dy]); }); });
+      l.sort(function (a, b) { return (Math.abs(a[0]) / 15 + Math.abs(a[1]) / 13) - (Math.abs(b[0]) / 15 + Math.abs(b[1]) / 13); });
+      return l;
+    })();
+    /* essaie des décalages verticaux successifs, puis accepte la dernière place */
+    function placer(x, y, texte, options) {
+      options = options || {};
+      var larg = String(texte).length * 6.4 + 12, haut = 13;   // police monospace : 0,61 em
+      /* une étiquette de niveau reste COLLÉE à sa ligne : elle glisse sur le côté,
+         elle ne monte jamais au-dessus d'une autre ligne (sinon on ne sait plus
+         quel prix elle désigne) */
+      var positions = options.surLigne
+        ? [[0, 0], [-17, 0], [17, 0], [-34, 0], [34, 0], [-51, 0], [51, 0], [-68, 0], [68, 0]]
+        : candidats;
+      /* une étiquette de niveau a le droit de toucher le haut du graphique : c'est
+         justement là que se trouve le sommet qu'elle nomme */
+      var hautMini = options.surLigne ? 13 : y0 + 11;
+      var basMaxi = options.surLigne ? (H || y1) - 4 : y1 - 2;
+      var choix = [], k;
+      for (k = 0; k < positions.length; k++) {
+        var ancre = options.ancre || 'start';
+        var py = y + positions[k][1];
+        /* hors cadre : ce n'est pas une place valable, on essaie la suivante */
+        if (py < hautMini || py > basMaxi) continue;
+        var px = x + positions[k][0];
+        /* près du bord droit, l'étiquette bascule à gauche du point */
+        if (ancre === 'start' && px + larg > x1p - 2) ancre = 'end';
+        if (ancre === 'end' && px - larg < x0 + 2) { ancre = 'start'; px = Math.max(px, x0 + 2); }
+        var box = {
+          ancre: ancre, x: px, y: py, texte: String(texte),
+          x0: ancre === 'start' ? px : px - larg, x1: ancre === 'start' ? px + larg : px,
+          y0: py - haut + 3, y1: py + 3
+        };
+        /* une étiquette de niveau glisse sur sa ligne : les bougies ne la bloquent pas,
+           elles lui valent seulement une plaque de fond */
+        box.libre = !placer.occupe(box, !options.surLigne);
+        choix.push(box);
+        if (box.libre) break;                      // trouvé une place nette : on la garde
+      }
+      if (!choix.length) return null;
+      var choisie = choix[choix.length - 1];
+      for (k = 0; k < choix.length; k++) {          // sinon, celle qui ne touche aucun texte
+        if (!placer.occupe(choix[k], false)) { choisie = choix[k]; break; }
+      }
+      /* reste-t-il une bougie (et seulement une bougie) sous le texte ?
+         alors on lui posera une plaque de fond — jamais sur une pastille */
+      choisie.plaque = placer.occupeMou(choisie) && !placer.occupe(choisie, false);
+      posees.push(choisie);
+      return choisie;
+    }
+    /* une pastille occupe elle aussi la place : les textes l'évitent */
+    placer.reserver = function (xa, ya, xb, yb) {
+      posees.push({ x0: xa, y0: ya, x1: xb, y1: yb, texte: '', ancre: 'start', x: 0, y: 0 });
+    };
+    /* obstacles « mous » : on préfère ne pas écrire dessus, mais c'est permis */
+    var mous = [];
+    placer.eviter = function (xa, ya, xb, yb) { mous.push({ x0: xa, y0: ya, x1: xb, y1: yb }); };
+    /* la place est-elle prise par une bougie (obstacle mou) ? */
+    placer.occupeMou = function (box) {
+      for (var q = 0; q < mous.length; q++) {
+        var m = mous[q];
+        if (box.x0 < m.x1 && box.x1 > m.x0 && box.y0 < m.y1 && box.y1 > m.y0) return true;
+      }
+      return false;
+    };
+    placer.occupe = function (box, avecMous) {
+      var q;
+      for (q = 0; q < posees.length; q++) {
+        var a = posees[q];
+        if (box.x0 < a.x1 + 2 && box.x1 > a.x0 - 2 && box.y0 < a.y1 + 1 && box.y1 > a.y0 - 1) return true;
+      }
+      if (avecMous) {
+        for (q = 0; q < mous.length; q++) {
+          var m = mous[q];
+          if (box.x0 < m.x1 && box.x1 > m.x0 && box.y0 < m.y1 && box.y1 > m.y0) return true;
+        }
+      }
+      return false;
+    };
+    return placer;
+  }
+
+  /* ---- une étiquette de texte, placée proprement ---- */
+  function etiquette(box, classe, couleur) {
+    if (!box) return '';                       // aucune place propre : on n'écrit rien
+    var plaque = box.plaque
+      ? '<rect x="' + (box.x0 - 3).toFixed(1) + '" y="' + (box.y - 10).toFixed(1) + '" width="' +
+        (box.x1 - box.x0 + 6).toFixed(1) + '" height="14" rx="3" fill="var(--bg-2)" opacity="0.86"/>'
+      : '';
+    return plaque + '<text x="' + box.x.toFixed(1) + '" y="' + box.y.toFixed(1) + '" class="' + classe +
+      '" text-anchor="' + box.ancre + '"' + (couleur ? ' fill="' + couleur + '"' : '') + '>' +
+      esc(box.texte) + '</text>';
+  }
+
+  /**
+   * Dessine une série de bougies.
+   * @param {object} s    série {t,o,h,l,c}
+   * @param {object} o    options : debut, fin, min, max, largeur, hauteur,
+   *                      zones, niveaux, reperes, trade, journees, aria
+   */
   function dessiner(s, o) {
     o = o || {};
     if (!s || !s.t) return '<p class="muted">Pas de cours disponible.</p>';
@@ -148,6 +254,7 @@
     var X = function (n) { return x0 + pas * (n + 0.5); };
     var rang = {};
     idx.forEach(function (v, n) { rang[v] = n; });
+    var place = placeur(x0, x1, y0, y1, H);
 
     var h = [];
     h.push('<svg class="etude-svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H +
@@ -160,6 +267,7 @@
       h.push('<line x1="' + x0 + '" y1="' + y.toFixed(1) + '" x2="' + x1 + '" y2="' + y.toFixed(1) +
         '" stroke="var(--line)" stroke-width="1"/>');
       h.push('<text x="' + (x1 + 6) + '" y="' + (y + 4).toFixed(1) + '" class="etude-axe">' + f1(p, 0) + '</text>');
+      place.eviter(x0, y - 2, x1, y + 2);
     }
 
     /* zones (ex. la zone des records) */
@@ -167,12 +275,14 @@
       var ya = Y(z.a), yb = Y(z.de), haut = Math.min(ya, yb), bas = Math.max(ya, yb);
       var xa = (z.debut === undefined ? 0 : (rang[z.debut] === undefined ? 0 : rang[z.debut]));
       var xb = (z.fin === undefined ? idx.length - 1 : (rang[z.fin] === undefined ? idx.length - 1 : rang[z.fin]));
-      h.push('<rect x="' + (x0 + pas * xa).toFixed(1) + '" y="' + haut.toFixed(1) + '" width="' +
+      var gauche = x0 + pas * xa;
+      h.push('<rect x="' + gauche.toFixed(1) + '" y="' + haut.toFixed(1) + '" width="' +
         (pas * (xb - xa + 1)).toFixed(1) + '" height="' + Math.max(1, bas - haut).toFixed(1) +
         '" fill="' + (z.ton === 'red' ? 'var(--red-dim)' : 'var(--gold-dim)') + '"/>');
       if (z.texte) {
-        h.push('<text x="' + (x0 + pas * xa + 4).toFixed(1) + '" y="' + (haut - 5).toFixed(1) +
-          '" class="etude-note-champ">' + esc(z.texte) + '</text>');
+        /* le nom de la zone est écrit dedans, sous son bord haut */
+        var bz = place(gauche + 4, bas - 4, z.texte, { ancre: 'start' });
+        h.push(etiquette(bz, 'etude-note-champ', 'var(--gold-2)'));
       }
     });
 
@@ -209,16 +319,12 @@
       poser(debutBloc, idx.length - 1);
     }
 
-    /* niveaux horizontaux */
-    (o.niveaux || []).forEach(function (n) {
-      var y = Y(n.prix), col = n.ton === 'red' ? COULEUR.down : (n.ton === 'bleu' ? COULEUR.bleu : COULEUR.or);
-      h.push('<line x1="' + x0 + '" y1="' + y.toFixed(1) + '" x2="' + x1 + '" y2="' + y.toFixed(1) +
-        '" stroke="' + col + '" stroke-width="1.2" stroke-dasharray="6 4"/>');
-      h.push('<text x="' + (x0 + 4) + '" y="' + (y - 5).toFixed(1) + '" class="etude-niveau">' +
-        esc(n.texte) + '</text>');
-    });
+    /* les bougies : on préfère ne pas écrire de texte dessus */
+    for (k = 0; k < idx.length; k++) {
+      place.eviter(X(k) - larg / 2 - 1, Y(s.h[idx[k]]) - 1, X(k) + larg / 2 + 1, Y(s.l[idx[k]]) + 1);
+    }
 
-    /* la position : risque et gain, dessinés */
+    /* la position : risque et gain, dessinés (posés avant les étiquettes) */
     if (o.trade) {
       var t = o.trade;
       var xa2 = rang[t.depuis] === undefined ? x0 : X(rang[t.depuis]);
@@ -232,29 +338,48 @@
        [yC, 'cible ' + prix(t.cible), COULEUR.up]].forEach(function (l) {
         h.push('<line x1="' + xa2.toFixed(1) + '" y1="' + l[0].toFixed(1) + '" x2="' + xb2.toFixed(1) +
           '" y2="' + l[0].toFixed(1) + '" stroke="' + l[2] + '" stroke-width="1.3"/>');
-        h.push('<text x="' + (xa2 + 4).toFixed(1) + '" y="' + (l[0] - 4).toFixed(1) + '" class="etude-niveau">' +
-          esc(l[1]) + '</text>');
+        /* l'étiquette est posée à droite de la zone, face au prix */
+        var b2 = place(xb2 - 6, l[0] - 5, l[1], { ancre: 'end', surLigne: true });
+        h.push(etiquette(b2, 'etude-niveau', l[2]));
       });
     }
 
-    /* repères numérotés posés sur les bougies */
-    (o.reperes || []).forEach(function (r) {
+    /* niveaux horizontaux */
+    (o.niveaux || []).forEach(function (n) {
+      var y = Y(n.prix), col = n.ton === 'red' ? COULEUR.down : (n.ton === 'bleu' ? COULEUR.bleu : COULEUR.or);
+      h.push('<line x1="' + x0 + '" y1="' + y.toFixed(1) + '" x2="' + x1 + '" y2="' + y.toFixed(1) +
+        '" stroke="' + col + '" stroke-width="1.2" stroke-dasharray="6 4"/>');
+      /* la ligne elle-même est une place occupée : aucun texte ne s'écrit dessus */
+      place.reserver(x0, y - 3, x1, y + 3);
+      var b3 = place(x0 + 4, y - 5, n.texte, { ancre: 'start', surLigne: true });
+      h.push(etiquette(b3, 'etude-niveau', col));
+    });
+
+    /* repères numérotés posés sur les bougies — les pastilles occupent leur place
+       avant que le moindre texte soit posé, sinon deux repères voisins se chevauchent */
+    var reperes = (o.reperes || []).map(function (r) {
       var n = rang[r.i];
-      if (n === undefined) return;
-      var xc2 = X(n);
-      var ancre = r.place === 'bas' ? Y(s.l[r.i]) + 14 + (r.decalage || 0) : Y(s.h[r.i]) - 14 - (r.decalage || 0);
-      ancre = Math.max(y0 + 8, Math.min(y1 - 4, ancre));
-      var col = r.ton === 'red' ? COULEUR.down : (r.ton === 'bleu' ? COULEUR.bleu : COULEUR.or);
-      h.push('<line x1="' + xc2.toFixed(1) + '" y1="' + (r.place === 'bas' ? (ancre - 8) : (ancre + 8)).toFixed(1) +
-        '" x2="' + xc2.toFixed(1) + '" y2="' + (r.place === 'bas' ? Y(s.l[r.i]) : Y(s.h[r.i])).toFixed(1) +
-        '" stroke="' + col + '" stroke-width="0.9" stroke-dasharray="2 2"/>');
-      h.push('<circle cx="' + xc2.toFixed(1) + '" cy="' + ancre.toFixed(1) + '" r="9" fill="var(--panel-3)" stroke="' +
-        col + '" stroke-width="1.3"/>');
-      h.push('<text x="' + xc2.toFixed(1) + '" y="' + (ancre + 3.6).toFixed(1) + '" class="etude-repere" text-anchor="middle">' +
-        esc(r.num) + '</text>');
+      if (n === undefined) return null;
+      var ancreY = r.place === 'bas' ? Y(s.l[r.i]) + 14 + (r.decalage || 0) : Y(s.h[r.i]) - 14 - (r.decalage || 0);
+      return {
+        r: r, x: X(n), y: Math.max(y0 + 9, Math.min(y1 - 2, ancreY)),
+        col: r.ton === 'red' ? COULEUR.down : (r.ton === 'bleu' ? COULEUR.bleu : COULEUR.or)
+      };
+    }).filter(Boolean);
+    reperes.forEach(function (p) { place.reserver(p.x - 10, p.y - 10, p.x + 10, p.y + 10); });
+    reperes.forEach(function (p) {
+      var r = p.r;
+      h.push('<line x1="' + p.x.toFixed(1) + '" y1="' + (r.place === 'bas' ? (p.y - 9) : (p.y + 9)).toFixed(1) +
+        '" x2="' + p.x.toFixed(1) + '" y2="' + (r.place === 'bas' ? Y(s.l[r.i]) : Y(s.h[r.i])).toFixed(1) +
+        '" stroke="' + p.col + '" stroke-width="0.9" stroke-dasharray="2 2"/>');
+      h.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="9" fill="var(--panel-3)" stroke="' +
+        p.col + '" stroke-width="1.3"/>');
+      h.push('<text x="' + p.x.toFixed(1) + '" y="' + (p.y + 3.6).toFixed(1) +
+        '" class="etude-repere" text-anchor="middle">' + esc(r.num) + '</text>');
       if (r.texte) {
-        h.push('<text x="' + (xc2 + (r.aDroite ? 13 : -13)).toFixed(1) + '" y="' + (ancre + 3.6).toFixed(1) +
-          '" class="etude-repere-texte" text-anchor="' + (r.aDroite ? 'start' : 'end') + '">' + esc(r.texte) + '</text>');
+        var cote = r.aDroite === false ? -13 : 13;
+        var br = place(p.x + cote, p.y + 3.6, r.texte, { ancre: cote > 0 ? 'start' : 'end' });
+        h.push(etiquette(br, 'etude-repere-texte'));
       }
     });
 
@@ -345,8 +470,8 @@
       reperes: [
         { i: 0, num: '1', place: 'bas', texte: '3 725 le 16 sept.', aDroite: true },
         { i: 24, num: '2', place: 'haut', texte: 'sommet du 20 oct.', aDroite: true, decalage: 4 },
-        { i: 25, num: '3', place: 'bas', texte: '−5,7 % le 21 oct.', aDroite: true, decalage: 26 },
-        { i: 26, num: '4', place: 'bas', texte: 'plus bas 4 021,2' }
+        { i: 25, num: '3', place: 'bas', texte: '−5,7 % (21 oct.)', aDroite: true, decalage: 16 },
+        { i: 26, num: '4', place: 'bas', texte: 'plus bas 4 021,2', aDroite: true, decalage: 44 }
       ]
     }) + '<figcaption>Journalier. L\'or monte de 3 725 $ (16 septembre) à 4 398 $ (20 octobre), soit près de 20 % en un mois, ' +
       'et neuf semaines de hausse d\'affilée — la plus longue série depuis 2020. Les deux dernières bougies sont celles de ' +
@@ -388,9 +513,9 @@
       ],
       reperes: [
         { i: 42, num: '1', place: 'bas', texte: 'ouverture en gap', aDroite: true },
-        { i: 63, num: '2', place: 'haut', texte: 'lundi 19:00', aDroite: true },
-        { i: 66, num: '3', place: 'haut', texte: 'lundi 22:00', aDroite: true, decalage: 2 },
-        { i: 68, num: '4', place: 'bas', texte: 'mardi 00:00' }
+        { i: 63, num: '2', place: 'haut', texte: '19:00', aDroite: true },
+        { i: 66, num: '3', place: 'bas', texte: '22:00', aDroite: true },
+        { i: 68, num: '4', place: 'bas', texte: '00:00', aDroite: true, decalage: 14 }
       ]
     }) + '<figcaption>Horaire. Dimanche 22:00 : ouverture en hausse à 4 269 (le vendredi avait clos à 4 213,3) — les acheteurs ' +
       'reviennent. Lundi 19:00 : sommet à 4 398,0. Lundi 22:00 : deuxième poussée à 4 393,6, refusée. ' +
@@ -422,9 +547,9 @@
       min: 4000, max: 4420,
       trade: { entree: TRADE.entree, stop: TRADE.stop, cible: TRADE.cibles[2].prix, depuis: 70, jusqua: 82 },
       reperes: [
-        { i: 69, num: '1', place: 'haut', texte: '01:00 : clôture 4 367,7', aDroite: true },
+        { i: 69, num: '1', place: 'bas', texte: '01:00 : cassure 4 367,7', aDroite: true },
         { i: 70, num: '2', place: 'haut', texte: '02:00 : entrée 4 368', aDroite: true },
-        { i: 76, num: '3', place: 'bas', texte: '08:00 : 1 pour 2' },
+        { i: 76, num: '3', place: 'bas', texte: '08:00 : 1 pour 2', decalage: 8 },
         { i: 80, num: '4', place: 'bas', texte: '12:00 : 1 pour 4', aDroite: true },
         { i: 82, num: '5', place: 'bas', texte: '14:00 : 1 pour 7' }
       ]
