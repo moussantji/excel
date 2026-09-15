@@ -257,10 +257,11 @@
         piege: 'Marchés surtout américains, aucune notion SMC. Utile pour le coup d\'œil sur la tendance, pas pour vos 12 chapitres.'
       },
       {
-        nom: 'Trading Game (GoForex)', editeur: 'tiim',
-        fait: 'Simulateur en temps réel, plus de 400 questions de quiz et des leçons courtes, sans pub ni inscription.',
-        prix: 'Gratuit', langue: 'Français',
-        piege: 'Orienté débutant et forex classique. La partie « signaux quotidiens » n\'a rien à voir avec votre plan : à ignorer.'
+        nom: 'Trading Game — Simulateur Bourse', editeur: 'tradinggame.com',
+        fait: 'Simulateur en temps réel sur de vrais cours, plus de 400 questions de quiz notées, un entraîneur de figures chartistes et des leçons courtes.',
+        prix: 'Gratuit + achats dans l\'application', langue: 'Français',
+        piege: 'Le plus ludique de la liste, mais la version gratuite reste limitée et l\'application pousse vers un courtier partenaire : ' +
+          'utilisez le simulateur et les quiz, ignorez les invitations à ouvrir un compte réel.'
       },
       {
         nom: 'Forex Smart Money Concept', editeur: 'Appnovasi',
@@ -289,7 +290,8 @@
       }).join('') + '</div>' +
       '<div class="alert warn"><span class="alert-ico">' + UI.icon('warn') + '</span><span><b>Attention aux fausses applications éducatives.</b> ' +
       'Une grande partie des applications « trading » du Play Store sont des <b>vitrines de courtiers</b> : elles poussent à déposer de l\'argent réel, ' +
-      'et certaines accumulent les avis de retraits en échec. Aucune n\'est nécessaire pour s\'entraîner : les applications ci-dessus suffisent, et pour ' +
+      'et certaines accumulent les avis de retraits en échec. Même une application éducative sérieuse peut pousser vers son courtier partenaire : ' +
+      'gardez les quiz, pas l\'invitation à déposer. Aucune n\'est nécessaire pour s\'entraîner : les applications ci-dessus suffisent, et pour ' +
       'passer des ordres sans argent réel, utilisez un <b>compte démo</b> d\'un courtier régulé. Ne déposez jamais d\'argent sur une application découverte ' +
       'par hasard, même si elle se présente comme éducative.</span></div>';
   }

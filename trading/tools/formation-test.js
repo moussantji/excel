@@ -383,7 +383,7 @@ console.log('\n5. Vue et progression');
   // les applications du Play Store : listées avec leurs limites, sans lien externe
 const formation = lire('assets/js/formation.js');
 verif('les applications d\'entraînement du Play Store sont listées',
-  /Play Store/.test(formation) && /Candle Master/.test(formation) && /Chart Quiz/.test(formation) && /GoForex/.test(formation),
+  /Play Store/.test(formation) && /Candle Master/.test(formation) && /Chart Quiz/.test(formation) && /Simulateur Bourse/.test(formation),
   '3 applications qui corrigent et notent');
 verif('chaque application porte sa langue et sa limite',
   /application partage l\'identifiant|sans exercices corrigés|verrouillé en premium|signaux quotidiens/.test(formation));
@@ -391,6 +391,9 @@ verif('la mise en garde contre les fausses applications éducatives est écrite'
   /vitrines de courtiers/.test(formation) && /retraits en échec/.test(formation) && /compte démo/.test(formation));
 verif('le guide n\'ajoute aucun lien externe (il reste utilisable hors ligne)',
   !/https?:\/\//.test(formation), 'aucune adresse dans la vue Formation');
+verif('le nom des applications correspond à la fiche du Play Store',
+  !/GoForex/.test(formation) && /candlemaster|Aman33kh/.test(formation) && /tradinggame\.com/.test(formation),
+  'aucune application confondue avec une autre');
 
 verif('la formation est annoncée dans le README', /Formation/.test(lire('README.md')));
 
