@@ -64,7 +64,7 @@ L'application **fonctionne entièrement sans connexion** une fois ouverte une pr
 Deux précisions utiles :
 
 - **Tablette en Wi-Fi local** (`http://192.168.x.x`) : l'application marche, mais le mode hors ligne **et** l'installation sur l'écran d'accueil exigent **https** — donc l'adresse GitHub Pages (ou Netlify/Cloudflare). C'est la seule raison de préférer cette adresse au Wi-Fi local.
-- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v14`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
+- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v15`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
 
 Recette automatique du mode hors ligne : `node tools/offline-test.js` (service worker réel simulé, réseau coupé, serveur en panne, fichiers manquants).
 
@@ -195,6 +195,43 @@ La Formation liste aussi, **dans l'application et hors ligne**, les applications
 
 **Si un jour vous avez un ordinateur** : MetaTrader 5 dispose d'un mode de test **visuel** gratuit qui rejoue n'importe quelle période en intraday, bougie par bougie, avec des ordres placés à la main (Espace pour mettre en pause, F12 pour avancer d'une bougie, F9 pour passer un ordre). C'est la seule façon gratuite de s'entraîner en intraday sur des données réelles — dites-le-moi ce jour-là, j'ajouterai la procédure pas à pas dans la Formation.
 
+### Étude de cas réelle : l'or, du 17 au 22 octobre 2025
+
+Un trade complet, **du début à la fin**, avec des cours réels — pas un schéma dessiné à la main.
+
+Les bougies sont un relevé figé de l'or (contrat à terme COMEX `GC=F`, Yahoo Finance, arrêté le 15 septembre 2026) : **44 bougies journalières** (16 septembre → 14 novembre 2025) et **69 bougies horaires** (17 → 22 octobre). Elles sont encodées dans `assets/js/etude-or-donnees.js` et **dessinées en SVG par l'application** : aucune image, aucune requête, l'étude s'affiche et s'imprime hors ligne.
+
+Quatre graphiques, dix étapes :
+
+| # | Ce que la page montre |
+|---|---|
+| 1 | **Le contexte** (journalier) : de 3 725 $ le 16 septembre à 4 398 $ le 20 octobre, neuf semaines de hausse d'affilée |
+| 2 | **La veille** (horaire, vendredi 17) : sommet à 4 390,4 puis vente toute la journée, clôture 4 213,3 — la cassure des records échoue une première fois |
+| 3 | **Le balayage** : ouverture en gap à 4 269 le dimanche soir, deux poussées refusées — 4 398,0 (lundi 19:00) puis 4 393,6 (lundi 22:00) — plus bas de structure à 4 370,2 |
+| 4 | **Le scénario écrit avant d'entrer** : condition d'entrée, stop, objectif, risque — tout est posé d'avance, sur le papier |
+| 5 | **Le déclenchement et la sortie** : cassure confirmée à 01:00 (clôture 4 367,7 sous 4 370,2), entrée à **4 368** (02:00, fin de la fenêtre Asie), stop **4 402**, objectif **4 130** = 7 fois le risque |
+| 6 | **Les chiffres** : stop jamais approché (plus haut après l'entrée : 4 367,3 — 29 $ de marge) ; 1:2 touché à 08:00, 1:4 à 12:00, 1:7 à 14:00 (plus bas de la journée : 4 093,0) ; **+238 $ l'once en douze heures** |
+| 7 | **La relecture** : les 5 règles du plan posées sur ce trade, une par une |
+| 8 | **Le contre-exemple** : l'achat du nouveau record (4 398,0) → −305 $ l'once, **−6,9 %**, soit −30,5 % du compte avec le plus petit lot |
+| 9 | **La taille de position** : la vraie leçon (ci-dessous) |
+| 10 | **À vous** : deux boutons ouvrent l'or en journalier et en horaire sur TradingView |
+
+**La relecture n'est pas complaisante : le trade obtient 4 règles sur 5.** Il respecte le ratio (1:7 exactement), la fenêtre de tir (02:00, dernière heure de la fenêtre Asie) et la limite du jour (1 trade). Il viole la règle la plus importante : le risque. Sur l'or, le plus petit lot possible (0,01 lot = 1 once) engage **34 $ = 3,4 %** d'un compte de 1 000 $, très au-dessus du plafond de 1 % du plan.
+
+|  | Or (XAUUSD) | EUR/USD |
+|---|---|---|
+| Plus petit lot | 0,01 lot = 1 once | 0,01 lot = 1 000 unités |
+| Stop de l'exemple | 34 $ (34 points) | 15 pips (la règle du plan) |
+| Risque de ce lot sur 1 000 $ | **3,4 %** | **0,15 %** |
+| Taille pour 1 % de 1 000 $ | impossible (0,0029 lot) | 0,06 lot (9,00 $) |
+| Capital nécessaire | 3 400 $ | 1 000 $ suffisent |
+
+La conclusion est écrite noir sur blanc dans l'application : **sur un compte de 1 000 $, la bonne décision était de laisser passer ce trade** et de travailler une paire où la règle du 1 % tient. Sur un compte de 3 400 $, le même trade risquait 1 % et rapportait **+7 % en douze heures**. En démo, les deux se pratiquent gratuitement.
+
+**Deux précisions d'honnêteté**, écrites dans la page : le contrat à terme cote quelques dollars au-dessus du cours « spot » cité dans la presse (4 398,0 ici contre 4 381,21 le 20 octobre), et les mouvements se recoupent (−5,7 % sur la clôture du 21 octobre, jusqu'à −6,9 % depuis le sommet — décrit par Reuters comme la plus forte baisse quotidienne de l'or en cinq ans). Les cours sont réels ; **le montage est pédagogique** (où placer l'entrée, le stop, les objectifs) — et il est recalculé par la recette à partir des bougies elles-mêmes, jamais recopié à la main.
+
+Recette dédiée : `node tools/etude-test.js` (**78 contrôles** — intégrité des cours encodés, recoupement journalier/horaire, position réelle de chaque repère sur sa bougie, arithmétique du trade recalculée, stop jamais touché, trois objectifs réellement atteints avec l'heure, taille de position, jugement de relecture, dessin SVG, cache hors ligne, rendu dans la vue Formation et ouverture du vrai graphique).
+
 ### Hors ligne, tablette, impression
 
 - Tout le cours, les exercices et l'entraîneur sont **dans le cache hors ligne** : la formation s'utilise sans réseau, y compris sur l'application installée.
@@ -203,7 +240,7 @@ La Formation liste aussi, **dans l'application et hors ligne**, les applications
 
 La formation **explique** le plan, elle ne le remplace pas : le plan reste la référence en séance, la formation sert à le comprendre et à s'entraîner dessus.
 
-Recettes dédiées : `node tools/formation-test.js` (76 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression) et `node tools/relecture-test.js` (61 contrôles — règles chiffrées et leur notation, masquage du résultat avant la révélation, jugements séparés du score, bilan enregistré, cas particuliers).
+Recettes dédiées : `node tools/formation-test.js` (77 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression) et `node tools/relecture-test.js` (61 contrôles — règles chiffrées et leur notation, masquage du résultat avant la révélation, jugements séparés du score, bilan enregistré, cas particuliers) et `node tools/etude-test.js` (78 contrôles — l'étude de cas réelle sur l'or).
 
 ---
 
@@ -607,6 +644,7 @@ node tools/notify-test.js                               # rappels du plan : heur
 npm i -D jsdom && node tools/formation-test.js           # formation : cours, entraîneur, correction, progression
 npm i -D jsdom && node tools/graphe-test.js              # graphique TradingView : lien, hors ligne, boutons
 npm i -D jsdom && node tools/relecture-test.js           # relecture des vrais trades : règles, notation, bilan
+npm i -D jsdom && node tools/etude-test.js                # étude de cas réelle : cours encodés, trade, dessin SVG
 node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
@@ -618,13 +656,14 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.9 | **Étude de cas réelle : l'or, 17 → 22 octobre 2025** — un trade complet du début à la fin, dans la vue Formation : le contexte journalier, la veille, le **balayage de liquidité** au-dessus des records (4 398,0 puis 4 393,6), le scénario écrit avant d'entrer, la cassure confirmée (clôture 4 367,7 sous 4 370,2), l'entrée à 4 368, le stop 4 402 jamais approché, trois objectifs touchés (1:2 à 08:00, 1:4 à 12:00, 1:7 à 14:00) pour +238 $ l'once en douze heures, puis la **relecture des 5 règles du plan** — qui rend **4 sur 5** : le risque de 3,4 % sur un compte de 1 000 $ viole la règle du 1 %, et la page conclut qu'il fallait **laisser passer ce trade** ou attendre 3 400 $. Le contre-exemple (acheter le record : −6,9 % par once, −30,5 % du compte) est chiffré à côté. Les 44 bougies journalières et 69 bougies horaires sont **réelles** (relevé figé, source citée) et **dessinées en SVG par l'application** : aucune image, aucun appel réseau, l'étude marche hors ligne et s'imprime. Deux boutons ouvrent l'or en journalier et en horaire sur TradingView. Recette `tools/etude-test.js` : 78 contrôles, cache `trading-desk-v15` |
 | 2.8 | **Applications d'entraînement du Play Store listées dans la Formation** : les trois qui corrigent et notent (Candle Master, Chart Quiz, Trading Game) et les deux qui expliquent (Forex Smart Money Concept, GTS), avec leur langue, leur prix et **leur limite**. Plus une mise en garde explicite : beaucoup d'applications « trading » du Play Store sont des **vitrines de courtiers** poussant au dépôt d'argent réel — aucune n'est nécessaire pour s'entraîner. La liste est écrite **dans l'application, hors ligne**, sans aucun lien externe ajouté. |
 | 2.7 | **Relire ses vrais trades** : l'application reprend vos trades du journal et vous repose les questions du plan — règles chiffrées (stop 15 pips, ratio 1:7, risque 1 %, fenêtre de tir, limite du jour) corrigées automatiquement avec la mesure affichée, jugements de lecture enregistrés séparément et non notés. **Le résultat du trade reste masqué jusqu'à la révélation**, pour que la lecture ne soit pas influencée. La règle des 15 pips n'est posée que sur les paires forex. Recette `tools/relecture-test.js` (61 contrôles). |
 | 2.7 | **Pratiquer sur de vrais graphiques** : la Formation indique désormais, chapitre par chapitre, ce qui est réellement gratuit et utilisable **depuis une tablette Android** — replay journalier TradingView, compte démo MT5 pour l'exécution, quiz SMC dans le navigateur — avec la limite constatée en 2026 (le replay **intraday** TradingView n'est plus gratuit) et l'annexe ordinateur (testeur visuel MT5 + FX Blue) pour le jour où vous en auriez un. |
 | 2.6 | **Graphique TradingView à côté du journal** : bouton sur chaque trade, dans l'en-tête du journal, dans la fiche de saisie et dans l'entraîneur. L'application ouvre **le bon symbole et la bonne unité de temps** — et rien d'autre : aucun script externe n'est chargé dans la page, aucune donnée du journal ne part avec le lien. Correspondance des symboles corrigeable (le symbole de votre courtier gagne sur le défaut), bouton désactivable, et message explicite hors ligne. Recette dédiée `tools/graphe-test.js` (57 contrôles). |
 | 2.6 | **Journal → place à côté (Android)** : procédure écrite pour l'écran partagé, avec le **piège connu** de l'application TradingView pour tablette Android (écran partagé refusé depuis une mise à jour de 2026 — passer par tradingview.com dans le navigateur). Limite assumée et écrite noir sur blanc : **vos tracés ne sont pas lisibles** par l'application, ils restent dans votre compte. |
 | 2.5 | **Vue Formation — apprendre la méthode et s'entraîner** : le plan est expliqué dans l'ordre de ses **12 chapitres** (essentiel, leçons, lecture sur le graphique, étapes, erreurs fréquentes) avec **52 exercices notés**, dont le calcul de risque. |
-| 2.5 | **Entraîneur interactif** : l'application **dessine ses propres graphiques de bougies** (SVG, aucune image, aucun réseau) et corrige la réponse en **dessinant la zone et le niveau de cassure** sur le graphique. **6 concepts** d'entraînement, dont « identifier la tendance ». Recette dédiée `tools/formation-test.js` (76 contrôles) — cohérence vérifiée sur **1 400 scénarios**. |
+| 2.5 | **Entraîneur interactif** : l'application **dessine ses propres graphiques de bougies** (SVG, aucune image, aucun réseau) et corrige la réponse en **dessinant la zone et le niveau de cassure** sur le graphique. **6 concepts** d'entraînement, dont « identifier la tendance ». Recette dédiée `tools/formation-test.js` (77 contrôles) — cohérence vérifiée sur **1 400 scénarios**. |
 | 2.5 | **Progression conservée** : chapitres étudiés, score des exercices, série et détail par concept, enregistrés avec le journal (donc chiffrés par le verrouillage et sauvegardés dans votre dépôt). Sources de chaque chapitre citées, et **modules absents des documents signalés** au lieu d'être inventés. |
 | 2.5 | **Défaut corrigé au passage** : la recette des rappels figeait encore le numéro de version du cache (`trading-desk-v9`) — même faux échec que `lock-test` et `sync-test` en 2.4 ; elle lit désormais la version du fichier. |
 | 2.4 | **Rappels du plan en notifications de la tablette** : préparation avant l'ouverture, ouverture, fermeture (rappel de saisie) et revue du dimanche, aux heures des fenêtres de tir du plan. Heures lues dans le plan lui-même — plus aucun risque de divergence. Application en arrière-plan comprise ; rappels manqués regroupés et signalés à la réouverture ; jamais deux fois le même rappel. |

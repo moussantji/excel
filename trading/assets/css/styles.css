@@ -1233,6 +1233,37 @@ body.verrouille>#app,body.verrouille>.mobile-nav{filter:blur(9px) saturate(.5);p
 .appli-tete b{font-size:.87rem}
 .appli p{margin:.4em 0 0;line-height:1.5}
 .appli-langue{display:inline-block;margin-left:4px;font-size:.7rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:.05em}
+/* ---- etude de cas reelle (or) : graphiques fabriques par l'application ---- */
+.etude-chapeau{margin:2px 0 10px;line-height:1.6}
+.etude-titre{margin:22px 0 8px;font-size:.95rem;letter-spacing:.01em}
+.etude-figure{margin:12px 0 16px;padding:10px 12px 8px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
+.etude-svg{display:block;width:100%;height:auto}
+.etude-svg text{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.etude-svg .etude-axe{font-size:10px;fill:var(--muted-2)}
+.etude-svg .etude-jour{font-size:10.5px;fill:var(--muted-2);letter-spacing:.04em}
+.etude-svg .etude-niveau{font-size:10.5px;fill:var(--text)}
+.etude-svg .etude-repere{font-size:11px;font-weight:700;fill:var(--text)}
+.etude-svg .etude-repere-texte{font-size:10.5px;fill:var(--muted)}
+.etude-svg .etude-note-champ{font-size:10.5px;fill:var(--gold-2)}
+.etude-figure figcaption{margin-top:8px;font-size:.78rem;line-height:1.55;color:var(--muted)}
+.etude-carnet{margin:12px 0 16px;padding:12px 14px;border:1px solid var(--line-2);border-left:3px solid var(--gold);border-radius:var(--radius-xs);background:var(--gold-dim)}
+.etude-carnet-tete{margin-bottom:7px;font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--gold-2)}
+.etude-liste{margin:0;padding-left:18px}
+.etude-liste li{margin:5px 0;line-height:1.55}
+.etude-etapes{margin:12px 0;padding-left:20px}
+.etude-etapes li{margin:8px 0;line-height:1.58}
+.etude-tableau{margin:12px 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.etude-tableau table{width:100%;border-collapse:collapse;font-size:.82rem}
+.etude-tableau th,.etude-tableau td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.etude-tableau th{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.etude-tableau td.doux{color:var(--muted)}
+.etude-oui{color:var(--green);font-weight:700;white-space:nowrap}
+.etude-non{color:var(--red);font-weight:700;white-space:nowrap}
+.etude-verdict{margin:12px 0 16px;padding:12px 14px;border:1px solid var(--line-2);border-left:3px solid var(--red);border-radius:var(--radius-xs);background:var(--red-dim);font-size:.85rem;line-height:1.6}
+.etude-note-cellule{font-size:.76rem;color:var(--muted-2)}
+.etude-source{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:.76rem;line-height:1.65;color:var(--muted-2)}
+.etude-code{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+@media print{.etude-figure,.etude-tableau,.etude-carnet,.etude-verdict{break-inside:avoid}}
 .vrais-table{display:flex;flex-direction:column;gap:12px;margin:12px 0}
 .vrais-ligne{border-left:2px solid var(--gold-dim);padding-left:12px}
 .vrais-quoi{display:flex;flex-direction:column;gap:2px}
