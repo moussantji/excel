@@ -88,6 +88,7 @@
      Vue principale
      --------------------------------------------------------- */
   function rendre(host, model, App) {
+    appCourante = App || null;
     var p = lire();
     var chapitres = global.FormationContenu.chapitres;
     var html = '';
@@ -146,6 +147,24 @@
     concept: 'tendance', scenario: null, index: 0, reponses: [], clic: null, correction: false, fini: false,
     ouverts: {}   // chapitres dépliés : conservés d'un redessin à l'autre
   };
+
+  /* L'application en cours de rendu : la vue Formation reçoit App (état, réglages,
+     trades) et le garde sous la main pour les boutons posés dans le HTML. */
+  var appCourante = null;
+
+  /** Réglages de l'application (pour savoir si le lien externe est autorisé). */
+  function planReglages() {
+    return (appCourante && appCourante.state && appCourante.state.settings) || {};
+  }
+
+  /** Ouvre le graphique réel de l'instrument le plus tradé (graphe.js). */
+  function ouvrirGraphiqueReel() {
+    var G = global.Graphe;
+    if (!G) return;
+    var reglages = planReglages();
+    var trades = (appCourante && appCourante.state && appCourante.state.trades) || [];
+    G.ouvrir(G.instrumentPrincipal(trades, reglages), reglages);
+  }
 
   function carteEntraineur(p, App) {
     var E = global.Entraineur;
@@ -216,6 +235,7 @@
       '<button class="btn' + (etat.correction ? '' : ' ghost') + '" id="fCorrection">' + (etat.correction ? 'Masquer la correction' : 'Voir la correction') + '</button>' +
       '<button class="btn primary" id="fTirer">Nouveau graphique</button>' +
       '<button class="btn ghost" id="fRelire">Relire la leçon du chapitre lié</button>' +
+      (global.Graphe && global.Graphe.actif(planReglages()) ? '<button class="btn ghost" id="fReel">' + UI.icon('link') + ' Comparer sur un graphique réel</button>' : '') +
       '</div>';
 
     var e = p.entraineur;
@@ -503,6 +523,8 @@
       var d = document.getElementById('chap-' + chapitre.id);
       if (d) { d.open = true; etat.ouverts[chapitre.id] = true; d.scrollIntoView({ block: 'start' }); }
     });
+    var reel = zone.querySelector('#fReel');
+    if (reel) reel.addEventListener('click', ouvrirGraphiqueReel);
     zone.querySelectorAll('.ent-choix-btn').forEach(function (b) {
       b.addEventListener('click', function () {
         repondre(b.dataset.choix, null, App);

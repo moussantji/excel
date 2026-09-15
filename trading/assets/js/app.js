@@ -887,6 +887,7 @@
       }).join('') + '</div>' +
       '<button class="btn ghost" id="btnImport">Importer CSV</button>' +
       '<button class="btn ghost" id="btnExport">Exporter</button>' +
+      (boutonGraphique() ? '<button class="btn ghost" id="btnGraph">' + UI.icon('link') + ' Graphique</button>' : '') +
       '<button class="btn primary" id="btnAdd">+ Nouveau trade</button>' +
       '</div>';
 
@@ -939,6 +940,7 @@
     $('#btnAdd').addEventListener('click', function () { openTradeForm(null, model); });
     $('#btnImport').addEventListener('click', function () { openImportDialog(model); });
     $('#btnExport').addEventListener('click', function () { openExportDialog(model); });
+    if ($('#btnGraph')) $('#btnGraph').addEventListener('click', function () { ouvrirDialogueGraphique(); });
     $$('[data-preset]', host).forEach(function (b) {
       b.addEventListener('click', function () { applyPreset(b.dataset.preset); });
     });
@@ -988,6 +990,11 @@
     $$('[data-action]').forEach(function (b) {
       b.addEventListener('click', function (e) {
         e.stopPropagation();
+        // « graph » ne porte pas d'identifiant de trade : on le traite avant la recherche
+        if (b.dataset.action === 'graph') {
+          if (global.Graphe) global.Graphe.ouvrir(b.dataset.sym, state.settings);
+          return;
+        }
         var t = state.trades.filter(function (x) { return x.id === b.dataset.id; })[0];
         if (!t) return;
         if (b.dataset.action === 'delete') {
@@ -1009,6 +1016,50 @@
           UI.toast('Copie du trade ajoutée à aujourd\'hui.');
         }
       });
+    });
+  }
+
+  /** Bouton « Graphique » : présent seulement si le lien est autorisé dans les Paramètres. */
+  function boutonGraphique(instrument) {
+    if (!global.Graphe || !global.Graphe.actif(state.settings)) return '';
+    var sym = instrument ? String(instrument) : '';
+    var titre = sym ? 'Ouvrir ' + sym + ' sur TradingView (' + global.Graphe.libelleIntervalle(global.Graphe.intervalleDe(state.settings)) + ')'
+                    : 'Ouvrir un graphique TradingView';
+    return '<button class="icon-btn lien-ext" data-action="graph"' + (sym ? ' data-sym="' + attr(sym) + '"' : '') +
+      ' title="' + attr(titre) + '" aria-label="' + attr(titre) + '">' + UI.icon('link') + '</button>';
+  }
+
+  /** Choix de l'instrument et de l'unité de temps avant d'ouvrir la fenêtre externe. */
+  function ouvrirDialogueGraphique() {
+    var G = global.Graphe;
+    if (!G) return;
+    var instruments = [];
+    state.trades.forEach(function (t) { if (t.symbol && instruments.indexOf(t.symbol) === -1) instruments.push(t.symbol); });
+    (state.settings.symbols || []).forEach(function (x) { if (instruments.indexOf(x) === -1) instruments.push(x); });
+    var principal = G.instrumentPrincipal(state.trades, state.settings);
+    var content = el('div', 'tv-dialog');
+    content.innerHTML =
+      '<p>Le graphique s\'ouvre dans une nouvelle fenêtre : gardez-la à côté du journal pour comparer ce que vous voyez à ce que vous avez noté.</p>' +
+      '<div class="form-field wide"><label>Instrument</label>' +
+      UI.selectHTML('tvInstrument', instruments.map(function (x) { return { value: x, label: x + ' — ' + G.symboleTV(x, state.settings) }; }), principal) + '</div>' +
+      '<div class="form-field wide"><label>Unité de temps</label>' +
+      UI.selectHTML('tvIntervalle', G.INTERVALLES.map(function (x) { return { value: x.id, label: x.label }; }), G.intervalleDe(state.settings)) + '</div>' +
+      '<p class="muted small">Internet est nécessaire pour TradingView ; le journal, le plan et l\'entraîneur restent utilisables hors ligne. ' +
+      'L\'adresse transmise ne contient que le symbole et l\'unité de temps.</p>';
+    UI.openModal({
+      title: 'Ouvrir un graphique', size: 'sm', content: content,
+      footerButtons: [
+        { label: 'Annuler', class: 'ghost', onClick: function (overlay, close) { close(); } },
+        { label: 'Ouvrir TradingView', class: 'primary', onClick: function (overlay, close) {
+            var sel = $('select[name="tvInstrument"]', overlay);
+            var iv = $('select[name="tvIntervalle"]', overlay);
+            var reglages = Object.assign({}, state.settings, {
+              graphique: Object.assign({}, state.settings.graphique, { intervalle: iv ? iv.value : undefined })
+            });
+            var u = G.ouvrir(sel ? sel.value : principal, reglages);
+            if (u) close();
+          } }
+      ]
     });
   }
 
@@ -1092,6 +1143,7 @@
             return td('num', UI.dur(t.durationMin));
           case 'actions':
             return td('num nowrap',
+              boutonGraphique(t.symbol) +
               '<button class="icon-btn" data-action="duplicate" data-id="' + t.id + '" title="Dupliquer le trade">' + UI.icon('copy') + '</button>' +
               '<button class="icon-btn danger" data-action="delete" data-id="' + t.id + '" title="Supprimer le trade">' + UI.icon('trash') + '</button>');
           default:
@@ -1147,6 +1199,7 @@
         (t.mistake && t.mistake !== 'Aucune' ? '<span class="tc-tag warn">' + UI.icon('warn') + esc(t.mistake) + '</span>' : '') +
         '</div>' +
         '<div class="tc-actions">' +
+        boutonGraphique(t.symbol) +
         '<button class="icon-btn" data-action="duplicate" data-id="' + t.id + '" title="Dupliquer le trade">' + UI.icon('copy') + '</button>' +
         '<button class="icon-btn danger" data-action="delete" data-id="' + t.id + '" title="Supprimer le trade">' + UI.icon('trash') + '</button>' +
         '</div></footer>' +
@@ -1225,7 +1278,8 @@
       f('Date', input('date', r.date, 'type="date"')) +
       f('Heure', input('time', r.time, 'type="time"')) +
       f('Instrument', input('symbol', r.symbol, 'list="symbolList" placeholder="EURUSD"') +
-        '<datalist id="symbolList">' + s.symbols.map(function (x) { return '<option value="' + attr(x) + '">'; }).join('') + '</datalist>') +
+        '<datalist id="symbolList">' + s.symbols.map(function (x) { return '<option value="' + attr(x) + '">'; }).join('') + '</datalist>' +
+        (boutonGraphique() ? '<button type="button" class="btn ghost small" id="fGraphTV">' + UI.icon('link') + ' Voir le graphique</button>' : '')) +
       f('Sens', UI.segHTML('direction', [{ value: 'long', label: '▲ Achat' }, { value: 'short', label: '▼ Vente' }], r.direction)) +
 
       f('Session', UI.selectHTML('session', s.sessions, r.session, '—')) +
@@ -1275,6 +1329,12 @@
         $$('.seg-btn', seg).forEach(function (x) { x.classList.toggle('active', x === b); });
         updatePreview(form, s);
       });
+    });
+    var voirGraphe = $('#fGraphTV', form);
+    if (voirGraphe) voirGraphe.addEventListener('click', function () {
+      var champ = $('input[name="symbol"]', form);
+      var instrument = champ ? String(champ.value || '').trim() : '';
+      if (global.Graphe) global.Graphe.ouvrir(instrument || undefined, s);
     });
     $$('.calc', form).forEach(function (i) { i.addEventListener('input', function () { updatePreview(form, s); }); });
     $$('input,select,textarea', form).forEach(function (i) { i.addEventListener('change', function () { updatePreview(form, s); }); });

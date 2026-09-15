@@ -219,6 +219,13 @@
       currencySymbol: '€',
       /* Rappels du plan (notify.js) — éteints par défaut : jamais de demande
          d'autorisation sans un geste volontaire. */
+      /* Graphique externe (graphe.js) — lien TradingView, allumé par défaut :
+         il ne charge rien tant qu'on n'appuie pas. */
+      graphique: {
+        actif: true,
+        intervalle: '60',
+        symboles: {}
+      },
       notifications: {
         actif: false,
         fenetres: ['asie', 'europe', 'usa'],
@@ -376,6 +383,11 @@
     var st = emptyState();
     if (parsed && typeof parsed === 'object') {
       var s = Object.assign({}, st.settings, parsed.settings || {});
+      // les réglages imbriqués gardent leurs valeurs par défaut : une sauvegarde
+      // ancienne (ou partielle) ne doit pas éteindre le bouton par accident
+      var def = defaultSettings();
+      s.graphique = Object.assign({}, def.graphique, s.graphique || {});
+      if (!s.graphique.symboles || typeof s.graphique.symboles !== 'object') s.graphique.symboles = {};
       st.settings = s;
       st.demo = !!parsed.demo;
       st.trades = (parsed.trades || []).map(function (t) { return normalizeTrade(t, s); });

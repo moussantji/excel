@@ -7,6 +7,8 @@ Application **locale, sans dépendance** (HTML + CSS + JavaScript vanilla) pour 
 3. **voir ses performances** : courbe d'équité, drawdown, P&L par jour/mois/setup/instrument/session, distribution des R, calendrier annuel, score de discipline ;
 4. **apprendre la méthode et s'entraîner** : la vue **Formation** explique le plan chapitre par chapitre et fait réviser chaque concept (lire une tendance, reconnaître une cassure, trouver une zone, repérer la liquidité, suivre Wyckoff) sur des graphiques générés et corrigés par l'application.
 
+Le graphique de votre plateforme (TradingView) se met **à côté** de l'application, pas dedans : l'application vous emmène au bon instrument et à la bonne unité de temps d'un appui, sans jamais lire ni remplacer vos tracés (voir [Trader avec le graphique à côté](#trader-avec-le-graphique-à-côté-tradingview)).
+
 Cible : compte **forex & indices CFD** (EURUSD, XAUUSD, US30, NAS100…), style intraday / swing court, résultats suivis **en R et en devise**.
 
 **Utilisable sur ordinateur et sur tablette** : application installable (PWA), plein écran, fonctionne **hors ligne** et adaptée au tactile (voir la section [Sur tablette](#sur-tablette-ipad--android)).
@@ -62,7 +64,7 @@ L'application **fonctionne entièrement sans connexion** une fois ouverte une pr
 Deux précisions utiles :
 
 - **Tablette en Wi-Fi local** (`http://192.168.x.x`) : l'application marche, mais le mode hors ligne **et** l'installation sur l'écran d'accueil exigent **https** — donc l'adresse GitHub Pages (ou Netlify/Cloudflare). C'est la seule raison de préférer cette adresse au Wi-Fi local.
-- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v11`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
+- **Après une mise à jour**, ouvrez l'application une fois avec du réseau : le service worker (`trading-desk-v12`) récupère la nouvelle version, et le hors ligne continue d'être assuré.
 
 Recette automatique du mode hors ligne : `node tools/offline-test.js` (service worker réel simulé, réseau coupé, serveur en panne, fichiers manquants).
 
@@ -156,6 +158,50 @@ Le contenu suit **les deux documents de la méthode que vous avez fournis** (`UL
 La formation **explique** le plan, elle ne le remplace pas : le plan reste la référence en séance, la formation sert à le comprendre et à s'entraîner dessus.
 
 Recette dédiée : `node tools/formation-test.js` (72 contrôles — contenu et définitions des notions clés, cohérence des graphiques sur 1 400 scénarios, questions et correction, calculs de risque, rendu et progression dans la vue, cache hors ligne et impression).
+
+---
+
+## Trader avec le graphique à côté (TradingView)
+
+Le journal et le graphique TradingView **cohabitent sur la même tablette** : l'application peut ouvrir **le bon symbole, sur la bonne unité de temps**, d'un appui — puis vous placez les deux fenêtres côte à côte.
+
+### Où se trouvent les boutons
+
+| Endroit | Ce qu'il fait |
+|---|---|
+| **Journal** → en-tête, bouton *Graphique* | Demande l'instrument et l'unité de temps, puis ouvre le graphique |
+| **Journal** → chaque ligne / chaque carte | Ouvre directement le graphique **de l'instrument de ce trade** |
+| **Fiche d'un trade** → *Voir le graphique* | Ouvre l'instrument en cours de saisie (suit ce que vous tapez dans le champ Instrument) |
+| **Formation** → entraîneur → *Comparer sur un graphique réel* | Ouvre le graphique de l'instrument que vous tradez le plus, pour comparer votre lecture simulée au marché réel |
+
+Chaque bouton ouvre un **nouvel onglet** : votre journal reste à l'écran, rien n'est remplacé.
+
+### Vous mettre TradingView à côté (Android)
+
+1. Ouvrez **TradingView** et l'application.
+2. **Applications récentes** (le carré ou le geste bas→haut) → appui sur l'icône de TradingView au-dessus de sa vignette → **Ouvrir en affichage fractionné**.
+3. La moitié du haut est prise par TradingView ; dans la moitié du bas, choisissez l'application du journal. La séparation se déplace en glissant la poignée centrale.
+
+**Un piège connu** : depuis une mise à jour de 2026, l'**application** TradingView pour tablette Android refuse parfois l'écran partagé (le système affiche alors que ce n'est pas possible). Dans ce cas, utilisez **tradingview.com dans le navigateur** (Chrome) : le navigateur, lui, accepte toujours le fractionné, et le graphique est identique.
+
+Sur iPad, la fonction s'appelle **Split View / Slide Over** (glisser une application depuis le Dock) ; la manipulation est décrite dans la section tablette ci-dessous.
+
+### Ce que l'application peut faire — et ce qu'elle ne peut pas
+
+| | |
+|---|---|
+| **Ce qu'elle fait** | Ouvrir le bon symbole et la bonne unité de temps, sans vous faire chercher ; garder l'adresse lisible (exemple : `?symbol=OANDA:XAUUSD&interval=240`) ; rester utilisable hors ligne, avec un message clair quand le réseau manque |
+| **Ce qu'elle ne fait pas** | **Lire vos tracés** (zones, trendlines, position, watchlist). Aucun site web n'a accès au contenu d'une autre application ; l'API qui le permettrait est réservée aux professionnels. Vos tracés restent dans **votre compte** TradingView, et c'est très bien ainsi : rien ne sort de votre appareil |
+| **Ce qu'elle ne fait jamais** | Charger un script TradingView dans la page, ouvrir une fenêtre toute seule, ou envoyer autre chose que le symbole et l'unité de temps. **Aucune donnée du journal** (date, prix, montant, note) ne part avec le lien |
+
+### Réglages (Paramètres → Graphique TradingView)
+
+- **Afficher le bouton** : allumé par défaut, déplaçable en un clic (les boutons disparaissent partout, y compris dans l'entraîneur et la fiche de trade).
+- **Unité de temps** : 15 minutes, 1 heure, 4 heures, 1 jour, 1 semaine.
+- **Correspondance des symboles** : l'application propose un symbole par instrument (les paires forex chez **FX**, l'or et l'argent chez **OANDA**, les indices chez **TVC**, les cryptos chez **BITSTAMP**). **Votre courtier a peut-être les mêmes références sous un autre fournisseur** : écrivez le vôtre une fois (exemple `CAPITALCOM:US30`, `FOREXCOM:XAUUSD`, `OANDA:XAUUSD`), il est réutilisé partout. Videz un champ pour revenir au symbole par défaut.
+- **Tester l'ouverture** : ouvre le graphique de l'instrument le plus tradé, sans rien enregistrer.
+
+Recette dédiée : `node tools/graphe-test.js` (56 contrôles — symboles et corrections, adresse produite, confidentialité, hors ligne, boutons présents/éteints, click-through, cache hors ligne et impression).
 
 ---
 
@@ -323,7 +369,7 @@ Plan rédigé sur la méthode **SMV** : les 4 lois (structure, offre/demande, ca
 - Utilisable **hors ligne** et **imprimable** (l'entraîneur est masqué à l'impression).
 
 ### ⚙️ Paramètres
-Capital, devise, risque par trade, valeur du pip, limites (jour/semaine/drawdown), objectif mensuel, listes d'instruments, de setups et de sessions ; **sécurité** (verrouillage, chiffrement, code de secours, biométrie, verrouillage automatique) ; **sauvegarde cloud (dépôt GitHub)** : dépôt, branche, fichier, jeton, test de connexion, journal des dernières opérations ; **rappels du plan** (notifications de la tablette aux heures des fenêtres de tir, avec aperçu des prochains rappels) ; import/export ; effacement des données.
+Capital, devise, risque par trade, valeur du pip, limites (jour/semaine/drawdown), objectif mensuel, listes d'instruments, de setups et de sessions ; **sécurité** (verrouillage, chiffrement, code de secours, biométrie, verrouillage automatique) ; **sauvegarde cloud (dépôt GitHub)** : dépôt, branche, fichier, jeton, test de connexion, journal des dernières opérations ; **rappels du plan** (notifications de la tablette aux heures des fenêtres de tir, avec aperçu des prochains rappels) ; **graphique TradingView** (bouton dans le journal, unité de temps, correspondance des symboles instrument par instrument) ; import/export ; effacement des données.
 
 ---
 
@@ -474,6 +520,7 @@ trading/
 │       ├── entraineur.js         Générateur de scénarios et correction (structure, zones, liquidité, Wyckoff)
 │       ├── formation.js          Vue Formation : cours, exercices, entraîneur, progression
 │       ├── ui.js                 Formatage FR, modales, toasts, icônes SVG
+│       ├── graphe.js             Lien vers le graphique TradingView (symbole, unité de temps)
 │       ├── views.js              Vues Calendrier, Analyses, Plan, Paramètres
 │       ├── sync.js               Sauvegarde cloud GitHub (états, conflits, fusion, hors ligne)
 │       ├── lock.js               Verrouillage, chiffrement AES-GCM, code de secours, biométrie
@@ -489,6 +536,7 @@ trading/
     ├── offline-test.js           Recette du mode hors ligne : service worker, cache, réseau coupé
     ├── notify-test.js            Recette des rappels : heures du plan, anti-doublon, rattrapage
     ├── formation-test.js         Recette de la formation : cours, scénarios, correction, progression
+    ├── graphe-test.js            Recette du lien graphique : symboles, correction, hors ligne, boutons
     ├── style-check.js            Recette du thème : contrastes AA, jetons, cibles tactiles, impression
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
@@ -509,6 +557,7 @@ npm i -D jsdom && node tools/lock-test.js                # verrouillage : chiffr
 node tools/offline-test.js                              # hors ligne : service worker et cache (aucune dépendance)
 node tools/notify-test.js                               # rappels du plan : heures, doublons, autorisation
 npm i -D jsdom && node tools/formation-test.js           # formation : cours, entraîneur, correction, progression
+npm i -D jsdom && node tools/graphe-test.js              # graphique TradingView : lien, hors ligne, boutons
 node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
@@ -520,6 +569,8 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.6 | **Graphique TradingView à côté du journal** : bouton sur chaque trade, dans l'en-tête du journal, dans la fiche de saisie et dans l'entraîneur. L'application ouvre **le bon symbole et la bonne unité de temps** — et rien d'autre : aucun script externe n'est chargé dans la page, aucune donnée du journal ne part avec le lien. Correspondance des symboles corrigeable (le symbole de votre courtier gagne sur le défaut), bouton désactivable, et message explicite hors ligne. Recette dédiée `tools/graphe-test.js` (56 contrôles). |
+| 2.6 | **Journal → place à côté (Android)** : procédure écrite pour l'écran partagé, avec le **piège connu** de l'application TradingView pour tablette Android (écran partagé refusé depuis une mise à jour de 2026 — passer par tradingview.com dans le navigateur). Limite assumée et écrite noir sur blanc : **vos tracés ne sont pas lisibles** par l'application, ils restent dans votre compte. |
 | 2.5 | **Vue Formation — apprendre la méthode et s'entraîner** : le plan est expliqué dans l'ordre de ses **12 chapitres** (essentiel, leçons, lecture sur le graphique, étapes, erreurs fréquentes) avec **52 exercices notés**, dont le calcul de risque. |
 | 2.5 | **Entraîneur interactif** : l'application **dessine ses propres graphiques de bougies** (SVG, aucune image, aucun réseau) et corrige la réponse en **dessinant la zone et le niveau de cassure** sur le graphique. **6 concepts** d'entraînement, dont « identifier la tendance ». Recette dédiée `tools/formation-test.js` (72 contrôles) — cohérence vérifiée sur **1 400 scénarios**. |
 | 2.5 | **Progression conservée** : chapitres étudiés, score des exercices, série et détail par concept, enregistrés avec le journal (donc chiffrés par le verrouillage et sauvegardés dans votre dépôt). Sources de chaque chapitre citées, et **modules absents des documents signalés** au lieu d'être inventés. |

@@ -1197,6 +1197,28 @@ body.verrouille>#app,body.verrouille>.mobile-nav{filter:blur(9px) saturate(.5);p
 }
 
 /* =========================================================
+   GRAPHIQUE EXTERNE (TradingView) — lien, jamais un chargement
+   ========================================================= */
+.lien-ext{color:var(--muted-2)}
+.lien-ext:hover{color:var(--gold);background:var(--gold-dim);border-color:var(--line-3)}
+.btn .ico-svg{width:15px;height:15px}
+.tv-card .notif-etat{margin-bottom:12px}
+.tv-liste{display:grid;gap:6px;margin-top:6px}
+.tv-ligne{display:grid;grid-template-columns:96px minmax(0,1fr) auto;align-items:center;gap:8px}
+.tv-ligne .tv-inst{font-size:.8rem;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+.tv-ligne .input{min-height:38px}
+.tv-perso{font-size:.68rem;color:var(--gold);text-transform:uppercase;letter-spacing:.06em}
+.tv-dialog .form-field{margin-bottom:10px}
+@media (max-width:560px){
+  .tv-ligne{grid-template-columns:74px minmax(0,1fr);gap:6px}
+  .tv-ligne .tv-perso{grid-column:2;justify-self:start}
+}
+@media print{
+  /* l'impression reste du papier : pas de boutons vers l'extérieur */
+  .lien-ext,#btnGraph,#fGraphTV,#fReel{display:none !important}
+}
+
+/* =========================================================
    RAPPELS DU PLAN — notifications de la tablette
    ========================================================= */
 .notif-card .card-body{display:flex;flex-direction:column;gap:16px}

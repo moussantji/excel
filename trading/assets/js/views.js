@@ -809,6 +809,110 @@
   }
 
   /* ---------------------------------------------------------
+     Graphique externe (TradingView) — un lien, jamais un chargement
+     --------------------------------------------------------- */
+  function carteGraphique(App) {
+    var G = global.Graphe;
+    if (!G) return '';
+    var s = App.state.settings || {};
+    var g = s.graphique || {};
+    var actif = g.actif !== false;
+    var iv = G.intervalleDe(s);
+    var symboles = s.symbols || [];
+
+    var pastille = '<span class="badge ' + (actif ? 'ok' : 'flat') + '">' + (actif ? 'Actif' : 'Éteint') + '</span>';
+    var horsLigne = !G.enLigne();
+
+    var etatHTML = '<div class="notif-etat ' + (horsLigne ? 'warn' : 'ok') + '">' +
+      '<span class="notif-ico">' + UI.icon('link') + '</span>' +
+      '<div><p><b>' + (horsLigne ? 'Hors ligne : le bouton attendra le réseau' : 'Le bouton « Graphique » ouvre TradingView dans une nouvelle fenêtre') + '</b></p>' +
+      '<p class="muted small">L\'adresse ne contient que le symbole et l\'unité de temps (' + esc(G.libelleIntervalle(iv)) + '). ' +
+      'Aucune donnée du journal — date, prix, montant, note — ne part avec le lien.</p></div></div>';
+
+    var lignes = symboles.map(function (sym) {
+      var perso = (g.symboles || {})[sym];
+      var defaut = G.symboleTV(sym, { graphique: { symboles: {} } });
+      return '<label class="tv-ligne"><span class="tv-inst">' + esc(sym) + '</span>' +
+        '<input class="input" name="tv:' + attr(sym) + '" value="' + attr(perso || '') + '" placeholder="' + attr(defaut) + '" spellcheck="false">' +
+        (perso ? '<em class="tv-perso" title="Correction enregistrée">corrigé</em>' : '') + '</label>';
+    }).join('');
+
+    var formHTML = '<form id="tvForm" class="notif-form">' +
+      '<label class="case"><input type="checkbox" name="tvActif"' + (actif ? ' checked' : '') + '>' +
+      '<span><b>Afficher le bouton « Graphique »</b><em>Dans le journal (chaque trade) et dans l\'en-tête de la liste</em></span></label>' +
+      '<div class="form-field wide"><label>Unité de temps à l\'ouverture</label>' +
+      UI.selectHTML('tvIntervalle', G.INTERVALLES.map(function (x) { return { value: x.id, label: x.label }; }), iv) +
+      '<span class="field-hint">Celle que vous utilisez pour décider. Vous pouvez la changer à tout moment.</span></div>' +
+      (symboles.length
+        ? '<div class="form-field wide"><label>Symbole TradingView de chaque instrument</label>' +
+          '<div class="tv-liste">' + lignes + '</div>' +
+          '<span class="field-hint">Les valeurs grisées sont les symboles par défaut. Votre courtier n\'a peut-être pas les mêmes références : ' +
+          'écrivez les vôtres (exemple <code>CAPITALCOM:US30</code>, <code>OANDA:XAUUSD</code>, <code>FX:EURUSD</code>). Videz un champ pour revenir au défaut.</span></div>'
+        : '<p class="muted small">Ajoutez d\'abord des instruments suivis, un peu plus haut : chaque instrument aura sa ligne de correspondance.</p>') +
+      '<div class="form-actions"><button class="btn primary" type="submit">Enregistrer le graphique</button>' +
+      '<button class="btn ghost" type="button" id="tvEssai">' + UI.icon('link') + ' Tester l\'ouverture</button>' +
+      '<span class="muted small">Rien n\'est chargé par l\'application : le lien ne s\'ouvre qu\'à votre appui.</span></div>' +
+      '</form>';
+
+    var limites = '<p class="muted small">Le graphique s\'ouvre <b>à côté</b> de l\'application : sur Android, applications récentes → icône de ' +
+      'l\'application → <i>Ouvrir en affichage fractionné</i>. Si l\'application TradingView refuse l\'écran partagé, passez par le navigateur ' +
+      '(tradingview.com), qui l\'accepte. <b>Vos tracés restent dans votre compte</b> : l\'application ne peut pas les lire ni les afficher, et ne ' +
+      'les remplace pas — elle vous emmène simplement au bon endroit.</p>';
+
+    return App.card('Graphique TradingView (lien externe)',
+      etatHTML + formHTML + limites, { tools: pastille, class: 'tv-card' });
+  }
+
+  function brancherGraphique(App) {
+    var G = global.Graphe;
+    var form = $('#tvForm');
+    if (!G || !form) return;
+
+    function enregistrer() {
+      var s = App.state.settings;
+      var prec = Object.assign({ actif: true, intervalle: G.INTERVALLE_DEFAUT, symboles: {} }, s.graphique || {});
+      var symboles = {};
+      (s.symbols || []).forEach(function (sym) {
+        var champ = form.elements['tv:' + sym];
+        var val = champ ? String(champ.value || '').trim() : '';
+        if (val) symboles[sym] = val;
+      });
+      s.graphique = {
+        actif: !!(form.elements.tvActif && form.elements.tvActif.checked),
+        intervalle: (form.elements.tvIntervalle && form.elements.tvIntervalle.value) || prec.intervalle,
+        symboles: symboles
+      };
+      App.persist();
+      App.render();
+      UI.toast(s.graphique.actif ? 'Graphique enregistré.' : 'Bouton graphique masqué.', s.graphique.actif ? 'success' : '');
+    }
+
+    form.addEventListener('submit', function (ev) { ev.preventDefault(); enregistrer(); });
+
+    var essai = $('#tvEssai');
+    if (essai) essai.addEventListener('click', function () {
+      var s = App.state.settings;
+      // on teste sur l'instrument le plus utilisé du journal, sinon le premier suivi
+      var principal = G.instrumentPrincipal(App.state.trades, s);
+      // une correction en cours de saisie doit compter tout de suite, sans enregistrer
+      var provisoire = Object.assign({}, s, { graphique: Object.assign({}, s.graphique, { symboles: symbolesSaisis(form, s) }) });
+      var u = G.ouvrir(principal, provisoire);
+      if (u) UI.toast('Ouverture de ' + principal + ' sur TradingView (' + G.libelleIntervalle(G.intervalleDe(provisoire)) + ').', 'info', 6000);
+    });
+  }
+
+  /** Les symboles actuellement écrits dans le formulaire (sans enregistrer). */
+  function symbolesSaisis(form, settings) {
+    var out = {};
+    (settings.symbols || []).forEach(function (sym) {
+      var champ = form && form.elements['tv:' + sym];
+      var val = champ ? String(champ.value || '').trim() : '';
+      if (val) out[sym] = val;
+    });
+    return out;
+  }
+
+  /* ---------------------------------------------------------
      Rappels du plan — notifications de la tablette
      --------------------------------------------------------- */
   var JOURS_COURTS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -1017,6 +1121,7 @@
 
     html += carteNuage(App);
     html += carteSecurite(App);
+    html += carteGraphique(App);
     html += carteRappels(App);
 
     html += '<div class="grid-2">';
@@ -1082,6 +1187,7 @@
     });
 
     brancherRappels(App);
+    brancherGraphique(App);
 
     $('#stDemo').addEventListener('click', function () { App.loadDemo(); });
     $('#stImport').addEventListener('click', function () { App.openImportDialog(App.buildModel()); });

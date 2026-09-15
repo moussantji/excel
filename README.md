@@ -16,6 +16,8 @@ Application statique (HTML/CSS/JS, aucune dépendance) : saisie des trades, mét
 
 **Application installable (PWA)** : utilisable sur ordinateur **et sur tablette**, en plein écran, avec une ergonomie tactile (journal en cartes, navigation en bas d'écran). **Rappels du plan en notifications de la tablette** (préparation, ouverture et fermeture des fenêtres de tir, revue du dimanche), produits par l'appareil lui-même, sans service tiers. **Tout fonctionne hors ligne** (saisie, statistiques, plan, checklists, verrouillage) ; seul l'envoi vers le dépôt GitHub attend le retour du réseau, et repart alors tout seul.
 
+**Graphique à côté du journal** : un bouton ouvre TradingView **sur le bon instrument et la bonne unité de temps** (chaque trade a le sien), sans jamais charger de script externe ni transmettre de donnée du journal — vos tracés restent dans votre compte. Sur Android, la procédure d'écran partagé est écrite dans `trading/README.md`, avec le piège connu de l'application TradingView.
+
 **Vue Formation** : le plan est expliqué **chapitre par chapitre, dans son ordre** (l'essentiel, les leçons, la lecture sur le graphique, les étapes à suivre, les erreurs fréquentes) avec **52 exercices notés** et un **entraîneur interactif** qui dessine ses propres graphiques de bougies et corrige chaque réponse en marquant la zone et le niveau de cassure. Six concepts à réviser, dont « identifier la tendance » ; la progression (chapitres étudiés, scores, série par concept) est conservée avec le journal et sauvegardée dans votre dépôt.
 
 **Sur tablette**, trois voies (détaillées dans [`trading/README.md`](trading/README.md#sur-tablette-ipad--android)) :
