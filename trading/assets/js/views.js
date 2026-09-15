@@ -32,8 +32,8 @@
     html += card_nav(year, years, yearNet, yearR, green, red, trades);
     html += App.card('Calendrier ' + year,
       '<div class="chart-host" id="calHost"></div>' +
-      '<div class="cal-legend"><span class="lg-dot" style="background:#25d09a"></span> jour gagnant ' +
-      '<span class="lg-dot" style="background:#ff5f6d;margin-left:12px"></span> jour perdant ' +
+      '<div class="cal-legend"><span class="lg-dot" style="background:var(--green)"></span> jour gagnant ' +
+      '<span class="lg-dot" style="background:var(--red);margin-left:12px"></span> jour perdant ' +
       '<span class="cal-hint">Cliquez sur un jour pour voir le détail des trades.</span></div>', { class: 'card-wide' });
 
     var selected = st.selectedDay;
@@ -266,7 +266,7 @@
       { label: 'Plan respecté', value: model.results.filter(function (t) { return t.planFollowed === 'oui'; }).length, color: Charts.colors.green },
       { label: 'Partiellement', value: model.results.filter(function (t) { return t.planFollowed === 'partiel'; }).length, color: Charts.colors.gold },
       { label: 'Hors plan', value: model.results.filter(function (t) { return t.planFollowed === 'non'; }).length, color: Charts.colors.red },
-      { label: 'Non renseigné', value: model.results.filter(function (t) { return !t.planFollowed; }).length, color: '#4b5265' }
+      { label: 'Non renseigné', value: model.results.filter(function (t) { return !t.planFollowed; }).length, color: '#6b7385' }
     ];
     function block(title, g, tone) {
       if (!g) return '<div class="conform-col"><h4>' + title + '</h4><p class="muted">Pas de trades dans cette catégorie.</p></div>';

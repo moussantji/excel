@@ -365,7 +365,7 @@ trading/
 ├── sw.js                         Service worker : cache hors ligne
 ├── assets/
 │   ├── icons/                    Icônes (192/512/maskable/Apple/iOS)
-│   ├── css/styles.css            Thème sombre / or, responsive, impression, ergonomie tactile
+│   ├── css/styles.css            Thème sombre / or (jetons de design), responsive, impression, tactile
 │   └── js/
 │       ├── store.js              État, persistance, trade normalisé, CSV, démo
 │       ├── metrics.js            Statistiques, agrégats, drawdown, objectifs, garde-fous
@@ -385,6 +385,7 @@ trading/
     ├── sync-test.js              Recette de la sauvegarde cloud : états, conflits, fusion (jsdom)
     ├── lock-test.js              Recette du verrouillage : chiffrement, code, secours, biométrie (jsdom)
     ├── offline-test.js           Recette du mode hors ligne : service worker, cache, réseau coupé
+    ├── style-check.js            Recette du thème : contrastes AA, jetons, cibles tactiles, impression
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
 ```
@@ -402,6 +403,7 @@ npm i -D jsdom && node tools/smoke-test.js              # chaque vue se rend san
 npm i -D jsdom && node tools/sync-test.js                # sauvegarde cloud : états, conflits, fusion
 npm i -D jsdom && node tools/lock-test.js                # verrouillage : chiffrement, code, secours, biométrie
 node tools/offline-test.js                              # hors ligne : service worker et cache (aucune dépendance)
+node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
 ```
@@ -412,6 +414,9 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 2.3 | **Affichage plus premium** : palette resserrée (fonds bleutés plus profonds, traits fins, or légèrement adouci), **chiffres alignés en colonnes** dans tous les tableaux et cartes (chiffres tabulaires), titres de cartes repérés par une pastille dorée, cartes qui se soulèvent au survol, tableaux avec en-têtes dégradés et survol doré, boutons et champs avec relief discret, notifications et modales en verre dépoli, barres de défilement fines, filet doré en haut de fenêtre. |
+| 2.3 | **Confort et accessibilité** : contraste du texte secondaire remonté (6,8:1 au lieu de 5,6:1, minimum AA respecté partout), anneau de focus doré pour la navigation au clavier, sélection de texte dorée, respect du réglage système « réduire les animations ». |
+| 2.3 | **Un seul thème pour tout** : les graphiques lisent désormais les couleurs de la feuille de style (`Charts.rafraichirPalette()`) au lieu de les coder en dur — un changement de thème se répercute partout. Recette `tools/style-check.js` (41 contrôles) : contrastes, jetons, cibles tactiles, impression, et vérification qu'aucun réglage adaptatif n'est écrasé. |
 | 2.2 | **Hors ligne vérifié et corrigé** : `pwa.js` manquait dans le cache du service worker (l'installation et la synchronisation entre onglets ne survivaient pas à une ouverture sans réseau) ; un serveur joignable mais en panne ne casse plus la page (repli sur la copie en cache) ; cache en `trading-desk-v7`. Recette dédiée `tools/offline-test.js`. |
 | 2.2 | **Deux bugs du verrouillage corrigés** (trouvés par la recette) : l'application ne rechargeait pas le journal après un déverrouillage quand le verrou avait été activé en cours de session (journal vide à l'écran) ; le **code de secours disparaissait de l'écran** aussitôt affiché, avant qu'on puisse le noter (il faut désormais confirmer par « J'ai noté mon code »). |
 | 2.2 | **Journal chiffré et verrouillé (optionnel)** : code de déverrouillage, chiffrement AES-GCM 256 avec clé dérivée par PBKDF2, **code de secours imprimable** et **biométrie Face ID / empreinte** (passkey + PRF) quand l'appareil le permet. Le fichier du dépôt GitHub devient illisible lui aussi. |

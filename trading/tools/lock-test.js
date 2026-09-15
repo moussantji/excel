@@ -414,7 +414,7 @@ function tresor(w, trades, checks) {
   const sw = fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8');
   verif('lock.js est chargé par la page', /assets\/js\/lock\.js/.test(html));
   verif('lock.js est en cache hors ligne', /assets\/js\/lock\.js/.test(sw));
-  verif('cache du service worker en v7', /trading-desk-v7/.test(sw));
+  verif('cache du service worker en v7', /trading-desk-v8/.test(sw));
   verif('écran de verrouillage présent dans la page', /id="ecranVerrou"/.test(html) && /id="lockForm"/.test(html) && /id="lockSecours"/.test(html));
   verif('aucune erreur JS pendant la recette', erreurs.length === 0, erreurs.join(' | '));
 

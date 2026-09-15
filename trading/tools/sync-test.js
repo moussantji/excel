@@ -353,7 +353,7 @@ const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
   verif('13 états déclarés (12 + journal verrouillé)', manquants2.length === 0, manquants2.join(','));
   verif('bandeau stylé pour chaque ton', /\.sync-banner\.warn/.test(styles) && /\.sync-banner\.ko/.test(styles) && /\.sync-banner\.info/.test(styles));
   verif('pastille stylée', /\.sync-chip\.ok/.test(styles) && /\.sync-chip\.ko/.test(styles));
-  verif('service worker en v7', /trading-desk-v7/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
+  verif('service worker en v7', /trading-desk-v8/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
   verif('lock.js en cache hors ligne', /assets\/js\/lock\.js/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
   verif('sync.js dans le cache hors ligne', /assets\/js\/sync\.js/.test(fs.readFileSync(path.join(RACINE, 'sw.js'), 'utf8')));
   verif('aucune erreur JS sur toute la session', erreurs.length === 0, erreurs.join(' | '));

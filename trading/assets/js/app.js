@@ -461,7 +461,7 @@
       [['equity', 'Équité'], ['r', 'Cumul R'], ['dd', 'Drawdown'], ['daily', 'P&L par jour']].map(function (m) {
         return '<button class="seg-btn' + (state.curveMode === m[0] ? ' active' : '') + '" data-val="' + m[0] + '">' + m[1] + '</button>';
       }).join('') + '</div>' +
-      '<div class="chart-legend"><span class="lg-dot" style="background:#f2c14e"></span><span id="curveLegend">' + curveLegendText(model) + '</span></div>' +
+      '<div class="chart-legend"><span class="lg-dot" style="background:var(--gold)"></span><span id="curveLegend">' + curveLegendText(model) + '</span></div>' +
       '</div><div class="chart-host" id="equityChart"></div>',
       { class: 'card-chart' });
 
@@ -635,17 +635,18 @@
     }
     var stackHost = $('#stackR');
     if (stackHost) {
+      // Du vert profond au rouge sombre : lisible même imprimé en noir et blanc
       function colorForR(mid) {
-        if (mid >= 3) return '#0e9b74';
-        if (mid >= 2) return '#14b487';
-        if (mid >= 1) return '#25d09a';
-        if (mid >= 0.5) return '#5cd7a8';
-        if (mid > 0) return '#9fe6c8';
-        if (mid === 0) return '#8b93a7';
-        if (mid >= -0.5) return '#f0a1ab';
-        if (mid >= -1) return '#e05a6b';
-        if (mid >= -1.5) return '#c8435b';
-        return '#a52a3f';
+        if (mid >= 3) return '#12805f';
+        if (mid >= 2) return '#189a73';
+        if (mid >= 1) return '#2ed3a0';
+        if (mid >= 0.5) return '#6adfb8';
+        if (mid > 0) return '#adecd4';
+        if (mid === 0) return '#737b8d';
+        if (mid >= -0.5) return '#f4a3ac';
+        if (mid >= -1) return '#f0697a';
+        if (mid >= -1.5) return '#c8404f';
+        return '#8f2436';
       }
       var segs = model.rDistribution.filter(function (b) { return b.count > 0; }).map(function (b) {
         return { label: b.label, value: b.count, color: colorForR(b.mid) };

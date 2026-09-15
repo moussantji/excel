@@ -6,13 +6,36 @@
   'use strict';
 
   var NS = 'http://www.w3.org/2000/svg';
-  var C = {
-    gold: '#f2c14e', gold2: '#f7d072',
-    green: '#25d09a', red: '#ff5f6d',
-    blue: '#5aa9ff', violet: '#a78bfa', cyan: '#38d6d6',
-    grid: 'rgba(255,255,255,.07)', axis: 'rgba(255,255,255,.22)',
-    text: '#8b93a7', textBright: '#e8ecf5'
+
+  /* Les couleurs viennent des jetons de la feuille de style : un seul endroit
+     à changer pour retoucher le thème, et les graphiques suivent toujours. */
+  var JETONS = {
+    gold: '--gold', gold2: '--gold-2', green: '--green', red: '--red',
+    blue: '--blue', violet: '--violet',
+    text: '--muted', textBright: '--text', fond: '--bg'
   };
+  var JETONS_REPLI = {
+    gold: '#edbb52', gold2: '#f7d27c', green: '#2ed3a0', red: '#ff6470',
+    blue: '#63b0ff', violet: '#ad92fb',
+    text: '#959dae', textBright: '#eaedf5', fond: '#070910'
+  };
+  function jeton(nom) {
+    try {
+      var v = global.getComputedStyle && global.document && global.document.documentElement
+        ? global.getComputedStyle(global.document.documentElement).getPropertyValue(nom)
+        : '';
+      v = (v || '').trim();
+      return v || JETONS_REPLI[nom.replace('--', '')] || '';
+    } catch (e) { return JETONS_REPLI[nom.replace('--', '')] || ''; }
+  }
+  function palette() {
+    var c = { grid: 'rgba(255,255,255,.065)', axis: 'rgba(255,255,255,.22)' };
+    Object.keys(JETONS).forEach(function (cle) { c[cle] = jeton(JETONS[cle]) || JETONS_REPLI[cle]; });
+    return c;
+  }
+  var C = palette();
+  /** Recharge les couleurs (appelé après un changement de thème ou un rendu). */
+  function rafraichirPalette() { C = palette(); return C; }
 
   /* ---------- helpers DOM / SVG ---------- */
   function el(tag, cls, html) {
@@ -86,6 +109,7 @@
    *   gradient: id unique
    */
   function line(host, o) {
+    rafraichirPalette();
     o = o || {};
     var pts = (o.points || []).slice();
     host.classList.add('chart-host');
@@ -161,7 +185,7 @@
 
     // point final
     var last = pts[pts.length - 1];
-    svg.appendChild(s('circle', { cx: last._x, cy: Y(last.y), r: 5, fill: o.color || C.gold, stroke: '#0b0e14', 'stroke-width': 2 }));
+    svg.appendChild(s('circle', { cx: last._x, cy: Y(last.y), r: 5, fill: o.color || C.gold, stroke: C.fond, 'stroke-width': 2 }));
 
     // axe X
     var nLbl = Math.min(pts.length, W > 700 ? 7 : 4);
@@ -176,7 +200,7 @@
 
     // survol
     var guide = s('line', { x1: 0, y1: m.t, x2: 0, y2: m.t + ih, stroke: 'rgba(255,255,255,.35)', 'stroke-width': 1, opacity: 0 });
-    var dot = s('circle', { r: 5.5, fill: o.color || C.gold, stroke: '#0b0e14', 'stroke-width': 2, opacity: 0 });
+    var dot = s('circle', { r: 5.5, fill: o.color || C.gold, stroke: C.fond, 'stroke-width': 2, opacity: 0 });
     svg.appendChild(guide); svg.appendChild(dot);
     var hit = s('rect', { x: m.l, y: m.t, width: iw, height: ih, fill: 'transparent', style: 'cursor:crosshair' });
     svg.appendChild(hit);
@@ -211,6 +235,7 @@
      2. BARRES verticales (jour, semaine, mois, jour de semaine)
      ========================================================= */
   function bars(host, o) {
+    rafraichirPalette();
     o = o || {};
     var items = o.items || [];
     host.classList.add('chart-host');
@@ -274,6 +299,7 @@
      3. BARRES horizontales (setups, instruments, sessions…)
      ========================================================= */
   function hbars(host, o) {
+    rafraichirPalette();
     o = o || {};
     var items = (o.items || []).slice();
     clear(host);
@@ -300,6 +326,7 @@
      4. DONUT (répartition gains / pertes / neutres)
      ========================================================= */
   function donut(host, o) {
+    rafraichirPalette();
     o = o || {};
     clear(host);
     var segs = (o.segments || []).filter(function (x) { return x.value > 0; });
@@ -343,6 +370,7 @@
      5. BARRE EMPILÉE horizontale (répartition R, discipline…)
      ========================================================= */
   function stack(host, o) {
+    rafraichirPalette();
     o = o || {};
     clear(host);
     var segs = o.segments || [];
@@ -377,6 +405,7 @@
      6. SPARKLINE
      ========================================================= */
   function sparkline(host, o) {
+    rafraichirPalette();
     o = o || {};
     var vals = (o.values || []).filter(function (v) { return v !== null && v !== undefined; });
     clear(host);
@@ -485,7 +514,8 @@
   }
 
   var Charts = {
-    colors: C, line: line, bars: bars, hbars: hbars, donut: donut, stack: stack,
+    colors: C, palette: palette, rafraichirPalette: rafraichirPalette,
+    line: line, bars: bars, hbars: hbars, donut: donut, stack: stack,
     sparkline: sparkline, yearCalendar: yearCalendar, fmtNum: fmtNum, fmtCompact: fmtCompact,
     el: el, clear: clear, MONTHS: MONTHS
   };
