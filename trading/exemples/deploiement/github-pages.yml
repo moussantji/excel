@@ -1,0 +1,61 @@
+# =========================================================
+# MODÈLE — Publie l'application trading/ en HTTPS via GitHub Pages.
+# Utile pour l'installer sur une tablette (PWA : plein écran + hors ligne).
+#
+# Utilisation : copiez ce fichier vers .github/workflows/deploy-trading-pages.yml
+# (ex. : mkdir -p .github/workflows && cp trading/exemples/deploiement/github-pages.yml .github/workflows/)
+# puis, sur GitHub : Settings → Pages → Source = « GitHub Actions ».
+# Sans compte autorisé à pousser des workflows, utilisez la méthode manuelle
+# décrite dans trading/README.md (Source = « Deploy from a branch »).
+#
+# L'application est alors servie à l'adresse :
+#   https://<utilisateur>.github.io/<dépôt>/trading/
+# et se met à jour à chaque push sur main.
+# =========================================================
+name: Déployer le journal de trading (Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'trading/**'
+      - '.github/workflows/deploy-trading-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-trading
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Préparer le site (dossier trading)
+        run: |
+          mkdir -p _site
+          cp -r trading/. _site/
+          rm -rf _site/node_modules _site/tools/shots
+          # Page d'accueil de redirection si la racine du site est ouverte
+          printf '%s\n' '<!doctype html><meta charset="utf-8">' \
+            '<meta http-equiv="refresh" content="0; url=./trading/">' \
+            '<title>Trading Desk</title>' > _site/index.html
+          ls -la _site | head -20
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

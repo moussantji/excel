@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes">
+<title>Trading Desk — Journal & Plan de trading</title>
+<meta name="description" content="Journal de trading, plan écrit et tableau de bord de performance (R, espérance, profit factor, drawdown, discipline) — application installable, fonctionne hors ligne, sauvegarde automatique dans votre dépôt GitHub.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0e14">
+
+<!-- Application installable (PWA) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trading Desk">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Trading Desk">
+
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 18.5 9.2 11l4.1 3.2L20.5 5.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20.5" cy="5.5" r="1.9" fill="currentColor"/></svg></span>
+      <span class="brand-text">
+        <b>Trading Desk</b>
+        <small>Journal · Plan · Performance</small>
+      </span>
+    </div>
+    <nav id="nav" class="nav"></nav>
+    <div class="sidebar-foot">
+      <button class="btn ghost install-btn" id="btnInstall" hidden>⬇️ Installer sur cet appareil</button>
+      <div class="foot-card">
+        <b>Sauvegarde cloud</b>
+        <p>Vos trades partent dans votre dépôt GitHub et reviennent tout seuls. Paramètres → Sauvegarde cloud.</p>
+      </div>
+      <p class="ver">v3.4 · SMV · sauvegarde · verrou · rappels · formation · étude de cas · routine suivie · l'or en 15 minutes · calculateur de lot</p>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="btnMenu" aria-label="Menu">☰</button>
+      <div class="tb-title">
+        <h1 id="viewTitle">Tableau de bord</h1>
+        <div id="topStatus" class="status-badge ok"><span class="dot"></span>Prêt</div>
+      </div>
+      <div class="tb-right">
+        <div id="topEquity" class="tb-kpi"></div>
+        <div id="topToday" class="tb-kpi"></div>
+        <button type="button" id="topSync" class="sync-chip" hidden aria-label="État de la sauvegarde cloud" title="Sauvegarde cloud"></button>
+        <button class="icon-btn" id="btnRefresh" title="Recharger les données enregistrées" aria-label="Actualiser">⟳</button>
+        <button class="btn primary" id="btnAddGlobal" title="Ajouter un trade (Ctrl+K pour rechercher)">+ Nouveau trade</button>
+      </div>
+    </header>
+
+    <div id="installBanner" class="install-banner" hidden>
+      <span class="ib-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v11M7.6 10.5 12 14.9l4.4-4.4M4.5 18.5h15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <div class="ib-text">
+        <b>Installer l'application</b>
+        <span id="installBannerText">Ajoutez-la à votre écran d'accueil pour l'ouvrir en plein écran, même sans réseau.</span>
+      </div>
+      <button class="btn small primary" id="ibAction">Installer</button>
+      <button class="icon-btn" id="ibClose" aria-label="Fermer">✕</button>
+    </div>
+
+    <section id="syncBanner" class="sync-banner" hidden aria-live="polite"></section>
+
+    <main id="view" class="view" aria-live="polite"></main>
+
+    <footer class="foot">
+      <span>Journal, plan et tableau de bord de trading — calculs : P&amp;L net = P&amp;L brut − frais · R = P&amp;L net ÷ risque · drawdown depuis le plus haut.</span>
+      <span class="foot-right">Sauvegarde locale + cloud · <kbd>Ctrl</kbd>+<kbd>K</kbd> journal · <kbd>Ctrl</kbd>+<kbd>P</kbd> PDF du plan</span>
+    </footer>
+  </div>
+</div>
+
+<nav id="mobileNav" class="mobile-nav"></nav>
+<div id="toasts"></div>
+
+<!-- ============ ÉCRAN DE VERROUILLAGE (chiffrement) ============ -->
+<div id="ecranVerrou" class="lock-screen" hidden role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="lock-card">
+    <div class="lock-head">
+      <span class="lock-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.6" width="14" height="9.4" rx="2.4"/><path d="M8.4 10.6V7.8a3.6 3.6 0 0 1 7.2 0v2.8"/><path d="M12 14.6v2.2"/></svg></span>
+      <div>
+        <h2 id="lockTitle">Journal verrouillé</h2>
+        <p class="lock-lead" id="lockLead">Vos trades sont chiffrés sur cet appareil et dans votre dépôt. Saisissez votre code pour ouvrir le journal.</p>
+      </div>
+    </div>
+
+    <form id="lockForm" class="lock-form" autocomplete="off">
+      <label for="lockCode">Code de déverrouillage</label>
+      <input class="input lock-input" id="lockCode" type="password" inputmode="text" autocomplete="current-password" spellcheck="false" placeholder="votre code">
+      <div class="lock-actions">
+        <button class="btn primary" id="lockGo" type="submit">Déverrouiller</button>
+        <button class="btn ghost" id="lockBio" type="button" hidden>Déverrouiller avec Face ID / empreinte</button>
+      </div>
+      <label class="cloud-toggle" id="lockBioWrap"><input type="checkbox" id="lockBioOn" hidden><span>Activer Face ID / empreinte sur cet appareil (proposé une seule fois)</span></label>
+      <div id="lockMsg" class="lock-msg" role="status" aria-live="polite"></div>
+    </form>
+
+    <details class="lock-secours">
+      <summary>Code oublié ? Utiliser le code de secours</summary>
+      <p class="muted small">Le code de secours est celui affiché (et imprimé) à l'activation du verrouillage. Il ouvre le même journal et permet de choisir un nouveau code.</p>
+      <div class="lock-actions">
+        <input class="input lock-input" id="lockSecours" type="password" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">
+        <button class="btn ghost" id="lockSecoursGo" type="button">Ouvrir avec ce code</button>
+      </div>
+      <p class="muted small">Sans code ni code de secours, les données restent <b>définitivement illisibles</b> — c'est le prix du chiffrement. Elles ne sont pas perdues pour autant : rien n'est effacé tant que vous ne le demandez pas.</p>
+      <button class="btn ghost danger small" id="lockReset" type="button">Effacer le journal de cet appareil</button>
+    </details>
+
+    <p class="lock-foot">Chiffrement AES-GCM 256 · clé dérivée par PBKDF2 · tout se passe dans le navigateur, aucun compte, aucun serveur.</p>
+  </div>
+</div>
+
+<script src="assets/js/store.js"></script>
+<script src="assets/js/metrics.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/plan.js"></script>
+<script src="assets/js/routine.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/taille.js"></script>
+<script src="assets/js/graphe.js"></script>
+<script src="assets/js/views.js"></script>
+<script src="assets/js/sync.js"></script>
+<script src="assets/js/lock.js"></script>
+<script src="assets/js/notify.js"></script>
+<script src="assets/js/entraineur.js"></script>
+<script src="assets/js/formation-contenu.js"></script>
+<script src="assets/js/relecture.js"></script>
+<script src="assets/js/etude-or-donnees.js"></script>
+<script src="assets/js/etude-or.js"></script>
+<script src="assets/js/etude-ltf-donnees.js"></script>
+<script src="assets/js/etude-ltf.js"></script>
+<script src="assets/js/formation.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/pwa.js"></script>
+</body>
+</html>

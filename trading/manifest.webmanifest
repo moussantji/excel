@@ -1,0 +1,72 @@
+{
+  "id": "journal-trading-desk",
+  "name": "Trading Desk — Journal & Plan",
+  "short_name": "Trading Desk",
+  "description": "Journal de trading, plan écrit et tableau de bord de performance : R, courbe d'équité, drawdown, discipline. Fonctionne hors ligne, sauvegarde automatique dans votre dépôt GitHub.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "any",
+  "background_color": "#080a0e",
+  "theme_color": "#0b0e14",
+  "categories": [
+    "finance",
+    "productivity",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouveau trade",
+      "short_name": "Trade",
+      "url": "./index.html?action=add"
+    },
+    {
+      "name": "Journal",
+      "short_name": "Journal",
+      "url": "./index.html?view=journal"
+    },
+    {
+      "name": "Calendrier",
+      "short_name": "Calendrier",
+      "url": "./index.html?view=calendrier"
+    },
+    {
+      "name": "Plan de trading",
+      "short_name": "Plan",
+      "url": "./index.html?view=plan"
+    }
+  ]
+}

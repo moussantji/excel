@@ -1,0 +1,4 @@
+Date;Heure;Instrument;Sens;Entrée;Stop;Sortie;Taille;Risque;Frais;Respect du plan;Émotion;Erreur;Notes
+01/09/2026;08:40;EURUSD;Long;1,0850;1,0837;1,0932;0,77;100,00;5,00;oui;Calme;Aucune;Modèle simplifié : seules les colonnes utiles au calcul du R. Stop à 13 pips, objectif 1:7.
+02/09/2026;13:20;XAUUSD;Short;2342,50;2343,90;2334,00;0,71;100,00;6,50;oui;Confiant;Aucune;Prise de liquidité sur EQH puis ChoCh, entrée au retest.
+04/09/2026;13:35;GBPUSD;Short;1,2672;1,2686;1,2679;0,71;100,00;5,00;non;Fatigué;Pas de ChoCh;Exemple de trade hors plan : entrée sans confirmation, coupée au stop.
