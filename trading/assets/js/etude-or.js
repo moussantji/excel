@@ -139,7 +139,8 @@
          elle ne monte jamais au-dessus d'une autre ligne (sinon on ne sait plus
          quel prix elle désigne) */
       var positions = options.surLigne
-        ? [[0, 0], [-17, 0], [17, 0], [-34, 0], [34, 0], [-51, 0], [51, 0], [-68, 0], [68, 0]]
+        ? [[0, 0], [-17, 0], [17, 0], [-34, 0], [34, 0], [-51, 0], [51, 0], [-68, 0], [68, 0],
+           [-85, 0], [85, 0], [-102, 0], [102, 0], [-119, 0], [119, 0], [-136, 0], [136, 0]]
         : candidats;
       /* une étiquette de niveau a le droit de toucher le haut du graphique : c'est
          justement là que se trouve le sommet qu'elle nomme */
@@ -270,6 +271,33 @@
       place.eviter(x0, y - 2, x1, y + 2);
     }
 
+    /* repères numérotés posés sur les bougies — les pastilles occupent leur place
+       avant que le moindre texte soit posé, sinon deux repères voisins se chevauchent */
+    var reperes = (o.reperes || []).map(function (r) {
+      var n = rang[r.i];
+      if (n === undefined) return null;
+      var ancreY = r.place === 'bas' ? Y(s.l[r.i]) + 14 + (r.decalage || 0) : Y(s.h[r.i]) - 14 - (r.decalage || 0);
+      return {
+        r: r, x: X(n), y: Math.max(y0 + 9, Math.min(y1 - 2, ancreY)),
+        col: r.ton === 'red' ? COULEUR.down : (r.ton === 'bleu' ? COULEUR.bleu : COULEUR.or)
+      };
+    }).filter(Boolean);
+    reperes.forEach(function (p) { place.reserver(p.x - 10, p.y - 10, p.x + 10, p.y + 10); });
+
+    /* bandes verticales (ex. les fenêtres de tir du plan) */
+    (o.bandes || []).forEach(function (bd) {
+      var xa = rang[bd.debut] === undefined ? x0 : X(rang[bd.debut]) - pas / 2;
+      var xb = rang[bd.fin] === undefined ? x1 : X(rang[bd.fin]) + pas / 2;
+      h.push('<rect x="' + xa.toFixed(1) + '" y="' + y0 + '" width="' + Math.max(1, xb - xa).toFixed(1) +
+        '" height="' + (y1 - y0) + '" fill="' + (bd.ton === 'bleu' ? 'rgba(99,176,255,.07)' : 'var(--gold-dim)') + '"/>');
+      if (bd.texte) {
+        /* le nom de la bande passe par le placeur : aucun texte ne s'écrira dessus */
+        var lb = String(bd.texte).length * 6.4 + 12;
+        var bb = place((xa + xb) / 2 - lb / 2, y0 + 15, bd.texte, { ancre: 'start' });
+        h.push(etiquette(bb, 'etude-note-champ', 'var(--muted-2)'));
+      }
+    });
+
     /* zones (ex. la zone des records) */
     (o.zones || []).forEach(function (z) {
       var ya = Y(z.a), yb = Y(z.de), haut = Math.min(ya, yb), bas = Math.max(ya, yb);
@@ -329,13 +357,19 @@
       var t = o.trade;
       var xa2 = rang[t.depuis] === undefined ? x0 : X(rang[t.depuis]);
       var xb2 = rang[t.jusqua] === undefined ? x1 : X(rang[t.jusqua]) + pas / 2;
-      var yE = Y(t.entree), yS = Y(t.stop), yC = Y(t.cible);
+      var yE = Y(t.entree), yS = Y(t.stop);
       h.push('<rect x="' + xa2.toFixed(1) + '" y="' + Math.min(yS, yE).toFixed(1) + '" width="' +
         (xb2 - xa2).toFixed(1) + '" height="' + Math.abs(yE - yS).toFixed(1) + '" fill="var(--red-dim)"/>');
-      h.push('<rect x="' + xa2.toFixed(1) + '" y="' + Math.min(yC, yE).toFixed(1) + '" width="' +
-        (xb2 - xa2).toFixed(1) + '" height="' + Math.abs(yE - yC).toFixed(1) + '" fill="var(--green-dim)"/>');
-      [[yE, 'entrée ' + prix(t.entree), COULEUR.or], [yS, 'stop ' + prix(t.stop), COULEUR.down],
-       [yC, 'cible ' + prix(t.cible), COULEUR.up]].forEach(function (l) {
+      /* la cible est facultative : une séquence peut ne montrer que le risque pris */
+      var lignesPosition = [[yE, (t.texteEntree || 'entrée ') + prix(t.entree), COULEUR.or],
+                            [yS, (t.texteStop || 'stop ') + prix(t.stop), COULEUR.down]];
+      if (t.cible !== null && t.cible !== undefined) {
+        var yC = Y(t.cible);
+        h.push('<rect x="' + xa2.toFixed(1) + '" y="' + Math.min(yC, yE).toFixed(1) + '" width="' +
+          (xb2 - xa2).toFixed(1) + '" height="' + Math.abs(yE - yC).toFixed(1) + '" fill="var(--green-dim)"/>');
+        lignesPosition.push([yC, (t.texteCible || 'cible ') + prix(t.cible), COULEUR.up]);
+      }
+      lignesPosition.forEach(function (l) {
         h.push('<line x1="' + xa2.toFixed(1) + '" y1="' + l[0].toFixed(1) + '" x2="' + xb2.toFixed(1) +
           '" y2="' + l[0].toFixed(1) + '" stroke="' + l[2] + '" stroke-width="1.3"/>');
         /* l'étiquette est posée à droite de la zone, face au prix */
@@ -355,18 +389,6 @@
       h.push(etiquette(b3, 'etude-niveau', col));
     });
 
-    /* repères numérotés posés sur les bougies — les pastilles occupent leur place
-       avant que le moindre texte soit posé, sinon deux repères voisins se chevauchent */
-    var reperes = (o.reperes || []).map(function (r) {
-      var n = rang[r.i];
-      if (n === undefined) return null;
-      var ancreY = r.place === 'bas' ? Y(s.l[r.i]) + 14 + (r.decalage || 0) : Y(s.h[r.i]) - 14 - (r.decalage || 0);
-      return {
-        r: r, x: X(n), y: Math.max(y0 + 9, Math.min(y1 - 2, ancreY)),
-        col: r.ton === 'red' ? COULEUR.down : (r.ton === 'bleu' ? COULEUR.bleu : COULEUR.or)
-      };
-    }).filter(Boolean);
-    reperes.forEach(function (p) { place.reserver(p.x - 10, p.y - 10, p.x + 10, p.y + 10); });
     reperes.forEach(function (p) {
       var r = p.r;
       h.push('<line x1="' + p.x.toFixed(1) + '" y1="' + (r.place === 'bas' ? (p.y - 9) : (p.y + 9)).toFixed(1) +

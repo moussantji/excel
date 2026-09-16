@@ -239,6 +239,26 @@ Les quatre graphiques sont dessinés par un moteur qui **place ses propres étiq
 
 Recette dédiée : `node tools/etude-test.js` (**96 contrôles** — intégrité des cours encodés, recoupement journalier/horaire, position réelle de chaque repère sur sa bougie, arithmétique du trade recalculée, stop jamais touché, trois objectifs réellement atteints avec l'heure, taille de position, jugement de relecture, dessin SVG, placement automatique des étiquettes (aucun texte ne se chevauche, aucune pastille numérotée n'est recouverte), questionnaire cliqué pour de vrai et score enregistré, cache hors ligne, rendu dans la vue Formation et ouverture du vrai graphique).
 
+### En basse unité de temps : la prise de liquidité, puis le ChoCh
+
+La routine du plan dit : « J'attends la prise de liquidité, puis le ChoCh en LTF. Sans les deux, je ne fais rien. » Voici cette phrase dépliée en **bougies de 15 minutes**, sur une seule séance réelle : **lundi 14 septembre 2026**, l'or, **96 créneaux de 00:00 à 23:45** (heure de Bamako) encodés dans `assets/js/etude-ltf-donnees.js` (relevé figé du contrat à terme COMEX `GC=F`, Yahoo Finance, arrêté le 16 septembre 2026). Les quatre créneaux de 21:00 à 21:45 sont le trou quotidien de cotation : ils sont sautés, jamais inventés.
+
+Cinq figures, dans la vue Formation :
+
+| # | Ce que la page montre |
+|---|---|
+| 1 | **La séance entière** — plus haut 4 396,8 à 02:30, plus bas 4 293,0 à 13:00, 103,8 points d'amplitude — avec les **trois fenêtres de tir du plan** dessinées en bandes (Asie 1h–2h, Europe 8h–9h, USA 13h–14h) |
+| 2 | **Séquence 1, à l'achat dans la fenêtre USA** : à 13:00 la mèche descend à 4 293,0, **12,7 points sous le plus bas du jour** (4 305,7), et la bougie clôture à 4 306,1 ; à 13:15 la clôture de **4 313,7** casse le sommet laissé par la bougie de balayage (4 312,9) — c'est le **ChoCh** ; entrée sur cette clôture, stop derrière le balayage à 4 293,0 |
+| 3 | **Ce que la suite a donné** : la reprise franchit le sommet d'avant la chute (4 337,7) et s'arrête à **4 358,9 à 16:45** — 45,2 points, **2,2 fois le risque**, le stop jamais touché |
+| 4 | **Séquence 2, à la vente (hors des trois fenêtres)** : à 06:00 la mèche monte à 4 379,3, au-dessus de tous les hauts depuis 04:00 (4 378,1), puis les sommets descendent (4 373,0 puis 4 372,9) ; à 06:45 la clôture de **4 362,5** casse le dernier plus bas (4 365,7) ; la baisse atteint 4 317,3 à 09:45 — **2,7 fois le risque** en trois heures |
+| 5 | **La séquence que le plan accepte** : le trade du 21 octobre 2025 (celui de l'étude de cas) — même mécanique, 7 fois le risque, tous les feux au vert |
+
+**Puis la page applique la check-list du plan aux deux séquences, et les refuse.** Le déclencheur est juste du premier au dernier temps, mais : **4 règles sur 6** pour la première, **3 sur 6** pour la seconde. 20,7 points de stop coûtent 20,70 $ au plus petit lot, soit **2,07 % d'un compte de 1 000 $** — il faudrait 2 070 $ pour que le stop tienne dans 1 % — et un rapport **1:7 demanderait 145 points** de potentiel quand la séance entière en fait 103,8. La conclusion est écrite noir sur blanc : « Je note le niveau (4 293,0), je ne clique pas : le déclencheur est bon, le contexte ne l'est pas. » Les deux exemples du 14 septembre ont été justes **et** refusés : c'est la différence entre repérer une séquence et prendre un trade.
+
+Un bouton ouvre l'or en **15 minutes** sur TradingView ; l'exemple lui-même est entièrement **dessiné en SVG par l'application** (aucune image, aucun appel réseau) et s'imprime hors ligne.
+
+Recette dédiée : `node tools/etude-ltf-test.js` (**119 contrôles** — intégrité des 96 créneaux de 15 minutes et de chaque bougie, trous de cotation, faits de la séance, fenêtres de tir comparées à celles de `plan.js`, les **deux séquences relues bougie par bougie sans passer par la carte** (le balayage dépasse bien le niveau attendu, la bougie y revient, le ChoCh est la *première* clôture qui casse l'extrême formé depuis le balayage, l'entrée est cette clôture, le stop n'est jamais touché avant la sortie, la sortie est l'extrême des seize bougies suivantes), arithmétique du risque et du multiple, refus du plan chiffrés (2,07 % et 1,68 % du capital, 1:7 impossible), dessin SVG (bougies, repères, aucune étiquette vide, qui se chevauche ou qui sort du cadre, aucune pastille sur une étiquette), cache hors ligne, rendu dans la vue Formation et ouverture du graphique en 15 minutes).
+
 ### Hors ligne, tablette, impression
 
 - Tout le cours, les exercices et l'entraîneur sont **dans le cache hors ligne** : la formation s'utilise sans réseau, y compris sur l'application installée.
@@ -626,6 +646,10 @@ trading/
 │       ├── formation-contenu.js  Cours de la vue Formation (12 chapitres, sources, manques)
 │       ├── entraineur.js         Générateur de scénarios et correction (structure, zones, liquidité, Wyckoff)
 │       ├── relecture.js          Relecture des vrais trades : règles du plan + jugements
+│       ├── etude-or-donnees.js   Cours réels de l'or (étude de cas) : 44 bougies journalières, 69 horaires
+│       ├── etude-or.js           Étude de cas réelle : le trade complet, recalculé et dessiné en SVG
+│       ├── etude-ltf-donnees.js  96 créneaux de 15 minutes (l'or, lundi 14 septembre 2026)
+│       ├── etude-ltf.js          Basse unité de temps : la liquidité prise, le ChoCh, et les refus du plan
 │       ├── formation.js          Vue Formation : cours, exercices, entraîneur, progression
 │       ├── ui.js                 Formatage FR, modales, toasts, icônes SVG
 │       ├── graphe.js             Lien vers le graphique TradingView (symbole, unité de temps)
@@ -669,6 +693,7 @@ npm i -D jsdom && node tools/formation-test.js           # formation : cours, en
 npm i -D jsdom && node tools/graphe-test.js              # graphique TradingView : lien, hors ligne, boutons
 npm i -D jsdom && node tools/relecture-test.js           # relecture des vrais trades : règles, notation, bilan
 npm i -D jsdom && node tools/etude-test.js                # étude de cas réelle : cours encodés, trade, dessin SVG
+npm i -D jsdom && node tools/etude-ltf-test.js            # basse unité de temps : liquidité prise, ChoCh, refus du plan
 npm i -D jsdom && node tools/routine-test.js              # routine : cases datées, série, grille du mois
 node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
@@ -681,6 +706,7 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 3.1 | **En basse unité de temps — attendre la prise de liquidité, puis le ChoCh** : la phrase de la routine dépliée en **96 bougies de 15 minutes** d'une vraie séance (l'or, lundi 14 septembre 2026, relevé figé COMEX `GC=F`). **Deux séquences ressortent de la même journée** : à l'achat dans la **fenêtre de tir USA** (mèche à 4 293,0 à 13:00 sous les plus bas du jour, ChoCh à 13:15 sur la clôture de 4 313,7, entrée 4 313,7, stop 4 293,0, sortie 4 358,9 à 16:45 — 2,2 fois le risque) et à la vente au petit matin (balayage de 4 379,3 à 06:00, sommets descendants, ChoCh à 06:45, sortie 4 317,3 à 09:45 — 2,7 fois le risque). La page passe ensuite les **six règles de la check-list** sur chacune et **refuse les deux** : 20,7 points de stop font **2,07 % d'un compte de 1 000 $** (1 % demanderait 2 070 $) et un rapport **1:7 voudrait 145 points** de potentiel quand la séance entière en fait 103,8 — « je note le niveau, je ne clique pas ». En face, le trade du 21 octobre 2025 (7 fois le risque, tous les feux au vert) montre ce qui décide : la fenêtre, la taille, le ratio. Cinq figures SVG, un bouton « Ouvrir l'or en 15 minutes ». Recette `tools/etude-ltf-test.js` : 119 contrôles, cache `trading-desk-v17` |
 | 3.0 | **Ma routine, jour par jour** (bloc 14 du plan) : les quatre moments de la routine deviennent **cochables et datés** — 13 cases en semaine, 17 le dimanche (la revue ne compte que ce dimanche-là). Une journée est **complète** quand tout est coché, **entamée** dès la première case. Navigation *jour précédent / jour suivant / aujourd'hui* (le futur est bloqué), boutons *cocher ce moment* et *tout cocher / vider la journée*, **grille du mois** avec l'état de chaque jour (verte, dorée, vide, dimanche signalé, aujourd'hui encadré, futur grisé), **bilans** du mois et de la semaine et **série de jours complets** (une journée entamée mais non finie arrête la série, une journée pas encore commencée laisse compter jusqu'à hier). Les moments et leurs cases sont **lus dans `plan.js`**, jamais recopiés. Tout s'enregistre **avec le journal** : chiffré par le verrou, sauvegardé dans votre dépôt, fusionné entre appareils **jour par jour**. Recette `tools/routine-test.js` : 77 contrôles |
 | 2.9 | **Étude de cas réelle : l'or, 17 → 22 octobre 2025** — un trade complet du début à la fin, dans la vue Formation : le contexte journalier, la veille, le **balayage de liquidité** au-dessus des records (4 398,0 puis 4 393,6), le scénario écrit avant d'entrer, la cassure confirmée (clôture 4 367,7 sous 4 370,2), l'entrée à 4 368, le stop 4 402 jamais approché, trois objectifs touchés (1:2 à 08:00, 1:4 à 12:00, 1:7 à 14:00) pour +238 $ l'once en douze heures, puis la **relecture des 5 règles du plan** — qui rend **4 sur 5** : le risque de 3,4 % sur un compte de 1 000 $ viole la règle du 1 %, et la page conclut qu'il fallait **laisser passer ce trade** ou attendre 3 400 $. Le contre-exemple (acheter le record : −6,9 % par once, −30,5 % du compte) est chiffré à côté. Les 44 bougies journalières et 69 bougies horaires sont **réelles** (relevé figé, source citée) et **dessinées en SVG par l'application** : aucune image, aucun appel réseau, l'étude marche hors ligne et s'imprime. Deux boutons ouvrent l'or en journalier et en horaire sur TradingView. Recette `tools/etude-test.js` : 78 contrôles, cache `trading-desk-v15` |
 | 2.8 | **Applications d'entraînement du Play Store listées dans la Formation** : les trois qui corrigent et notent (Candle Master, Chart Quiz, Trading Game) et les deux qui expliquent (Forex Smart Money Concept, GTS), avec leur langue, leur prix et **leur limite**. Plus une mise en garde explicite : beaucoup d'applications « trading » du Play Store sont des **vitrines de courtiers** poussant au dépôt d'argent réel — aucune n'est nécessaire pour s'entraîner. La liste est écrite **dans l'application, hors ligne**, sans aucun lien externe ajouté. |

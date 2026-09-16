@@ -98,6 +98,7 @@
     html += carteRelecture(App);
     html += carteVraisGraphiques(App);
     if (global.EtudeOr) html += global.EtudeOr.carte(App);
+    if (global.EtudeLtf) html += global.EtudeLtf.carte(App);
 
     html += '<section class="card form-card"><header class="card-head"><h3>Le cours — 12 chapitres, dans l\'ordre du plan</h3>' +
       '<div class="card-tools"><button class="btn ghost small" id="fToutOuvrir">Tout déplier (impression)</button>' +
@@ -112,6 +113,7 @@
     var voirReel = host.querySelector('#fVraisOuvrir');
     if (voirReel) voirReel.addEventListener('click', ouvrirGraphiqueReel);
     if (global.EtudeOr && global.EtudeOr.cabler) global.EtudeOr.cabler(host, App);
+    if (global.EtudeLtf && global.EtudeLtf.cabler) global.EtudeLtf.cabler(host, App);
     return html;
   }
 

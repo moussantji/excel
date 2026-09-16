@@ -1263,6 +1263,7 @@ body.verrouille>#app,body.verrouille>.mobile-nav{filter:blur(9px) saturate(.5);p
 .etude-quiz-score{font-size:.84rem;color:var(--muted)}
 .etude-quiz-score b{color:var(--gold-2)}
 .etude-verdict{margin:12px 0 16px;padding:12px 14px;border:1px solid var(--line-2);border-left:3px solid var(--red);border-radius:var(--radius-xs);background:var(--red-dim);font-size:.85rem;line-height:1.6}
+.etude-verdict.bonne{border-left-color:var(--green);background:var(--green-dim)}
 .etude-note-cellule{font-size:.76rem;color:var(--muted-2)}
 .etude-source{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:.76rem;line-height:1.65;color:var(--muted-2)}
 .etude-code{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
