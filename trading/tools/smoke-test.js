@@ -391,6 +391,9 @@ vc.on('log', () => {});
     process.exit(1);
   }
   console.log('\n✅ Tous les contrôles sont passés, aucune erreur JS.\n');
+  /* l'application pose des minuteurs (rappels, verrou) : on sort explicitement,
+     sinon la suite complète ne rend jamais la main */
+  process.exit(0);
 })().catch((e) => {
   console.error('Échec du test :', e);
   process.exit(1);

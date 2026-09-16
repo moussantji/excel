@@ -349,8 +349,11 @@ function relire(D, spec) {
   verif('la recette est déclarée dans les scripts',
     /"test:ltf": "node tools\/etude-ltf-test\.js"/.test(lire('package.json')) &&
     /npm run test:routine && npm run test:ltf/.test(lire('package.json')));
-  verif('la version de l\'application est relevée', /"version": "3\.1\.0"/.test(lire('package.json')));
-  verif('le pied de page annonce la version', /v3\.1/.test(idx));
+  /* la version doit être au moins celle du chantier : les suivantes passent aussi */
+  const vApp = (lire('package.json').match(/"version": "(\d+)\.(\d+)\.(\d+)"/) || []).slice(1, 4).map(Number);
+  verif('la version de l\'application est relevée',
+    vApp[0] === 3 && vApp[1] >= 1, vApp.length === 3 ? 'v' + vApp.join('.') : 'absente');
+  verif('le pied de page annonce la version', /v3\.[1-9]/.test(idx));
   const rd = lire('README.md');
   verif('le README annonce l\'exemple en basse unité de temps',
     /15 minutes/.test(rd) && /ChoCh/.test(rd) && /prise de liquidité/.test(rd));

@@ -283,7 +283,9 @@ function bac() {
   verif('la recette est déclarée dans les scripts',
     /"test:taille": "node tools\/taille-test\.js"/.test(lire('package.json')) &&
     /npm run test:ltf && npm run test:taille/.test(lire('package.json')));
-  verif('la version de l\'application est relevée', /"version": "3\.2\.0"/.test(lire('package.json')));
+  const vAppT = (lire('package.json').match(/"version": "(\d+)\.(\d+)\.(\d+)"/) || []).slice(1, 4).map(Number);
+  verif('la version de l\'application est relevée (3.2 ou plus)',
+    vAppT[0] === 3 && vAppT[1] >= 2, vAppT.length === 3 ? 'v' + vAppT.join('.') : 'absente');
   verif('le pied de page annonce la version', /v3\.2/.test(idx));
   verif('le README explique le calculateur',
     /calculateur de taille|taille de position/i.test(lire('README.md')) && /node tools\/taille-test\.js/.test(lire('README.md')));
