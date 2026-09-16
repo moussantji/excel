@@ -19,9 +19,13 @@
    - les refus du plan : 2,07 % du capital pour le premier stop, 1,68 %
      pour le second, un 1:7 impossible dans les deux cas alors que la
      check-list les compte (4 règles sur 6, 3 règles sur 6) ;
-   - le dessin : cinq figures fabriquées en SVG, les bougies attendues,
+   - le dessin : sept figures fabriquées en SVG (les deux retests comprises), les bougies attendues,
      les repères numérotés, aucune étiquette vide, aucune qui se
      chevauche, aucune qui sorte du cadre ;
+   - le retest : le niveau cassé, le point extrême du retour, la première clôture
+     qui repart, le stop qui en découle, les deux stops qui passent sous les
+     15 points du plan, et le mode d'invalidation (une clôture au-delà de
+     l'extrême du balayage) — recalculés bougie par bougie, sans la carte ;
    - le montage : page, cache hors ligne, vue Formation, scripts, README.
 
    Usage : node tools/etude-ltf-test.js
@@ -179,6 +183,7 @@ function relire(D, spec) {
 
   console.log('\n4. Séquence 1 — la prise de liquidité de 13:00, puis le ChoCh');
   const r1 = relire(D, S1), m1 = E.mesures(S1);
+  const M1 = m1;   /* les mesures de la carte, pour la comparaison entrée/retest */
   verif('le balayage part de la bougie de 13:00', r1.heureBalayage === '13:00' && r1.i === 52);
   verif('la mèche passe sous le plus bas des douze bougies précédentes',
     4293 < r1.niveau && r1.niveau === 4305.7, 'niveau ' + fr(r1.niveau));
@@ -203,6 +208,7 @@ function relire(D, spec) {
 
   console.log('\n5. Séquence 2 — la même mécanique, à la vente (06:00 puis 06:45)');
   const r2 = relire(D, S2), m2 = E.mesures(S2);
+  const M2 = m2;
   verif('le balayage part de la bougie de 06:00', r2.heureBalayage === '06:00' && r2.i === 24);
   verif('la mèche passe au-dessus du plus haut des douze bougies précédentes',
     4379.3 > r2.niveau && r2.niveau === 4378.1, 'niveau ' + fr(r2.niveau));
@@ -248,22 +254,46 @@ function relire(D, spec) {
   console.log('\n7. Le dessin');
   const html = E.carte(null), texte = plat(html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '));
   const svgs = html.match(/<svg[\s\S]*?<\/svg>/g) || [];
-  verif('cinq figures sont dessinées', svgs.length === 5, svgs.length + ' graphiques');
+  /* chaque figure est retrouvée par ce qui la décrit, pas par son rang :
+     l'ordre de la page peut changer sans casser la recette */
+  const quelle = (motif) => svgs.findIndex((g) => new RegExp(motif).test(g));
+  const iJour = quelle('trois fenêtres de tir');
+  const iSerree1 = quelle('12:15 à 14:30');
+  const iSuite1 = quelle('12:45 à 17:30');
+  const iSerree2 = quelle('05:30 à 07:15');
+  const iSuite2 = quelle('05:30 à 11:45');
+  const iRetest1 = quelle('12:45 à 15:30');
+  const iRetest2 = quelle('06:30 à 10:00');
+  verif('sept figures sont dessinées (les cinq de la séquence, plus les deux retests)',
+    svgs.length === 7 && [iJour, iSerree1, iSuite1, iSerree2, iSuite2, iRetest1, iRetest2].every((k) => k >= 0),
+    svgs.length + ' graphiques');
   const bougies = svgs.map((s) => (s.match(/<rect[^>]*fill="var\(--(?:green|red)\)"/g) || []).length);
-  verif('la première montre les 92 bougies cotées de la séance', bougies[0] === 92, bougies[0] + ' bougies');
-  verif('la deuxième montre les dix bougies du balayage (12:15 → 14:30)', bougies[1] === 10);
-  verif('la troisième montre la suite jusqu\'à la sortie (20 bougies)', bougies[2] === 20);
-  verif('la quatrième montre les huit bougies du balayage de 06:00', bougies[3] === 8);
-  verif('la cinquième montre la baisse jusqu\'à 09:45 (26 bougies)', bougies[4] === 26);
+  verif('la séance entière montre ses 92 bougies cotées', bougies[iJour] === 92, bougies[iJour] + ' bougies');
+  verif('le balayage de la séquence 1 tient en dix bougies (12:15 → 14:30)', bougies[iSerree1] === 10);
+  verif('la suite de la séquence 1 va jusqu\'à la sortie (20 bougies)', bougies[iSuite1] === 20);
+  verif('le balayage de la séquence 2 tient en huit bougies', bougies[iSerree2] === 8);
+  verif('la baisse de la séquence 2 va jusqu\'à 09:45 (26 bougies)', bougies[iSuite2] === 26);
+  verif('les deux figures du retest encadrent le retour du prix',
+    bougies[iRetest1] === 11 && bougies[iRetest2] === 14,
+    bougies[iRetest1] + ' et ' + bougies[iRetest2] + ' bougies');
   const reperes = svgs.map((s) => (s.match(/class="etude-repere"/g) || []).length);
-  verif('les repères numérotés sont posés (3, 2, 1, 2, 1)', reperes.join(',') === '3,2,1,2,1', reperes.join(','));
+  verif('les repères numérotés sont posés (2 et 2 pour les retests, puis 3, 2, 1, 2, 1)',
+    reperes[iRetest1] === 2 && reperes[iRetest2] === 2 && reperes[iJour] === 3 &&
+    reperes[iSerree1] === 2 && reperes[iSuite1] === 1 && reperes[iSerree2] === 2 && reperes[iSuite2] === 1,
+    reperes.join(','));
   verif('les trois fenêtres de tir sont dessinées et nommées',
-    /Asie/.test(svgs[0]) && /Europe/.test(svgs[0]) && /USA/.test(svgs[0]) &&
-    (svgs[0].match(/<rect[^>]*rgba\(99,176,255,\.07\)/g) || []).length === 3);
+    /Asie/.test(svgs[iJour]) && /Europe/.test(svgs[iJour]) && /USA/.test(svgs[iJour]) &&
+    (svgs[iJour].match(/<rect[^>]*rgba\(99,176,255,\.07\)/g) || []).length === 3);
   verif('l\'entrée, le stop et la sortie sont dessinés sur la suite de la séquence 1',
-    /entrée 4 313,7/.test(plat(svgs[2])) && /stop 4 293/.test(plat(svgs[2])) && /sortie 4 358,9/.test(plat(svgs[2])));
+    /entrée 4 313,7/.test(plat(svgs[iSuite1])) && /stop 4 293/.test(plat(svgs[iSuite1])) && /sortie 4 358,9/.test(plat(svgs[iSuite1])));
   verif('la séquence 2 dessine son risque et sa sortie',
-    /entrée 4 362,5/.test(plat(svgs[4])) && /stop 4 379,3/.test(plat(svgs[4])) && /sortie 4 317,3/.test(plat(svgs[4])));
+    /entrée 4 362,5/.test(plat(svgs[iSuite2])) && /stop 4 379,3/.test(plat(svgs[iSuite2])) && /sortie 4 317,3/.test(plat(svgs[iSuite2])));
+  verif('les figures du retest dessinent la zone, le niveau et le nouveau stop',
+    /la zone du balayage/.test(svgs[iRetest1]) && /le niveau cassé/.test(plat(svgs[iRetest1])) &&
+    /stop 4 303,7/.test(plat(svgs[iRetest1])) && /entrée 4 317/.test(plat(svgs[iRetest1])),
+    'séquence 1 : retest, reprise, stop sous le niveau');
+  verif('la figure du rejet montre un niveau jamais touché',
+    /le rejet/.test(svgs[iRetest2]) && /stop 4 364,5/.test(plat(svgs[iRetest2])) && /entrée 4 357,3/.test(plat(svgs[iRetest2])));
   verif('aucune étiquette n\'est restée vide',
     !/class="etude-(?:niveau|repere-texte|note-champ)"[^>]*><\/text>/.test(html));
   const chevauchent = [], cadre = [];
@@ -309,7 +339,58 @@ function relire(D, spec) {
   verif('aucun emoji', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}]/u.test(html));
   verif('la zone imprimable connaît les figures', /@media print\{\.etude-figure/.test(lire('assets/css/styles.css')));
 
-  console.log('\n8. Ce que la carte raconte');
+  console.log('\n8. Le retest, recalculé sans la carte');
+  const R1 = E.retest(E.SEQUENCES[0]), R2 = E.retest(E.SEQUENCES[1]);
+  /* le niveau cassé est le dernier extrême formé avant la clôture du ChoCh */
+  verif('le niveau cassé de la séquence 1 est 4 312,9', R1.niveau === 4312.9, fr(R1.niveau));
+  verif('le niveau cassé de la séquence 2 est 4 365,7', R2.niveau === 4365.7, fr(R2.niveau));
+  const plusBas = Math.min(...S.l.slice(54, 59));
+  verif('le point bas du retest de la séquence 1 est le plus bas des bougies qui suivent le ChoCh',
+    R1.ext === plusBas && R1.ext === 4303.7 && R1.heureExt === '14:15', fr(R1.ext) + ' à ' + R1.heureExt);
+  verif('la reprise de la séquence 1 est la première clôture repassée au-dessus du niveau',
+    R1.entree === 4317 && R1.heureEntree === '14:30' && R1.entree > R1.niveau, fr(R1.entree) + ' à ' + R1.heureEntree);
+  const plusHaut = Math.max(...S.h.slice(28, 30));
+  verif('le point haut du retest de la séquence 2 est le plus haut des bougies qui suivent le ChoCh',
+    R2.ext === plusHaut && R2.ext === 4364.5 && R2.heureExt === '07:00', fr(R2.ext) + ' à ' + R2.heureExt);
+  verif('la reprise de la séquence 2 est la première clôture repassée sous le niveau',
+    R2.entree === 4357.3 && R2.heureEntree === '07:15' && R2.entree < R2.niveau, fr(R2.entree) + ' à ' + R2.heureEntree);
+  /* l'arithmétique du retest, recalculée à la main */
+  const proche = (a, b) => Math.abs(a - b) < 0.01;
+  verif('le risque du retest est la distance entrée-stop',
+    proche(R1.risque, R1.entree - R1.ext) && proche(R2.risque, R2.ext - R2.entree),
+    fr(R1.risque) + ' et ' + fr(R2.risque) + ' points');
+  verif('il est deux à trois fois plus petit que celui de la clôture du ChoCh',
+    R1.risque < M1.risque && R2.risque < M2.risque && +(M2.risque / R2.risque).toFixed(1) === 2.3,
+    fr(M1.risque) + ' → ' + fr(R1.risque) + ' et ' + fr(M2.risque) + ' → ' + fr(R2.risque));
+  verif('les deux stops du retest tiennent dans les 15 points du plan, les deux autres non',
+    R1.tientQuinze && R2.tientQuinze && !(M1.risque <= 15) && !(M2.risque <= 15));
+  verif('le retest de la séquence 2 passe même sous 1 % d\'un compte de 1 000 $',
+    R2.tientUnPourcent && proche(R2.partCapital, 0.72) && proche(R2.capitalMinimum, 720), fr(R2.partCapital, 2) + ' %');
+  verif('celui de la séquence 1 reste au-dessus de 1 %',
+    !R1.tientUnPourcent && proche(R1.partCapital, 1.33) && proche(R1.capitalMinimum, 1330), fr(R1.partCapital, 2) + ' %');
+  /* la variante « ordre posé sur le niveau cassé » */
+  verif('sur la séquence 1, le prix est revenu jusque dans la zone du balayage',
+    R1.atteint && R1.ext < R1.niveau && proche(R1.risqueNiveau, 9.2), fr(R1.risqueNiveau) + ' points');
+  verif('sur la séquence 2, le niveau n\'a jamais été touché : l\'ordre n\'aurait pas été rempli',
+    !R2.atteint && proche(R2.ecartNiveau, 1.2) && R2.ext < R2.niveau, fr(R2.ecartNiveau) + ' point sous le niveau');
+  verif('la sortie ne bouge pas : seul le stop change',
+    R1.sortie === M1.sortie && R2.sortie === M2.sortie &&
+    R1.multiple > M1.multiple && R2.multiple > M2.multiple,
+    fr(M1.multiple) + ' → ' + fr(R1.multiple) + ' et ' + fr(M2.multiple) + ' → ' + fr(R2.multiple));
+  /* ce qui aurait annulé la lecture : une clôture au-delà de l'extrême du balayage */
+  verif('aucune des deux séquences n\'a invalidé son ChoCh avant la sortie',
+    R1.iInvalidation === null && R2.iInvalidation === null,
+    'aucune clôture sous ' + fr(M1.extreme) + ' ni au-dessus de ' + fr(M2.extreme));
+  verif('la règle est écrite dans le module', /l\'extrême du balayage/.test(lire('assets/js/etude-ltf.js')));
+  verif('le retest est annoncé par la carte',
+    texte.indexOf('le ChoCh, puis le retest') > -1 && texte.indexOf('Le même trade, deux entrées') > -1);
+  verif('le tableau du retest donne les quatre lignes chiffrées',
+    texte.indexOf('Séquence 1 — au retest') > -1 && texte.indexOf('Séquence 2 — au retest') > -1 &&
+    texte.indexOf('13,3') > -1 && texte.indexOf('7,2') > -1);
+  verif('la carte dit ce que le retest ne change pas',
+    /ne fabrique pas un trade/.test(texte) && /ne l\'exige pas/.test(texte));
+
+  console.log('\n9. Ce que la carte raconte');
   verif('elle cite la phrase de la routine', /prise de liquidité/.test(texte) && /ChoCh/.test(texte));
   verif('elle donne le plus haut et le plus bas de la séance', texte.indexOf('4 396,8') > -1 && texte.indexOf('4 293,0') > -1);
   verif('elle explique les quatre temps', /La liquidité est prise/.test(texte) && /Le ChoCh est confirmé/.test(texte) &&
@@ -332,7 +413,7 @@ function relire(D, spec) {
     /Yahoo Finance/.test(texte) && /COMEX GC=F/.test(texte) && /GC=F/.test(texte));
   verif('elle est reliée à l\'étude de cas', /étude de cas/i.test(texte));
 
-  console.log('\n9. Le montage dans l\'application');
+  console.log('\n10. Le montage dans l\'application');
   const idx = lire('index.html');
   verif('les données sont chargées par la page', /assets\/js\/etude-ltf-donnees\.js/.test(idx));
   verif('l\'exemple est chargé avant la vue Formation',
@@ -390,7 +471,7 @@ function relire(D, spec) {
   const carte = win.document.querySelector('#etudeLtf');
   verif('la carte de l\'exemple est rendue dans la Formation', !!carte);
   if (carte) {
-    verif('elle contient les cinq graphiques', carte.querySelectorAll('svg').length === 5);
+    verif('elle contient les sept graphiques', carte.querySelectorAll('svg').length === 7);
     verif('elle se place après l\'étude de cas',
       carte.previousElementSibling === win.document.querySelector('#etudeOr') || !!win.document.querySelector('#etudeOr'));
     verif('aucune donnée du journal n\'y apparaît', !/riskAmount|journal-trading|entry=/.test(carte.innerHTML));

@@ -1,6 +1,6 @@
 {
   "name": "journal-trading",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "private": true,
   "description": "Journal de trading, plan écrit et tableau de bord de performance — application statique sans dépendance (forex & indices).",
   "scripts": {

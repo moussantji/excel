@@ -152,6 +152,75 @@
   }
 
   /* ---------------------------------------------------------
+     Le retest — ce qui suit le ChoCh
+
+     La règle, écrite en clair pour qu'elle soit vérifiable :
+     - l'extrême du retest est le point le plus loin atteint à contresens
+       entre la bougie du ChoCh et la reprise (le plus bas pour un achat,
+       le plus haut pour une vente) ;
+     - l'entrée au retest est la PREMIÈRE clôture qui repart du côté du
+       ChoCh après que cet extrême est formé ;
+     - le stop se pose derrière cet extrême : c'est tout l'intérêt du
+       retest, il est plus serré que celui de la clôture du ChoCh ;
+     - ce qui annule le ChoCh n'est pas le retour sur le niveau, mais une
+       clôture au-delà de l'extrême du balayage.
+     --------------------------------------------------------- */
+  function retest(sq) {
+    if (!D || !D.serie || !sq) return null;
+    var S = D.serie, j = sq.iChoc, f = sq.iSuite, achat = sq.sens === 'achat';
+    var niveau = casse(sq, sq.iBalayage, j, achat);
+    var iExt = null, ext = null, iEntree = null, k, x, c;
+    for (k = j + 1; k <= f; k++) {
+      x = achat ? S.l[k] : S.h[k];
+      if (ext === null || (achat ? x < ext : x > ext)) { ext = x; iExt = k; }
+      c = S.c[k];
+      /* la clôture repart du côté du ChoCh, une fois l'extrême du retest formé */
+      if (c !== null && iExt < k && (achat ? c > niveau : c < niveau)) { iEntree = k; break; }
+    }
+    if (iExt === null || iEntree === null) return null;
+    var entree = S.c[iEntree];
+    var sortie = achat ? S.h[f] : S.l[f];
+    var risque = Math.abs(entree - ext);
+    var gain = Math.abs(sortie - entree);
+    /* l'ordre posé sur le niveau cassé : rempli si le retest est allé jusque-là */
+    var extremeRetest = achat ? Math.min.apply(null, S.l.slice(j + 1, iEntree + 1))
+                              : Math.max.apply(null, S.h.slice(j + 1, iEntree + 1));
+    var atteint = achat ? (extremeRetest <= niveau) : (extremeRetest >= niveau);
+    var ecart = achat ? (niveau - extremeRetest) : (extremeRetest - niveau);   /* positif = le niveau est dépassé */
+    var risqueNiveau = Math.abs(niveau - ext);
+    var r = {
+      sens: sq.sens, achat: achat, niveau: niveau,
+      iBalayage: sq.iBalayage, iChoc: j, iExt: iExt, iEntree: iEntree, iSuite: f,
+      ext: ext, heureExt: heure(iExt),
+      entree: entree, heureEntree: heure(iEntree),
+      sortie: sortie, heureSortie: heure(f),
+      risque: risque, gain: gain, multiple: risque ? gain / risque : 0,
+      /* ce que le stop coûte au plus petit lot (1 point = 1 $ sur 0,01 lot d'or) */
+      cout: risque, partCapital: risque / 10, capitalMinimum: risque * 100,
+      /* la variante « ordre posé sur le niveau cassé » */
+      atteint: atteint, ecartNiveau: Math.abs(ecart), depasse: ecart >= 0,
+      entreeNiveau: niveau, risqueNiveau: risqueNiveau,
+      multipleNiveau: risqueNiveau ? Math.abs(sortie - niveau) / risqueNiveau : 0,
+      partCapitalNiveau: risqueNiveau / 10, capitalMinimumNiveau: risqueNiveau * 100,
+      /* le retest, mesuré : de combien le prix est revenu vers le niveau */
+      profondeur: Math.abs((achat ? S.c[j] : S.c[j]) - ext),
+      /* ce qui aurait annulé la lecture : une clôture au-delà de l'extrême du balayage */
+      iInvalidation: (function () {
+        for (var m = j + 1; m <= f; m++) {
+          if (S.c[m] === null) continue;
+          if (achat ? S.c[m] < S.l[sq.iBalayage] : S.c[m] > S.h[sq.iBalayage]) return m;
+        }
+        return null;
+      })(),
+      CLOTURE_MIN: 15   /* la règle du plan : 15 points de stop maximum */
+    };
+    r.tientQuinze = r.risque <= r.CLOTURE_MIN;
+    r.tientQuinzeNiveau = r.risqueNiveau <= r.CLOTURE_MIN;
+    r.tientUnPourcent = r.partCapital <= 1 + 1e-9;
+    return r;
+  }
+
+  /* ---------------------------------------------------------
      Les figures : un appel au dessinateur de l'étude de cas, une légende
      --------------------------------------------------------- */
   function figure(svg, legende) {
@@ -271,6 +340,134 @@
   }
 
   /* ---------------------------------------------------------
+     Les figures du retest
+     --------------------------------------------------------- */
+  function figuresRetest(m1, m2, r1, r2) {
+    var S = D.serie;
+    var h = '';
+
+    /* --- séquence 1 : le retest est allé jusque dans la zone --- */
+    h += figure(dessiner(S, {
+      debut: 51, fin: 62, min: 4296, max: 4334,
+      largeur: 640, hauteur: 300,
+      aria: "Bougies de 15 minutes du 14 septembre 2026 de 12:45 à 15:30, avec le retour du prix sur le niveau cassé par le ChoCh",
+      zones: [{ de: m1.extreme, a: r1.niveau, debut: 52, fin: 58, texte: 'la zone du balayage', ton: 'or' }],
+      niveaux: [
+        { prix: r1.niveau, texte: prix(r1.niveau) + ' — le niveau cassé', ton: 'or' },
+        { prix: r1.ext, texte: prix(r1.ext) + ' — le point bas du retest', ton: 'bleu' }
+      ],
+      reperes: [
+        { i: 57, num: '3', place: 'bas', texte: 'le retest' },
+        { i: 58, num: '4', place: 'haut', texte: 'la reprise' }
+      ],
+      trade: { entree: r1.entree, stop: r1.ext, cible: null, depuis: 58, jusqua: 62 }
+    }), '12:45 à 15:30 — le retest de la séquence 1. Le ChoCh a cassé ' + prix(r1.niveau) + ' à 13:15 ; le prix ' +
+      'revient sur ce niveau dès 13:45 (bas à 4 309,5), puis descend jusqu\'à <b>' + prix(r1.ext) + '</b> à ' +
+      r1.heureExt + ' — 9,2 points sous le niveau cassé, et toujours au-dessus du balayage de 4 293,0. La reprise ' +
+      'repasse au-dessus du niveau à ' + r1.heureEntree + ' (clôture de ' + prix(r1.entree) + ') : c\'est l\'entrée ' +
+      'au retest, et le stop se pose derrière le point bas, à ' + prix(r1.ext) + ' — <b>' + f1(r1.risque) +
+      ' points</b> au lieu de ' + f1(m1.risque) + '. Un ordre posé sur le niveau cassé (' + prix(r1.niveau) +
+      ') aurait été rempli pendant ce retour : ' + f1(r1.risqueNiveau) + ' points de risque seulement.');
+
+    /* --- séquence 2 : le retest s'arrête juste avant le niveau --- */
+    h += figure(dessiner(S, {
+      debut: 26, fin: 40, min: 4310, max: 4374,
+      largeur: 640, hauteur: 300,
+      aria: "Bougies de 15 minutes du 14 septembre 2026 de 06:30 à 10:00, avec le rejet sous le niveau cassé par le ChoCh",
+      /* une seule ligne de niveau : le rejet est matérialisé par la ligne du stop */
+      niveaux: [
+        { prix: r2.niveau, texte: prix(r2.niveau) + ' — le niveau cassé', ton: 'or' }
+      ],
+      reperes: [
+        { i: 28, num: '3', place: 'haut', texte: 'le rejet', decalage: 18 },
+        { i: 29, num: '4', place: 'bas', texte: 'la reprise' }
+      ],
+      trade: { entree: r2.entree, stop: r2.ext, cible: null, depuis: 29, jusqua: 40 }
+    }), '06:30 à 10:00 — le retest de la séquence 2. Le ChoCh a cassé ' + prix(r2.niveau) + ' à 06:45 ; le prix ' +
+      'remonte, mais <b>s\'arrête ' + f1(r2.ecartNiveau) + ' point sous le niveau</b> (' + prix(r2.ext) + ' à ' +
+      r2.heureExt + ', puis 4 364,4) : un ordre posé sur le niveau cassé n\'aurait <b>jamais été rempli</b>. ' +
+      'La clôture qui repart à la baisse est celle de ' + r2.heureEntree + ' (' + prix(r2.entree) + ') ; le stop ' +
+      'se pose au-dessus du rejet, à ' + prix(r2.ext) + ' — <b>' + f1(r2.risque) + ' points</b> au lieu de ' +
+      f1(m2.risque) + '. La baisse reprend ensuite sans jamais revenir sur le niveau.');
+
+    return h;
+  }
+
+  /* ---------------------------------------------------------
+     Le même trade, deux entrées : le tableau
+     --------------------------------------------------------- */
+  function linge(titre, entree, stop, risque, tientQuinze, partCapital, capital, multiple) {
+    return '<tr><td>' + esc(titre) + '</td><td>' + prix(entree) + '</td><td>' + prix(stop) + '</td>' +
+      '<td>' + f1(risque) + ' pts</td>' +
+      '<td class="' + (tientQuinze ? 'pos' : 'neg') + '">' + (tientQuinze ? 'oui' : 'non, au-delà') + '</td>' +
+      '<td>' + f1(partCapital, 2) + ' %</td><td>' + f1(capital, 0) + ' $</td>' +
+      '<td>' + f1(multiple) + ' fois le risque</td></tr>';
+  }
+
+  function tableauRetest(m1, m2, r1, r2) {
+    return '<div class="etude-tableau"><table><thead><tr><th>Entrée</th><th>Prix</th><th>Stop</th><th>Risque</th>' +
+      '<th>Règle des 15 points</th><th>Sur 1 000 $ (0,01 lot)</th><th>Capital pour 1 %</th><th>Ce que ça a donné</th>' +
+      '</tr></thead><tbody>' +
+      linge('Séquence 1 — clôture du ChoCh', m1.entree, m1.stop, m1.risque, m1.risque <= 15, m1.partCapital, m1.capitalMinimum, m1.multiple) +
+      linge('Séquence 1 — au retest', r1.entree, r1.ext, r1.risque, r1.tientQuinze, r1.partCapital, r1.capitalMinimum, r1.multiple) +
+      linge('Séquence 2 — clôture du ChoCh', m2.entree, m2.stop, m2.risque, m2.risque <= 15, m2.partCapital, m2.capitalMinimum, m2.multiple) +
+      linge('Séquence 2 — au retest', r2.entree, r2.ext, r2.risque, r2.tientQuinze, r2.partCapital, r2.capitalMinimum, r2.multiple) +
+      '</tbody></table></div>';
+  }
+
+  /* ---------------------------------------------------------
+     La section : comprendre le ChoCh, puis le retest
+     --------------------------------------------------------- */
+  function sectionRetest(m1, m2, r1, r2) {
+    var h = '';
+    h += '<h4 class="etude-titre">2. Comprendre : le ChoCh, puis le retest</h4>';
+    h += '<p>Le ChoCh n\'est pas un signal d\'entrée, c\'est un constat : la première clôture qui casse le dernier ' +
+      'extrême formé depuis la bougie de balayage. Une mèche qui dépasse ne suffit pas — il faut la clôture — et le ' +
+      'constat dit seulement que <b>la structure locale a changé de caractère</b> : le marché ne fait plus de plus ' +
+      'hauts descendants, ou plus de plus bas montants. Il ne dit pas que le prix est au bon prix. Le plan est précis ' +
+      'là-dessus : « j\'entre au retest de la zone avec un stop serré ». Le <b>retest</b>, c\'est le retour du prix ' +
+      'sur le niveau qu\'il vient de casser : c\'est ce retour qui rend le stop petit, et rien d\'autre.</p>';
+
+    h += '<ol class="etude-etapes">' +
+      '<li><b>Je note le niveau cassé.</b> ' + prix(r1.niveau) + ' pour l\'achat, ' + prix(r2.niveau) + ' pour la ' +
+      'vente : c\'est le dernier extrême formé avant la clôture du ChoCh. Tout se mesure par rapport à lui.</li>' +
+      '<li><b>Je ne cours pas après la bougie.</b> Je pose mon ordre <i>sur ce niveau</i>. Sur la première séquence, ' +
+      'le prix revient jusque dans la zone du balayage (' + prix(r1.ext) + ' à ' + r1.heureExt + ') : l\'ordre est ' +
+      'rempli, et le stop derrière ce point bas ne fait plus que ' + f1(r1.risqueNiveau) + ' points au lieu de ' +
+      f1(m1.risque) + '.</li>' +
+      '<li><b>Si le niveau n\'est pas touché, j\'attends la clôture qui repart.</b> Sur la deuxième séquence, le ' +
+      'prix monte jusqu\'à ' + prix(r2.ext) + ' — ' + f1(r2.ecartNiveau) + ' point sous le niveau — puis repart : ' +
+      'l\'ordre posé sur le niveau n\'aurait jamais été rempli. L\'entrée est alors la clôture de ' + r2.heureEntree +
+      ' à ' + prix(r2.entree) + ', stop derrière le rejet : ' + f1(r2.risque) + ' points.</li>' +
+      '<li><b>Ce qui annule le ChoCh n\'est pas le retour sur le niveau</b>, mais une clôture de l\'autre côté de ' +
+      '<b>l\'extrême du balayage</b> : sous ' + prix(m1.extreme) + ' à l\'achat, au-dessus de ' + prix(m2.extreme) +
+      ' à la vente. Sur cette séance, aucune des deux n\'est arrivée : les deux lectures ont tenu jusqu\'à la sortie.' +
+      '</li></ol>';
+
+    h += figuresRetest(m1, m2, r1, r2);
+
+    h += '<h4 class="etude-titre">Le même trade, deux entrées</h4>';
+    h += tableauRetest(m1, m2, r1, r2);
+    h += '<p class="etude-note">Lecture du tableau : au retest, la distance entre l\'entrée et le stop tombe de ' +
+      f1(m1.risque) + ' à ' + f1(r1.risque) + ' points sur la première séquence et de ' + f1(m2.risque) + ' à ' +
+      f1(r2.risque) + ' sur la seconde. Les deux stops passent alors sous les 15 points que le plan exige, ce ' +
+      'qu\'aucune des deux entrées sur la clôture du ChoCh ne respectait. Sur la deuxième séquence, le risque ' +
+      'passe même sous 1 % d\'un compte de 1 000 $ (' + f1(r2.partCapital, 2) + ' %, soit ' + f1(r2.capitalMinimum, 0) +
+      ' $ de capital nécessaire). En posant l\'ordre sur le niveau, la première séquence descend à ' +
+      f1(r1.risqueNiveau) + ' points et ' + f1(r1.partCapitalNiveau, 2) + ' % du capital — mais ce n\'est possible ' +
+      'que quand le prix revient <i>jusque-là</i>, et il ne le fait pas toujours.</p>';
+
+    h += '<div class="etude-verdict"><b>Ce que le retest change, et ce qu\'il ne change pas.</b> Il resserre le ' +
+      'stop (' + f1(m2.risque / r2.risque) + ' fois plus petit sur la seconde séquence), il fait rentrer les deux séquences dans la règle ' +
+      'des 15 points, et il fait passer le risque de la seconde sous le 1 %. Il ne fabrique pas un trade pour autant : ' +
+      'aucune des deux n\'atteint le 1:7 du plan (' + f1(r1.multiple) + ' et ' + f1(r2.multiple) + ' fois le risque ' +
+      'au mieux), et la séquence 2 reste hors des fenêtres de tir. Et il n\'est jamais garanti : quand le prix part ' +
+      'sans revenir, il ne reste que la première entrée, la plus large — ou le renoncement. C\'est ce qui est écrit ' +
+      'dans le plan : je regarde le retest, je ne l\'exige pas.</div>';
+    return h;
+  }
+
+  /* ---------------------------------------------------------
      Le tableau de la checklist du plan, appliqué à une séquence
      --------------------------------------------------------- */
   function checklistHTML(m) {
@@ -362,16 +559,21 @@
       'ou un petit plus bas (pour un achat). Ce n\'est pas encore une cassure de structure : c\'est le point de ' +
       'référence.</li>' +
       '<li><b>Le ChoCh est confirmé.</b> Une clôture casse ce dernier extrême. Là, et seulement là, la structure ' +
-      'locale change de caractère : le marché ne monte plus, il descend (ou l\'inverse).</li>' +
-      '<li><b>L\'entrée et le stop.</b> J\'entre sur la clôture du ChoCh — pas sur la mèche — et je pose le stop ' +
-      'derrière l\'extrême du balayage, à l\'endroit exact où ma lecture devient fausse. Le stop se place avant ' +
-      'de cliquer, jamais après.</li></ol>';
+      'locale change de caractère : le marché ne monte plus, il descend (ou l\'inverse). C\'est un constat, pas un ' +
+      'signal d\'entrée — le prix peut être très loin du niveau qu\'on vient de casser.</li>' +
+      '<li><b>L\'entrée et le stop.</b> Deux entrées, dans cet ordre : <b>le retest</b> du niveau cassé quand il ' +
+      'vient (c\'est là que le stop est le plus serré), sinon la clôture du ChoCh elle-même, avec le stop derrière ' +
+      'l\'extrême du balayage — jamais sur la mèche. Le stop se place avant de cliquer, jamais après.</li></ol>';
     h += '<p>Deux séquences ressortent sur cette séance, une dans chaque sens. La première est dans la fenêtre de ' +
       'tir USA, la seconde tombe dans un creux d\'horaires : les deux sont dépliées, et les deux passent au ' +
       'crible de la checklist du plan.</p>';
 
-    /* ---------- 2. la journée ---------- */
-    h += '<h4 class="etude-titre">2. La séance entière, du haut de la nuit au bas de la fenêtre USA</h4>';
+    /* ---------- 2. comprendre le ChoCh, puis le retest ---------- */
+    var r1 = retest(S1), r2 = retest(S2);
+    if (r1 && r2) h += sectionRetest(m1, m2, r1, r2);
+
+    /* ---------- 3. la journée ---------- */
+    h += '<h4 class="etude-titre">3. La séance entière, du haut de la nuit au bas de la fenêtre USA</h4>';
     h += figures();
     h += '<p>La séance tient dans <b>' + f1(se.amplitude) + ' points</b> : un plus haut à ' + se.heureHaut +
       ' (' + prix(se.haut) + '), un plus bas à ' + se.heureBas + ' (' + prix(se.bas) + ') — 12,7 points sous les ' +
@@ -379,7 +581,7 @@
       'descente ; la clôture de la veille était plus haut, à ' + prix(D.cloturePrecedente) + '.</p>';
 
     /* ---------- 3. séquence 1 ---------- */
-    h += '<h4 class="etude-titre">3. ' + esc(S1.titre) + '</h4>';
+    h += '<h4 class="etude-titre">4. ' + esc(S1.titre) + '</h4>';
     h += '<div class="etude-carnet"><div class="etude-carnet-tete">Mon carnet, lundi 14 septembre, ' +
       m1.heureBalayage + '</div><ul class="etude-liste">' +
       '<li>Ce que je vois : la séance a fait son plus haut à 02:30, puis elle glisse depuis 09:00. À 12:45, les ' +
@@ -404,7 +606,7 @@
       'clique pas : le déclencheur est bon, le contexte ne l\'est pas.</div>';
 
     /* ---------- 4. séquence 2 ---------- */
-    h += '<h4 class="etude-titre">4. ' + esc(S2.titre) + '</h4>';
+    h += '<h4 class="etude-titre">5. ' + esc(S2.titre) + '</h4>';
     h += '<div class="etude-carnet"><div class="etude-carnet-tete">Mon carnet, lundi 14 septembre, ' +
       m2.heureBalayage + '</div><ul class="etude-liste">' +
       '<li>Ce que je vois : après le plus haut de 02:30, le prix tourne entre 4 363 et 4 379 depuis 04:00. Les ' +
@@ -429,7 +631,7 @@
       'pas le droit de cliquer.</div>';
 
     /* ---------- 5. la séquence qu'on prend ---------- */
-    h += '<h4 class="etude-titre">5. La séquence que le plan accepte : le trade du 21 octobre 2025</h4>';
+    h += '<h4 class="etude-titre">6. La séquence que le plan accepte : le trade du 21 octobre 2025</h4>';
     h += '<p>La même mécanique, mais tous les feux au vert. Du vendredi 17 au mardi 21 octobre 2025, sur l\'or : ' +
       'deux rejets au-dessus des records (4 398,0 puis 4 393,6) — <b>la liquidité prise</b> ; la clôture ' +
       'horaire du mardi 01:00 passe sous 4 370,2 — <b>le ChoCh confirmé</b> ; l\'entrée à 4 368 à 02:00, en ' +
@@ -442,7 +644,7 @@
       'porte, la checklist dit si on entre. L\'étude de cas complète est plus haut dans cette page.</div>';
 
     /* ---------- 6. à retenir ---------- */
-    h += '<h4 class="etude-titre">6. Ce qu\'il faut retenir</h4>';
+    h += '<h4 class="etude-titre">7. Ce qu\'il faut retenir</h4>';
     h += '<ul class="etude-liste">' +
       '<li>La prise de liquidité puis le ChoCh se lisent en quatre temps : la mèche hors du niveau, le retour, ' +
       'la clôture qui casse le dernier extrême, l\'entrée — le stop derrière le balayage, jamais élargi.</li>' +
@@ -450,6 +652,13 @@
       'donne l\'entrée. Sur cette séance, les deux séquences ont été justes du début à la fin.</li>' +
       '<li>Être juste en LTF, c\'est trouver <i>où</i> regarder. Ce n\'est pas une autorisation de cliquer : ' +
       'fenêtre de tir, taille et ratio 1:7 restent à valider avant, et ils se calculent sans le graphique.</li>' +
+      '<li>Le ChoCh dit <i>où</i> la structure a tourné ; il ne dit pas à quel prix entrer. Le prix d\'entrée, ' +
+      'c\'est le retest : le retour du prix sur le niveau cassé. Ce retour resserre le stop — ' +
+      f1(r1.risque) + ' points au lieu de ' + f1(m1.risque) + ' sur la première séquence, ' + f1(r2.risque) +
+      ' au lieu de ' + f1(m2.risque) + ' sur la seconde — et c\'est la seule chose qui le resserre.</li>' +
+      '<li>Quand le retest vient, les deux séquences respectent enfin la règle des 15 points ; quand il ne vient ' +
+      'pas (la seconde s\'arrête ' + f1(r2.ecartNiveau) + ' point sous le niveau), il ne reste que l\'entrée sur la ' +
+      'clôture du ChoCh — ou le renoncement. On regarde le retest, on ne l\'exige pas.</li>' +
       '<li>Quand une séquence est bonne et le contexte mauvais, le plan gagne : sur cette journée, deux bons ' +
       'déclencheurs, deux refus. C\'est écrit ici noir sur blanc parce que c\'est ce qui se passe en vrai.</li>' +
       '</ul>';
@@ -491,6 +700,7 @@
     carte: carte,
     cabler: cabler,
     figures: figures,
+    retest: retest,
     mesures: mesures,
     seance: seance,
     dessiner: dessiner,
