@@ -286,7 +286,7 @@ function bac() {
   const vAppT = (lire('package.json').match(/"version": "(\d+)\.(\d+)\.(\d+)"/) || []).slice(1, 4).map(Number);
   verif('la version de l\'application est relevée (3.2 ou plus)',
     vAppT[0] === 3 && vAppT[1] >= 2, vAppT.length === 3 ? 'v' + vAppT.join('.') : 'absente');
-  verif('le pied de page annonce la version', /v3\.2/.test(idx));
+  verif('le pied de page annonce la version', /v3\.[2-9]/.test(idx));
   verif('le README explique le calculateur',
     /calculateur de taille|taille de position/i.test(lire('README.md')) && /node tools\/taille-test\.js/.test(lire('README.md')));
   const css = lire('assets/css/styles.css');

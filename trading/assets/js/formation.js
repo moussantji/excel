@@ -114,6 +114,17 @@
     if (voirReel) voirReel.addEventListener('click', ouvrirGraphiqueReel);
     if (global.EtudeOr && global.EtudeOr.cabler) global.EtudeOr.cabler(host, App);
     if (global.EtudeLtf && global.EtudeLtf.cabler) global.EtudeLtf.cabler(host, App);
+    /* les raccourcis de l'en-tête : on descend jusqu'à la carte visée et on la montre */
+    Array.prototype.forEach.call(host.querySelectorAll('[data-alle]'), function (b) {
+      b.addEventListener('click', function () {
+        var c = host.querySelector(b.dataset.alle);
+        if (!c) return;
+        if (c.scrollIntoView) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        c.style.transition = 'box-shadow .5s';
+        c.style.boxShadow = '0 0 0 3px rgba(237,187,82,.35)';
+        setTimeout(function () { c.style.boxShadow = ''; }, 2600);
+      });
+    });
     return html;
   }
 
@@ -141,6 +152,10 @@
         ? '<div class="form-suivant"><span>Chapitre suivant conseillé :</span> <b>' + esc(suivant.num + ' — ' + suivant.titre) + '</b>' +
           '<button class="btn primary small" data-chap="' + attr(suivant.id) + '">Ouvrir le chapitre</button></div>'
         : '<div class="form-suivant"><span>Les 12 chapitres sont étudiés.</span> <b>Continuez avec l\'entraîneur</b> : c\'est la répétition qui installe la lecture.</div>') +
+      /* les deux lectures sur de vrais cours, à un appui (elles sont plus bas dans la page) */
+      '<div class="form-suivant"><span>La méthode sur de vrais cours :</span>' +
+      '<button class="btn ghost small" data-alle="#etudeOr">L\'or, un trade complet</button>' +
+      '<button class="btn ghost small" data-alle="#etudeLtf">La prise de liquidité puis le ChoCh, en 15 minutes</button></div>' +
       '</section>';
   }
   function score(label, valeur, jauge, sous) {

@@ -289,6 +289,10 @@
       '<button type="button" class="btn ghost small" data-rt-jour="' + (s.complet ? 'off' : 'on') + '">' +
       (s.complet ? 'Vider cette journée' : 'Tout cocher aujourd\'hui') + '</button></div></div>';
 
+    /* l'exemple en basse unité de temps (la phrase de la routine, dépliée) */
+    html += '<p class="rt-legende rt-ltf">Attendre la prise de liquidité, puis le ChoCh : la routine est dépliée sur une ' +
+      'séance réelle de 15 minutes. <button type="button" class="rt-lien" id="rtLtf">Voir cet exemple en 15 minutes</button></p>';
+
     /* --- le mois --- */
     html += '<div class="rt-mois"><header><h4>' + esc(M.titre) + '</h4>' +
       '<span class="rt-mois-bilan">' + bilan.complets + ' jour(s) complet(s) sur ' + bilan.ecoules + ' écoulé(s)' +
@@ -357,6 +361,22 @@
     });
     var auj = host.querySelector('#rtAujourd');
     if (auj) auj.addEventListener('click', function () { choisir(null); recharger(); });
+
+    /* l'exemple vit dans la vue Formation : on y va, on le vise, on le montre */
+    var ltf = host.querySelector('#rtLtf');
+    if (ltf) ltf.addEventListener('click', function () {
+      if (!App || !App.state || !App.render) return;
+      App.state.view = 'formation';
+      App.render();
+      setTimeout(function () {
+        var cible = document.querySelector('#etudeLtf');
+        if (!cible) return;
+        if (cible.scrollIntoView) cible.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        cible.style.transition = 'box-shadow .5s';
+        cible.style.boxShadow = '0 0 0 3px rgba(237,187,82,.35)';
+        setTimeout(function () { cible.style.boxShadow = ''; }, 2600);
+      }, 90);
+    });
 
     host.querySelectorAll('[data-rt-jour-cell]').forEach(function (c) {
       c.addEventListener('click', function () {

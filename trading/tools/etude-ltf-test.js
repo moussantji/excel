@@ -394,6 +394,10 @@ function relire(D, spec) {
     verif('elle se place après l\'étude de cas',
       carte.previousElementSibling === win.document.querySelector('#etudeOr') || !!win.document.querySelector('#etudeOr'));
     verif('aucune donnée du journal n\'y apparaît', !/riskAmount|journal-trading|entry=/.test(carte.innerHTML));
+    /* on arrive à la carte en un appui, depuis l'en-tête de la Formation et depuis la routine */
+    const raccourci = win.document.querySelector('[data-alle="#etudeLtf"]');
+    verif('la Formation propose un raccourci vers la carte', !!raccourci,
+      raccourci ? plat(raccourci.textContent) : 'absent');
     const ouvertes = [];
     win.open = (u) => { ouvertes.push(u); return null; };
     const bouton = carte.querySelector('#ltfOuvrirQuinze');
@@ -412,6 +416,20 @@ function relire(D, spec) {
       Object.defineProperty(win.navigator, 'onLine', { configurable: true, get: () => true });
     }
   }
+    /* et depuis la routine du plan, qui cite la phrase sans la recopier */
+    const ongletPlan = win.document.querySelector('[data-view="plan"]');
+    if (ongletPlan) ongletPlan.click();
+    await new Promise((r) => setTimeout(r, 300));
+    const lienRoutine = win.document.querySelector('#rtLtf');
+    verif('la carte de la routine mène au même exemple',
+      !!lienRoutine && /15 minutes/.test(plat(lienRoutine.textContent)),
+      lienRoutine ? plat(lienRoutine.textContent) : 'absent');
+    if (lienRoutine) {
+      lienRoutine.click();
+      await new Promise((r) => setTimeout(r, 400));
+      verif('et l\'appui ramène bien sur la carte de l\'exemple',
+        win.App.state.view === 'formation' && !!win.document.querySelector('#etudeLtf'), win.App.state.view);
+    }
   verif('l\'application se charge sans erreur', erreurs.length === 0, erreurs.slice(0, 2).join(' | ') || 'aucune erreur');
 
   console.log('\n' + (ko === 0 ? '✅ ' + ok + ' contrôles passés, exemple en basse unité de temps vérifié.'

@@ -256,6 +256,22 @@ function bac() {
     verif('le retour à aujourd\'hui est effectif',
       win.document.querySelector('#bloc-routine-jour [data-rt]').getAttribute('data-date') === win.Routine.aujourdhui());
   }
+  /* la routine mène à l'exemple en basse unité de temps, sans le recopier */
+  verif('la carte de la routine propose l\'exemple en 15 minutes',
+    /id="rtLtf"/.test(lire('assets/js/routine.js')) && /EtudeLtf/.test(lire('assets/js/routine.js')) === false,
+    'un lien, pas une copie');
+  const lienLtf = win.document.querySelector('#rtLtf');
+  verif('le lien est dans la carte de la routine', !!lienLtf);
+  if (lienLtf) {
+    lienLtf.click();
+    await new Promise((r) => setTimeout(r, 400));
+    verif('le lien ouvre la vue Formation', win.App.state.view === 'formation', win.App.state.view);
+    verif('l\'exemple en 15 minutes y est', !!win.document.querySelector('#etudeLtf'));
+    verif('et il est entier (les deux séquences et le bouton TradingView)',
+      !!win.document.querySelector('#etudeLtf #ltfOuvrirQuinze') &&
+      win.document.querySelectorAll('#etudeLtf svg').length >= 5,
+      win.document.querySelectorAll('#etudeLtf svg').length + ' figures');
+  }
   verif('l\'application se charge sans erreur', erreurs.length === 0, erreurs.slice(0, 2).join(' | ') || 'aucune erreur');
 
   console.log('\n' + (ko === 0 ? '✅ ' + ok + ' contrôles passés, routine quotidienne vérifiée.'
