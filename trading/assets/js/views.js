@@ -340,6 +340,8 @@
         (b.lead ? '<p class="lead">' + esc(b.lead) + '</p>' : '') +
         b.items.map(renderBlock).join('') +
         '</section>';
+      /* le calculateur de taille, juste sous la formule qu'il applique */
+      if (b.id === 'risque' && global.Taille) html += global.Taille.carte(App);
     });
 
     // Checklists
@@ -379,6 +381,7 @@
 
     // routine : cases datées, navigation, mois
     if (global.Routine) global.Routine.cabler(host, App);
+    if (global.Taille) global.Taille.cabler(host, App);
   }
 
   function renderBlock(item) {

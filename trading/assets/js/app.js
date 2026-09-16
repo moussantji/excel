@@ -1305,6 +1305,7 @@
       f('Capture d\'écran (URL ou chemin)', input('screenshot', r.screenshot, 'placeholder="https://…"'), '', 'g2') +
       f('Notes', '<textarea name="notes" class="input" rows="3" placeholder="Contexte, émotion, ce que je referais…">' + esc(r.notes) + '</textarea>', '', 'g2') +
 
+      (global.Taille ? global.Taille.bloc(s) : '') +
       '<div class="preview" id="preview"></div>' +
       '</form>';
   }
@@ -1339,6 +1340,10 @@
     });
     $$('.calc', form).forEach(function (i) { i.addEventListener('input', function () { updatePreview(form, s); }); });
     $$('input,select,textarea', form).forEach(function (i) { i.addEventListener('change', function () { updatePreview(form, s); }); });
+    /* la taille conseillée, calculée du risque vers les lots */
+    if (global.Taille && global.Taille.cablerFormulaire) {
+      global.Taille.cablerFormulaire(form, s, function () { updatePreview(form, s); });
+    }
     updatePreview(form, s);
   }
 

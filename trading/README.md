@@ -449,7 +449,7 @@ Le script vérifie l'absence de débordement horizontal, la taille des cibles ta
 
 ### 📒 Journal
 - Tableau triable et filtrable (instrument, setup, session, sens, respect du plan, recherche plein texte, période).
-- Formulaire complet avec **calculs automatiques** : pips, R:R prévu, risque estimé, P&L net, multiple de R (aperçu en direct avant enregistrement).
+- Formulaire complet avec **calculs automatiques** : pips, R:R prévu, risque estimé, P&L net, multiple de R (aperçu en direct avant enregistrement) — plus la **taille conseillée pour votre risque**, calculée du stop vers les lots, avec un bouton pour la reprendre.
 - Dupliquer / supprimer une ligne en un clic, import CSV, export CSV ou sauvegarde JSON.
 
 ### 🗓️ Calendrier
@@ -467,6 +467,7 @@ Plan rédigé sur la méthode **SMV** : les 4 lois (structure, offre/demande, ca
 - **4 setups documentés** avec 6 lignes chacun (contexte, déclencheur, entrée, stop, objectifs, invalidation) : Golden Setup (phase C), Complexe Pull Back, Market Shift (ChoCh), ODF.
 - Règles de risque chiffrées : **1 % maximum par trade, stop 15 pips maximum, ratio minimum 1:7, 2 stop loss par jour maximum**, mise à breakeven à la cassure, prises partielles 30 % / 50 % / solde.
 - Fenêtres de tir : Asie 1h–2h, Europe 8h–9h, USA 13h–14h (heure de Bamako).
+- **Un calculateur de taille de position**, juste sous la formule du bloc 03 : on saisit le capital, le risque, l'entrée et le stop, il donne la taille en lots — et refuse quand le plus petit lot dépasse le risque (voir la section suivante).
 - **4 checklists interactives** (pré-trade, gestion de position, post-trade, revue hebdomadaire) dont l'état est sauvegardé.
 - **4 moments de routine dont les cases sont datées, jour par jour** — voir la section suivante.
 - **2 contrôles de discipline supplémentaires** dans le suivi : part des trades dont le ratio visé atteint 1:7 et respect du stop à 15 pips maximum.
@@ -487,6 +488,19 @@ Les quatre moments de la routine (avant la séance, pendant, après, revue du di
 - Utilisable **hors ligne**, sans emoji, sans ressource distante, pensé pour le doigt (cibles de 42 px) et **imprimable**.
 
 Recette dédiée : `node tools/routine-test.js` (**77 contrôles** — source unique des moments, calcul des dates et du dimanche, score d'une journée, enregistrement daté et isolation entre les jours, série, grille du mois, bilans, affichage sans ressource externe, et parcours réel dans la vue Plan : cocher, décocher, tout cocher, naviguer d'un jour à l'autre).
+
+### 🧮 Le calculateur de taille (du risque vers les lots)
+
+Le plan donnait la formule : *taille = risque en devise ÷ (distance en pips × valeur du pip par lot)*. Elle est maintenant **calculable**, à deux endroits.
+
+- **Dans la vue Plan, juste sous la formule du bloc 03** : capital, risque par trade, instrument, valeur du pip par lot, prix d'entrée, stop, sens. Les valeurs de départ sont **vos Paramètres** (capital de départ, risque par trade, valeur du pip par lot, premier instrument) et chaque frappe recalcule tout en direct. Le résultat donne le **risque engagé (R)**, la **distance du stop** en pips, la **taille** arrondie vers le bas (jamais au-dessus du risque), ce que coûte le **plus petit lot** (0,01) en devise et en pourcentage du capital, le **capital qu'il faudrait** pour que ce stop tienne dans le risque autorisé, et l'**objectif 1:7** que le plan exige.
+- **Les règles chiffrées du plan sont confrontées à la saisie** : *1 % maximum par trade*, *stop 15 pips maximum* (règle écrite pour le forex : sur un indice ou un métal, la distance se compte en points et c'est dit), *ratio minimum 1:7*.
+- **Le verdict ne triche pas** : quand le plus petit lot négociable dépasse le risque autorisé, il ne dit pas « arrondir » mais **« laisser passer »**, avec les chiffres — exactement la conclusion de l'étude de cas et de l'exemple en 15 minutes (0,01 lot sur l'or avec un stop de 20,7 points = 20,70 $, soit **2,07 %** d'un compte de 1 000 $ : il faudrait **2 070 $** pour tenir dans 1 %).
+- **Dans le formulaire de trade** (journal), une ligne discrète fait le même calcul à partir de l'entrée et du stop déjà saisis, avec un bouton **Utiliser cette taille** ; l'aperçu du risque se met à jour dans la foulée.
+- L'exemple du plan est reproduit au chiffre près : 10 000 €, 1 %, stop de 12 pips, pip à 10 €/lot → **100 ÷ (12 × 10) = 0,83 lot**.
+- **Rien n'est enregistré** (c'est un outil de décision, pas une fiche), **rien ne quitte l'appareil**, ça marche **hors ligne**, sans emoji, au doigt, et le calculateur **ne s'imprime pas** (la formule du plan, elle, reste imprimable).
+
+Recette dédiée : `node tools/taille-test.js` (**77 contrôles** — la formule recalculée à la main, les cas limites, le pas du pip par instrument, le contrôle du plus petit lot, l'objectif 1:7, la carte du plan préremplie et son verdict, la ligne du formulaire et le trade enregistré, le montage et le cache hors ligne).
 
 ### 🎓 Formation
 - **Le cours complet, chapitre par chapitre** : l'essentiel, les leçons, la lecture sur le graphique, les étapes à suivre, les erreurs fréquentes et **52 exercices notés** (dont le calcul de risque).
@@ -650,8 +664,10 @@ trading/
 │       ├── etude-or.js           Étude de cas réelle : le trade complet, recalculé et dessiné en SVG
 │       ├── etude-ltf-donnees.js  96 créneaux de 15 minutes (l'or, lundi 14 septembre 2026)
 │       ├── etude-ltf.js          Basse unité de temps : la liquidité prise, le ChoCh, et les refus du plan
+│       ├── routine.js            Routine cochable : cases datées jour par jour, grille du mois, séries
 │       ├── formation.js          Vue Formation : cours, exercices, entraîneur, progression
 │       ├── ui.js                 Formatage FR, modales, toasts, icônes SVG
+│       ├── taille.js             Calculateur de taille de position : du risque vers les lots
 │       ├── graphe.js             Lien vers le graphique TradingView (symbole, unité de temps)
 │       ├── views.js              Vues Calendrier, Analyses, Plan, Paramètres
 │       ├── sync.js               Sauvegarde cloud GitHub (états, conflits, fusion, hors ligne)
@@ -670,6 +686,9 @@ trading/
     ├── formation-test.js         Recette de la formation : cours, scénarios, correction, progression
     ├── graphe-test.js            Recette du lien graphique : symboles, correction, hors ligne, boutons
     ├── relecture-test.js         Recette de la relecture des trades : notation, masquage, bilan
+    ├── etude-ltf-test.js         Recette de la basse unité de temps : 15 minutes, séquences, refus, dessin
+    ├── routine-test.js           Recette de la routine : cases datées, journaux, série, grille du mois
+    ├── taille-test.js            Recette du calculateur de taille : formule, lot minimum, règles, formulaire
     ├── style-check.js            Recette du thème : contrastes AA, jetons, cibles tactiles, impression
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
@@ -695,6 +714,7 @@ npm i -D jsdom && node tools/relecture-test.js           # relecture des vrais t
 npm i -D jsdom && node tools/etude-test.js                # étude de cas réelle : cours encodés, trade, dessin SVG
 npm i -D jsdom && node tools/etude-ltf-test.js            # basse unité de temps : liquidité prise, ChoCh, refus du plan
 npm i -D jsdom && node tools/routine-test.js              # routine : cases datées, série, grille du mois
+npm i -D jsdom && node tools/taille-test.js               # calculateur de taille : formule, lot minimum, règles du plan
 node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
@@ -706,6 +726,7 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 3.2 | **Le calculateur de taille de position** : la formule du bloc 03 du plan devient un outil, dans la vue Plan juste sous la formule et dans le formulaire de trade. On saisit capital, risque, instrument, valeur du pip par lot, entrée, stop et sens ; il rend le **risque engagé**, la **distance en pips**, la **taille en lots arrondie vers le bas**, ce que coûte le **plus petit lot (0,01)** en devise et en pourcentage du capital, le **capital minimum** pour tenir dans le risque autorisé et l'**objectif 1:7**. Les règles chiffrées du plan sont confrontées à la saisie (1 % maximum, stop 15 pips maximum pour le forex, ratio 1:7) et le verdict **refuse** quand le plus petit lot dépasse le risque — « laisser passer », avec les chiffres : 0,01 lot d'or à 20,7 points de stop = **2,07 %** d'un compte de 1 000 $, il faudrait **2 070 $**. Exemple du plan reproduit : 10 000 €, 1 %, 12 pips, 10 €/lot → **0,83 lot**. Rien n'est enregistré, rien ne sort de l'appareil. Recette `tools/taille-test.js` : 77 contrôles, cache `trading-desk-v18` |
 | 3.1 | **En basse unité de temps — attendre la prise de liquidité, puis le ChoCh** : la phrase de la routine dépliée en **96 bougies de 15 minutes** d'une vraie séance (l'or, lundi 14 septembre 2026, relevé figé COMEX `GC=F`). **Deux séquences ressortent de la même journée** : à l'achat dans la **fenêtre de tir USA** (mèche à 4 293,0 à 13:00 sous les plus bas du jour, ChoCh à 13:15 sur la clôture de 4 313,7, entrée 4 313,7, stop 4 293,0, sortie 4 358,9 à 16:45 — 2,2 fois le risque) et à la vente au petit matin (balayage de 4 379,3 à 06:00, sommets descendants, ChoCh à 06:45, sortie 4 317,3 à 09:45 — 2,7 fois le risque). La page passe ensuite les **six règles de la check-list** sur chacune et **refuse les deux** : 20,7 points de stop font **2,07 % d'un compte de 1 000 $** (1 % demanderait 2 070 $) et un rapport **1:7 voudrait 145 points** de potentiel quand la séance entière en fait 103,8 — « je note le niveau, je ne clique pas ». En face, le trade du 21 octobre 2025 (7 fois le risque, tous les feux au vert) montre ce qui décide : la fenêtre, la taille, le ratio. Cinq figures SVG, un bouton « Ouvrir l'or en 15 minutes ». Recette `tools/etude-ltf-test.js` : 119 contrôles, cache `trading-desk-v17` |
 | 3.0 | **Ma routine, jour par jour** (bloc 14 du plan) : les quatre moments de la routine deviennent **cochables et datés** — 13 cases en semaine, 17 le dimanche (la revue ne compte que ce dimanche-là). Une journée est **complète** quand tout est coché, **entamée** dès la première case. Navigation *jour précédent / jour suivant / aujourd'hui* (le futur est bloqué), boutons *cocher ce moment* et *tout cocher / vider la journée*, **grille du mois** avec l'état de chaque jour (verte, dorée, vide, dimanche signalé, aujourd'hui encadré, futur grisé), **bilans** du mois et de la semaine et **série de jours complets** (une journée entamée mais non finie arrête la série, une journée pas encore commencée laisse compter jusqu'à hier). Les moments et leurs cases sont **lus dans `plan.js`**, jamais recopiés. Tout s'enregistre **avec le journal** : chiffré par le verrou, sauvegardé dans votre dépôt, fusionné entre appareils **jour par jour**. Recette `tools/routine-test.js` : 77 contrôles |
 | 2.9 | **Étude de cas réelle : l'or, 17 → 22 octobre 2025** — un trade complet du début à la fin, dans la vue Formation : le contexte journalier, la veille, le **balayage de liquidité** au-dessus des records (4 398,0 puis 4 393,6), le scénario écrit avant d'entrer, la cassure confirmée (clôture 4 367,7 sous 4 370,2), l'entrée à 4 368, le stop 4 402 jamais approché, trois objectifs touchés (1:2 à 08:00, 1:4 à 12:00, 1:7 à 14:00) pour +238 $ l'once en douze heures, puis la **relecture des 5 règles du plan** — qui rend **4 sur 5** : le risque de 3,4 % sur un compte de 1 000 $ viole la règle du 1 %, et la page conclut qu'il fallait **laisser passer ce trade** ou attendre 3 400 $. Le contre-exemple (acheter le record : −6,9 % par once, −30,5 % du compte) est chiffré à côté. Les 44 bougies journalières et 69 bougies horaires sont **réelles** (relevé figé, source citée) et **dessinées en SVG par l'application** : aucune image, aucun appel réseau, l'étude marche hors ligne et s'imprime. Deux boutons ouvrent l'or en journalier et en horaire sur TradingView. Recette `tools/etude-test.js` : 78 contrôles, cache `trading-desk-v15` |
