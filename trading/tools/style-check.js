@@ -33,7 +33,9 @@ verif('accolades équilibrées', css.split('{').length === css.split('}').length
 verif('aucun caractère de remplacement', !/\uFFFD/.test(css));
 verif('aucune importation distante', !/@import/.test(css) && !/url\(\s*['"]?https?:/.test(css));
 verif('feuille unique, pas de doublon de chargement', (html.match(/styles\.css/g) || []).length === 1);
-const ko_debut = css.length, budget = 90000;
+/* le budget grandit avec les fonctions : il attrape la dérive, pas la croissance.
+   +2,4 Ko pour le carnet d'entrée (notes.js). */
+const ko_debut = css.length, budget = 94000;
 verif('taille raisonnable (budget ' + Math.round(budget / 1024) + ' Ko)', ko_debut <= budget, Math.round(ko_debut / 1024) + ' Ko');
 
 /* ---------- 2. jetons de design ---------- */

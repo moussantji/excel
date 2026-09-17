@@ -7,7 +7,7 @@
    ========================================================= */
 'use strict';
 
-const VERSION = 'trading-desk-v20';
+const VERSION = 'trading-desk-v21';
 const CORE = [
   './',
   './index.html',
@@ -20,6 +20,7 @@ const CORE = [
   './assets/js/routine.js',
   './assets/js/ui.js',
   './assets/js/taille.js',
+  './assets/js/notes.js',
   './assets/js/graphe.js',
   './assets/js/views.js',
   './assets/js/app.js',

@@ -1497,6 +1497,30 @@ img,svg{max-width:100%}
 .tz-ligne .btn{margin-left:auto}
 @media (max-width:640px){.tz-ligne .btn{margin-left:0}}
 @media print{.tz-carte,.tz-ligne{display:none}}
+/* carnet d'entree (notes.js) */
+.nt-rappel{border:1px dashed var(--line-2);border-radius:var(--radius-sm);padding:12px 14px;margin:12px 0 18px;background:var(--panel-2)}
+.nt-rappel h4,.nt-liste-tete h4{margin:0 0 8px;font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.nt-rappel ul{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.nt-rappel li{font-size:.82rem;line-height:1.55}.nt-rappel li b{color:var(--gold-2)}.nt-rappel li span{color:var(--muted)}
+.nt-rappel-note{margin:10px 0 0;font-size:.72rem;color:var(--muted-2)}
+.nt-form{border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px;background:var(--bg-2)}
+.nt-champs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:10px}
+.nt-zone{min-height:130px;resize:vertical;line-height:1.6;white-space:pre-wrap}
+.nt-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px}
+.nt-aide{font-size:.76rem;color:var(--muted-2)}.nt-aide.refus{color:var(--red)}
+.nt-liste-tete{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:20px 0 10px}
+.nt-liste-tete .input{flex:1 1 220px;max-width:340px}
+.nt-liste{display:grid;gap:10px}
+.nt-note{border:1px solid var(--line);border-left:3px solid var(--gold-3);border-radius:var(--radius-xs);padding:12px 14px;background:var(--panel)}
+.nt-note header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:6px}
+.nt-date{font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-2)}
+.nt-etiquette{font-size:.72rem;padding:2px 9px;border-radius:999px;background:var(--gold-dim);color:var(--gold-2);border:1px solid rgba(237,187,82,.24)}
+.nt-note h5{margin:0 0 6px;font-size:.92rem}
+.nt-texte{margin:0;white-space:pre-wrap;font-size:.86rem;line-height:1.65}
+.nt-note footer{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.nt-maj{margin-left:auto;font-size:.72rem;color:var(--muted-2)}
+.nt-vide{color:var(--muted);font-size:.85rem;line-height:1.6;border:1px dashed var(--line-2);border-radius:var(--radius-xs);padding:14px}
+@media print{.nt-form{display:none}.nt-note{break-inside:avoid;background:#fff}}
 @media print{
   body:before{display:none}
   .card,.kpi,.mini-stat,.plan-block,.trade-card,.welcome-hero,.lock-card{box-shadow:none!important;background:#fff!important}

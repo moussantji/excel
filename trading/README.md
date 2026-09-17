@@ -483,6 +483,7 @@ Plan rédigé sur la méthode **SMV** : les 4 lois (structure, offre/demande, ca
 - **4 setups documentés** avec 6 lignes chacun (contexte, déclencheur, entrée, stop, objectifs, invalidation) : Golden Setup (phase C), Complexe Pull Back, Market Shift (ChoCh), ODF.
 - Règles de risque chiffrées : **1 % maximum par trade, stop 15 pips maximum, ratio minimum 1:7, 2 stop loss par jour maximum**, mise à breakeven à la cassure, prises partielles 30 % / 50 % / solde.
 - Fenêtres de tir : Asie 1h–2h, Europe 8h–9h, USA 13h–14h (heure de Bamako).
+- **Un carnet d'entrée**, juste après les setups dont il relit les règles (voir la section suivante).
 - **Un calculateur de taille de position**, juste sous la formule du bloc 03 : on saisit le capital, le risque, l'entrée et le stop, il donne la taille en lots — et refuse quand le plus petit lot dépasse le risque (voir la section suivante).
 - **4 checklists interactives** (pré-trade, gestion de position, post-trade, revue hebdomadaire) dont l'état est sauvegardé.
 - **4 moments de routine dont les cases sont datées, jour par jour** — voir la section suivante.
@@ -504,6 +505,20 @@ Les quatre moments de la routine (avant la séance, pendant, après, revue du di
 - Utilisable **hors ligne**, sans emoji, sans ressource distante, pensé pour le doigt (cibles de 42 px) et **imprimable**.
 
 Recette dédiée : `node tools/routine-test.js` (**82 contrôles** — source unique des moments, calcul des dates et du dimanche, score d'une journée, enregistrement daté et isolation entre les jours, série, grille du mois, bilans, affichage sans ressource externe, et parcours réel dans la vue Plan : cocher, décocher, tout cocher, naviguer d'un jour à l'autre, et le lien qui ouvre l'exemple en 15 minutes dans la Formation).
+
+### 📝 Le carnet d'entrée — noter la bonne manière d'entrer
+
+Le plan dit **où** entrer ; le carnet dit **comment vous y arrivez**. Il est posé dans la vue Plan, juste après le bloc 04 (les setups) — c'est là que le plan écrit ses lignes « Entrée ».
+
+- **Le rappel du plan, lu et non recopié** : la carte affiche les lignes **« Entrée » des quatre setups** en les lisant dans `plan.js` (comme la routine lit ses moments). Le jour où vous modifiez le plan, la liste suit : rien à réécrire, rien à désynchroniser.
+- **Une note = une date, un titre, une étiquette, un texte.** L'étiquette est libre, avec des propositions (les noms de vos setups, plus *Règle*, *Erreur*, *À refaire*, *Observation*). Les retours à la ligne sont conservés : on peut écrire en liste.
+- **Le bouton « Modèle : les quatre temps »** remplit la zone avec la forme à suivre — la liquidité prise, le dernier extrême, le ChoCh par clôture, le retest puis l'entrée, où poser le stop, ce qu'on en retient. À vous de compléter ; l'application ne remplit pas vos phrases.
+- **La recherche** trouve une note par son titre, son étiquette ou son texte — utile quand le carnet grossit.
+- **Modifier** recharge la note dans le formulaire, **Supprimer** demande confirmation. Une note supprimée laisse une **pierre tombale** : elle ne réapparaît jamais depuis un autre appareil lors d'une fusion.
+- **Tout s'enregistre avec le journal** : les notes vivent dans le même compartiment que les checklists et la routine (`checks.notes`), donc **chiffrées quand le verrou est actif**, **sauvegardées dans votre dépôt GitHub**, et **fusionnées entre appareils** — deux appareils qui écrivent chacun une note se retrouvent avec les deux.
+- **Rien ne sort de l'appareil**, aucun emoji, aucun appel réseau ; le carnet **s'imprime** (le formulaire est masqué, les notes restent) et les cibles restent tactiles.
+
+Recette dédiée : `node tools/notes-test.js` (**84 contrôles** — écriture, modification, suppression avec pierre tombale, rangement dans le compartiment chiffré, **fusion réelle entre deux appareils** (union des notes, la plus récente gagne, une suppression ne ressuscite pas), recherche, entrées du plan lues et non recopiées, rendu de la carte, et parcours complet dans la vraie vue Plan : écrire, enregistrer, retrouver, modifier, chercher, supprimer).
 
 ### 🧮 Le calculateur de taille (du risque vers les lots)
 
@@ -684,6 +699,7 @@ trading/
 │       ├── formation.js          Vue Formation : cours, exercices, entraîneur, progression
 │       ├── ui.js                 Formatage FR, modales, toasts, icônes SVG
 │       ├── taille.js             Calculateur de taille de position : du risque vers les lots
+│       ├── notes.js              Carnet d'entrée : notes datées, étiquetées, cherchables
 │       ├── graphe.js             Lien vers le graphique TradingView (symbole, unité de temps)
 │       ├── views.js              Vues Calendrier, Analyses, Plan, Paramètres
 │       ├── sync.js               Sauvegarde cloud GitHub (états, conflits, fusion, hors ligne)
@@ -705,6 +721,7 @@ trading/
     ├── etude-ltf-test.js         Recette de la basse unité de temps : 15 minutes, séquences, refus, dessin
     ├── routine-test.js           Recette de la routine : cases datées, journaux, série, grille du mois
     ├── taille-test.js            Recette du calculateur de taille : formule, lot minimum, règles, formulaire
+    ├── notes-test.js             Recette du carnet d'entrée : notes, fusion, suppression, rendu dans le plan
     ├── style-check.js            Recette du thème : contrastes AA, jetons, cibles tactiles, impression
     ├── tablet-check.js           Contrôle du rendu tablette + mode hors ligne (puppeteer)
     └── vendor/qrcode.js          Générateur de QR code (MIT, Kazuhiko Arase)
@@ -731,6 +748,7 @@ npm i -D jsdom && node tools/etude-test.js                # étude de cas réell
 npm i -D jsdom && node tools/etude-ltf-test.js            # basse unité de temps : liquidité prise, ChoCh, refus du plan
 npm i -D jsdom && node tools/routine-test.js              # routine : cases datées, série, grille du mois
 npm i -D jsdom && node tools/taille-test.js               # calculateur de taille : formule, lot minimum, règles du plan
+npm i -D jsdom && node tools/notes-test.js                # carnet d'entrée : notes datées, fusion, suppression
 node tools/style-check.js                               # thème : contrastes, jetons, accessibilité (aucune dépendance)
 npm i -D puppeteer && node tools/tablet-check.js        # rendu tablette + mode hors ligne
 node tools/smoke-test.js                                # (test complet : import CSV, PWA, cartes…)
@@ -742,6 +760,7 @@ Le test de fumée charge la démo, parcourt les 6 vues, les 4 modes de courbe, l
 
 | Version | Correction |
 |---|---|
+| 3.5 | **Le carnet d'entrée** : un endroit pour écrire la bonne manière de rentrer en position. Dans la vue Plan, juste après le bloc 04 (les setups), une carte **« Mes notes »** : les lignes **« Entrée » des quatre setups** sont **relues dans `plan.js`** (jamais recopiées), et chaque note porte une **date**, un **titre**, une **étiquette** libre (propositions : vos setups, *Règle*, *Erreur*, *À refaire*, *Observation*) et un texte aux **retours à la ligne conservés**. Le bouton **« Modèle : les quatre temps »** remplit la zone avec la forme à suivre (liquidité prise, dernier extrême, ChoCh par clôture, retest puis entrée, stop, ce qu'on retient), une **recherche** retrouve une note par titre, étiquette ou texte, et **Supprimer** laisse une **pierre tombale** pour que la fusion entre appareils ne ressuscite jamais une note effacée. Tout vit dans le **compartiment des checklists** (`checks.notes`) : chiffré par le verrou, sauvegardé dans le dépôt, fusionné entre appareils — deux appareils qui écrivent chacun une note se retrouvent avec les deux. Aucun emoji, aucun appel réseau, le carnet s'imprime. Recette `tools/notes-test.js` : 84 contrôles, cache `trading-desk-v21` |
 | 3.4 | **Comprendre le ChoCh, puis le retest** : la page de l'exemple en 15 minutes gagne une section qui déplie la phrase du plan (« j'entre au retest de la zone avec un stop serré ») sur les deux séquences réelles de la séance. Le ChoCh est **un constat, pas un signal d'entrée** : sur la clôture du ChoCh le stop est derrière le balayage (20,7 et 16,8 points, au-delà des 15 points du plan). Le **retest** — le retour du prix sur le niveau cassé — le resserre : la séquence 1 revient à **4 303,7** (9,2 points sous le niveau cassé) et l'entrée repart à **4 317,0**, soit **13,3 points** de risque, **3,2 fois** le risque au lieu de 2,2 ; la séquence 2 remonte jusqu'à **1,2 point sous le niveau** (4 364,5) — l'ordre posé sur le niveau **n'aurait jamais été rempli** — et l'entrée à **4 357,3** ne risque que **7,2 points** (0,72 % d'un compte de 1 000 $, **5,6 fois** le risque). Les deux stops du retest passent sous les 15 points du plan, aucune entrée au ChoCh n'y passait. Deux figures de plus (sept au total) et le tableau « le même trade, deux entrées ». Ce qui **annule** un ChoCh y est écrit : une clôture de l'autre côté de l'extrême du balayage, pas le retour sur le niveau. Recette `tools/etude-ltf-test.js` : 144 contrôles, cache `trading-desk-v20` |
 | 3.3 | **L'exemple en basse unité de temps à portée de doigt** : depuis la carte de la routine (vue Plan), le lien « Voir cet exemple en 15 minutes » ouvre la Formation sur la **carte de la séance en 15 minutes** et l'encadre quelques secondes ; l'en-tête de la Formation reçoit les deux raccourcis « L'or, un trade complet » et « La prise de liquidité puis le ChoCh, en 15 minutes ». Rien n'est recopié — l'exemple vit à un seul endroit, la routine ne fait que montrer le chemin. Recettes `tools/routine-test.js` : 82 contrôles, `tools/etude-ltf-test.js` : 122 contrôles, cache `trading-desk-v19` |
 | 3.2 | **Le calculateur de taille de position** : la formule du bloc 03 du plan devient un outil, dans la vue Plan juste sous la formule et dans le formulaire de trade. On saisit capital, risque, instrument, valeur du pip par lot, entrée, stop et sens ; il rend le **risque engagé**, la **distance en pips**, la **taille en lots arrondie vers le bas**, ce que coûte le **plus petit lot (0,01)** en devise et en pourcentage du capital, le **capital minimum** pour tenir dans le risque autorisé et l'**objectif 1:7**. Les règles chiffrées du plan sont confrontées à la saisie (1 % maximum, stop 15 pips maximum pour le forex, ratio 1:7) et le verdict **refuse** quand le plus petit lot dépasse le risque — « laisser passer », avec les chiffres : 0,01 lot d'or à 20,7 points de stop = **2,07 %** d'un compte de 1 000 $, il faudrait **2 070 $**. Exemple du plan reproduit : 10 000 €, 1 %, 12 pips, 10 €/lot → **0,83 lot**. Rien n'est enregistré, rien ne sort de l'appareil. Recette `tools/taille-test.js` : 77 contrôles, cache `trading-desk-v18` |

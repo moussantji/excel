@@ -342,6 +342,8 @@
         '</section>';
       /* le calculateur de taille, juste sous la formule qu'il applique */
       if (b.id === 'risque' && global.Taille) html += global.Taille.carte(App);
+      /* le carnet d'entrée, juste après les setups dont il relit les entrées */
+      if (b.id === 'setups' && global.Notes) html += global.Notes.carte(App);
     });
 
     // Checklists
@@ -382,6 +384,7 @@
     // routine : cases datées, navigation, mois
     if (global.Routine) global.Routine.cabler(host, App);
     if (global.Taille) global.Taille.cabler(host, App);
+    if (global.Notes) global.Notes.cabler(host, App);
   }
 
   function renderBlock(item) {
