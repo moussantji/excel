@@ -2,12 +2,6 @@
 """
 Générateur de Reçu et Attestation de Vente de Véhicule Automobile (A4 - 1 page)
 Adapté aux ventes entre particuliers au Mali / Zone FCFA (XOF).
-
-Supporte deux modes :
-  1. Mode remplissable/vierge (--fillable) : génère un PDF A4 prêt à imprimer ET
-     interactif (champs AcroForm remplissables sur ordinateur ou smartphone).
-  2. Mode pré-rempli (--data data.json) : génère un PDF A4 personnalisé prêt à signer,
-     avec conversion automatique du montant en chiffres et en toutes lettres (FCFA).
 """
 
 import argparse
@@ -88,7 +82,6 @@ def nombre_en_lettres(n: int) -> str:
         if milliers == 1:
             blocs.append("mille")
         else:
-            # « mille » est invariable et bloque l'accord de « cent » / « quatre-vingt »
             blocs.append(f"{_sous_mille(milliers, accord_pluriel=False)} mille")
     if unites:
         blocs.append(_sous_mille(unites, accord_pluriel=True))
@@ -175,26 +168,22 @@ def draw_section_card(
 ) -> float:
     """Dessine un encadré de section avec bandeau de titre et retourne y_top du corps."""
     y_bottom = y_top - h
-    # Fond général blanc + bordure fine
     c.setFillColor(colors.white)
     c.setStrokeColor(BORDER_STRONG)
     c.setLineWidth(0.75)
     c.roundRect(x, y_bottom, w, h, radius=1.8 * mm, stroke=1, fill=1)
 
-    # Bandeau supérieur
     c.saveState()
     p = c.beginPath()
     p.roundRect(x, y_bottom, w, h, radius=1.8 * mm)
     c.clipPath(p, stroke=0, fill=0)
     c.setFillColor(NAVY)
     c.rect(x, y_top - header_h, w, header_h, stroke=0, fill=1)
-    # Fin filet doré sous le bandeau
     c.setStrokeColor(ACCENT_GOLD)
     c.setLineWidth(0.9)
     c.line(x, y_top - header_h, x + w, y_top - header_h)
     c.restoreState()
 
-    # Texte du titre
     c.setFillColor(colors.white)
     c.setFont(fonts["bold"], 8.3)
     c.drawString(x + 3.2 * mm, y_top - header_h + 1.9 * mm, title)
@@ -234,7 +223,6 @@ def draw_field_line(
     val_x = x + lw
     val_w = max(8 * mm, (x + total_w) - val_x - suffix_w)
 
-    # Ligne guide fine sous la zone de saisie
     c.saveState()
     c.setStrokeColor(BORDER_LIGHT if has_val else BORDER_STRONG)
     c.setLineWidth(0.55)
@@ -251,11 +239,10 @@ def draw_field_line(
     if has_val:
         c.setFillColor(NAVY_DARK if bold_value else SLATE_TEXT)
         chosen_font = fonts["mono"] if mono_value else fonts["bold"]
-        # Ajustement auto de la taille si texte long
-        fsize = font_size + (0.3 if bold_value else 0.0)
+        fsize = font_size + (0.25 if bold_value else 0.0)
         txt = str(value).strip()
-        while fsize > 6.3 and pdfmetrics.stringWidth(txt, chosen_font, fsize) > val_w - 1 * mm:
-            fsize -= 0.3
+        while fsize > 6.2 and pdfmetrics.stringWidth(txt, chosen_font, fsize) > val_w - 1 * mm:
+            fsize -= 0.25
         c.setFont(chosen_font, fsize)
         c.drawString(val_x + 0.6 * mm, y_baseline + 0.15 * mm, txt)
     elif fillable:
@@ -297,7 +284,6 @@ def draw_checkbox_item(
     c.rect(x, box_y, box_size, box_size, stroke=1, fill=1)
 
     if checked:
-        # Coche vectorielle blanche nette
         c.saveState()
         c.setStrokeColor(colors.white)
         c.setLineWidth(1.15)
@@ -374,11 +360,9 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
     c.setFillColor(NAVY_DARK)
     c.roundRect(margin_x, hdr_bot, usable_w, hdr_h, radius=2.2 * mm, stroke=0, fill=1)
 
-    # Bandeau doré décoratif à gauche
     c.setFillColor(ACCENT_GOLD)
     c.roundRect(margin_x + 3.0 * mm, hdr_bot + 3.0 * mm, 1.5 * mm, hdr_h - 6.0 * mm, radius=0.6 * mm, stroke=0, fill=1)
 
-    # Titre & sous-titre
     c.setFillColor(colors.white)
     c.setFont(fonts["bold"], 11.4)
     c.drawString(margin_x + 7.2 * mm, hdr_top - 7.8 * mm, "REÇU ET ATTESTATION DE VENTE DE VÉHICULE")
@@ -395,10 +379,9 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
     c.drawString(
         margin_x + 7.2 * mm,
         hdr_top - 17.0 * mm,
-        "Établi en deux (02) exemplaires originaux — Zone UEMOA / Franc CFA (XOF)",
+        "Établi en deux (02) exemplaires originaux — République du Mali / Zone UEMOA (FCFA)",
     )
 
-    # Encadré Réf / Date / Heure à droite
     meta_w = 53.5 * mm
     meta_x = margin_x + usable_w - meta_w - 2.6 * mm
     meta_y = hdr_bot + 2.3 * mm
@@ -431,25 +414,39 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
     vendeur = data.get("vendeur", {}) or {}
     acheteur = data.get("acheteur", {}) or {}
 
-    for idx, (titre, partie, prefix, col_x) in enumerate([
-        ("1. LE VENDEUR (CÉDANT)", vendeur, "vendeur", margin_x),
-        ("2. L'ACHETEUR (ACQUÉREUR)", acheteur, "acheteur", margin_x + col_w + gutter),
-    ]):
+    titre_vendeur = vendeur.get("titre_section", "1. LE VENDEUR (CÉDANT)")
+    titre_acheteur = acheteur.get("titre_section", "2. L'ACHETEUR (ACQUÉREUR)")
+
+    for titre, partie, prefix, col_x in [
+        (titre_vendeur, vendeur, "vendeur", margin_x),
+        (titre_acheteur, acheteur, "acheteur", margin_x + col_w + gutter),
+    ]:
         body_top = draw_section_card(c, col_x, parties_top, col_w, parties_h, titre, fonts)
         px = col_x + 3.0 * mm
         pw = col_w - 6.0 * mm
-        rows = [
-            (f"{prefix}_nom", "Nom & Prénom(s) :", partie.get("nom"), True),
-            (f"{prefix}_piece", "Pièce d'identité / N° :", partie.get("piece_identite"), False),
-            (f"{prefix}_delivree", "Délivrée le / par :", partie.get("piece_delivree"), False),
-            (f"{prefix}_tel", "Téléphone :", partie.get("telephone"), True),
-            (f"{prefix}_adresse", "Domicile / Quartier :", partie.get("adresse"), False),
-        ]
-        for r_i, (fname, flabel, fval, is_bold) in enumerate(rows):
+
+        if partie.get("nina") or partie.get("naissance"):
+            rows = [
+                (f"{prefix}_nom", "Nom & Prénom(s) :", partie.get("nom"), True, False),
+                (f"{prefix}_naiss", "Né(e) le / Lieu :", partie.get("naissance"), False, False),
+                (f"{prefix}_piece", "Carte CEDEAO N° :", partie.get("piece_identite"), True, False),
+                (f"{prefix}_nina", "Numéro NINA :", partie.get("nina"), True, True),
+                (f"{prefix}_tel", "Tél. / Domicile :", partie.get("telephone") or partie.get("adresse"), False, False),
+            ]
+        else:
+            rows = [
+                (f"{prefix}_nom", "Nom & Prénom(s) :", partie.get("nom"), True, False),
+                (f"{prefix}_piece", "Pièce d'identité / N° :", partie.get("piece_identite"), False, False),
+                (f"{prefix}_delivree", "Délivrée le / par :", partie.get("piece_delivree"), False, False),
+                (f"{prefix}_tel", "Téléphone :", partie.get("telephone"), True, False),
+                (f"{prefix}_adresse", "Domicile / Quartier :", partie.get("adresse"), False, False),
+            ]
+
+        for r_i, (fname, flabel, fval, is_bold, is_mono) in enumerate(rows):
             ry = body_top - (5.8 + r_i * 7.3) * mm
             draw_field_line(
                 c, fname, flabel, fval, px, ry, pw,
-                fonts, fillable=fillable, bold_value=is_bold, font_size=7.8,
+                fonts, fillable=fillable, bold_value=is_bold, mono_value=is_mono, font_size=7.7,
             )
 
     # =========================================================================
@@ -459,11 +456,10 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
     veh_h = 43.0 * mm
     veh_body_top = draw_section_card(
         c, margin_x, veh_top, usable_w, veh_h,
-        "3. DÉSIGNATION ET CARACTÉRISTIQUES DU VÉHICULE VENDU", fonts,
+        "3. DÉSIGNATION ET CARACTÉRISTIQUES DU VÉHICULE VENDU (SELON CARTE GRISE)", fonts,
     )
     veh = data.get("vehicule", {}) or {}
 
-    # Séparateur vertical central léger
     mid_x = margin_x + usable_w / 2.0
     c.saveState()
     c.setStrokeColor(BORDER_LIGHT)
@@ -475,22 +471,27 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
     veh_right_x = mid_x + 3.2 * mm
     veh_col_w = usable_w / 2.0 - 6.4 * mm
 
+    row4_left_lbl = veh.get("row4_left_label", "Kilométrage affiché :")
+    row4_left_val = veh.get("row4_left_value", veh.get("kilometrage"))
+    row4_right_lbl = veh.get("row4_right_label", "N° Carte Grise :")
+    row4_right_val = veh.get("row4_right_value", veh.get("carte_grise_num"))
+
     veh_rows = [
         (
             ("veh_marque", "Marque & Modèle :", veh.get("marque_modele"), True, False),
-            ("veh_genre", "Genre / Carrosserie :", veh.get("carrosserie"), False, False),
+            ("veh_genre", "Genre & Carrosserie :", veh.get("carrosserie"), False, False),
         ),
         (
             ("veh_immat", "N° d'Immatriculation :", veh.get("immatriculation"), True, True),
-            ("veh_annee", "Année / 1ère mise en circ. :", veh.get("annee"), False, False),
+            ("veh_annee", "1ère mise en circ. :", veh.get("annee"), True, False),
         ),
         (
             ("veh_chassis", "N° de Châssis (VIN) :", veh.get("chassis"), True, True),
-            ("veh_energie", "Énergie & Couleur :", veh.get("energie_couleur"), False, False),
+            ("veh_energie", veh.get("energie_label", "Énergie & Couleur :"), veh.get("energie_couleur"), False, False),
         ),
         (
-            ("veh_km", "Kilométrage affiché :", veh.get("kilometrage"), False, False),
-            ("veh_cg", "N° Carte Grise :", veh.get("carte_grise_num"), False, False),
+            ("veh_r4l", row4_left_lbl, row4_left_val, False, False),
+            ("veh_r4r", row4_right_lbl, row4_right_val, False, False),
         ),
     ]
     for r_i, (left_spec, right_spec) in enumerate(veh_rows):
@@ -498,12 +499,12 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
         draw_field_line(
             c, left_spec[0], left_spec[1], left_spec[2],
             veh_left_x, ry, veh_col_w, fonts,
-            fillable=fillable, bold_value=left_spec[3], mono_value=left_spec[4], font_size=7.9,
+            fillable=fillable, bold_value=left_spec[3], mono_value=left_spec[4], font_size=7.8,
         )
         draw_field_line(
             c, right_spec[0], right_spec[1], right_spec[2],
             veh_right_x, ry, veh_col_w, fonts,
-            fillable=fillable, bold_value=right_spec[3], mono_value=right_spec[4], font_size=7.9,
+            fillable=fillable, bold_value=right_spec[3], mono_value=right_spec[4], font_size=7.8,
         )
 
     # =========================================================================
@@ -517,7 +518,6 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
     )
     paiement = data.get("paiement", {}) or {}
 
-    # Calcul automatique du montant formaté + lettres si fourni
     prix_raw = paiement.get("prix_vente")
     prix_chiffres = formater_fcfa(prix_raw)
     prix_lettres = paiement.get("prix_lettres") or ""
@@ -529,7 +529,6 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
     montant_verse_raw = paiement.get("montant_verse")
     montant_verse_str = formater_fcfa(montant_verse_raw)
 
-    # Sous-encadré mis en valeur pour le montant (h = 16.2 mm)
     box_margin = 2.8 * mm
     pbox_x = margin_x + box_margin
     pbox_w = usable_w - 2 * box_margin
@@ -564,7 +563,6 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
         suffix="Francs CFA",
     )
 
-    # Mode de paiement (ligne y = pbox_bot - 5.6 mm)
     mode = (paiement.get("mode") or "").lower()
     row1_y = pbox_bot - 5.6 * mm
     lbl_mode = "Mode de paiement :"
@@ -582,7 +580,6 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
         is_chk = any(k in mode for k in match_keys)
         cur_x = draw_checkbox_item(c, cb_id, cb_label, is_chk, cur_x, row1_y, fonts, fillable=fillable, font_size=7.4) + 3.4 * mm
 
-    # Statut du solde (ligne y = row1_y - 6.8 mm)
     row2_y = row1_y - 6.8 * mm
     statut = (paiement.get("statut") or "").lower()
     reste_str = formater_fcfa(paiement.get("reste_a_payer"))
@@ -609,13 +606,11 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
         suffix="FCFA",
     )
 
-    # Filet de séparation
     sep_y = row2_y - 3.0 * mm
     c.setStrokeColor(BORDER_LIGHT)
     c.setLineWidth(0.5)
     c.line(pbox_x, sep_y, pbox_x + pbox_w, sep_y)
 
-    # Documents et clés remis (ligne y = sep_y - 5.2 mm)
     docs_remis = [d.lower() for d in (data.get("documents_remis") or [])]
     row3_y = sep_y - 5.3 * mm
     lbl_docs = "Remis à l'acheteur :"
@@ -658,8 +653,8 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
 
     clauses = [
         (
-            "• Quittance et garantie de propriété : Le Vendeur reconnaît avoir reçu de l'Acheteur la somme mentionnée ci-dessus "
-            "(dont le présent acte vaut reçu et quittance) et certifie sur l'honneur être le propriétaire légitime du véhicule, "
+            "• Quittance et garantie de propriété : La partie venderesse reconnaît avoir reçu de l'Acheteur la somme convenue ci-dessus "
+            "(dont le présent acte vaut reçu et quittance) et certifie sur l'honneur céder légitimement le véhicule en toute propriété, "
             "libre de tout gage, saisie, opposition ou litige."
         ),
         (
@@ -678,11 +673,12 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
         cur_text_y -= 0.7 * mm
 
     # =========================================================================
-    # 6. LIEU, DATE, SIGNATURES ET TÉMOINS (y = 81.2 -> 12.5 mm)
+    # 6. LIEU, DATE, SIGNATURES ET TÉMOINS
     # =========================================================================
     lieu_y = 77.6 * mm
+    lieu_default = "Bamako" if ("lieu_vente" not in data and not fillable) else data.get("lieu_vente", "")
     draw_field_line(
-        c, "lieu_signature", "Fait à :", data.get("lieu_vente", "Bamako" if not fillable else ""),
+        c, "lieu_signature", "Fait à :", lieu_default,
         margin_x + 1.0 * mm, lieu_y, 50.0 * mm,
         fonts, fillable=fillable, bold_value=True, font_size=8.0,
     )
@@ -698,29 +694,25 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
         "En deux (02) exemplaires originaux remis à chacune des parties",
     )
 
-    # --- Encadrés Signatures Principales (y = 74.2 -> 38.2 mm, h = 36.0 mm) ---
+    # --- Encadrés Signatures Principales (y = 74.2 -> 39.2 mm, h = 35.0 mm) ---
     sig_top = 74.2 * mm
-    sig_h = 36.0 * mm
+    sig_h = 35.0 * mm
     sig_bot = sig_top - sig_h
 
+    sig_v_title = vendeur.get("titre_signature", "SIGNATURE DU VENDEUR (Cédant)")
+    sig_v_sub = vendeur.get("sous_signature", "Précédée de la mention « Lu et approuvé, bon pour vente »")
+    sig_a_title = acheteur.get("titre_signature", "SIGNATURE DE L'ACHETEUR (Acquéreur)")
+    sig_a_sub = acheteur.get("sous_signature", "Précédée de la mention « Lu et approuvé, véhicule reçu »")
+
     for title, subtitle, sx in [
-        (
-            "SIGNATURE DU VENDEUR (Cédant)",
-            "Précédée de la mention « Lu et approuvé, bon pour vente »",
-            margin_x,
-        ),
-        (
-            "SIGNATURE DE L'ACHETEUR (Acquéreur)",
-            "Précédée de la mention « Lu et approuvé, véhicule reçu »",
-            margin_x + col_w + gutter,
-        ),
+        (sig_v_title, sig_v_sub, margin_x),
+        (sig_a_title, sig_a_sub, margin_x + col_w + gutter),
     ]:
         c.setFillColor(colors.white)
         c.setStrokeColor(NAVY)
         c.setLineWidth(0.75)
         c.roundRect(sx, sig_bot, col_w, sig_h, radius=1.8 * mm, stroke=1, fill=1)
 
-        # En-tête doux de la boîte signature
         c.saveState()
         p = c.beginPath()
         p.roundRect(sx, sig_bot, col_w, sig_h, radius=1.8 * mm)
@@ -733,31 +725,37 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
         c.restoreState()
 
         c.setFillColor(NAVY)
-        c.setFont(fonts["bold"], 8.0)
+        t_size = 7.9
+        while t_size > 6.5 and pdfmetrics.stringWidth(title, fonts["bold"], t_size) > col_w - 6.0 * mm:
+            t_size -= 0.25
+        c.setFont(fonts["bold"], t_size)
         c.drawCentredString(sx + col_w / 2.0, sig_top - 4.3 * mm, title)
 
-        c.setFillColor(LIGHT_TEXT)
+        c.setFillColor(SLATE_TEXT)
         c.setFont(fonts["italic"], 6.8)
-        c.drawCentredString(sx + col_w / 2.0, sig_top - 9.6 * mm, subtitle)
+        c.drawCentredString(sx + col_w / 2.0, sig_top - 9.5 * mm, subtitle)
 
         c.setFillColor(colors.HexColor("#94A3B8"))
         c.setFont(fonts["regular"], 6.5)
         c.drawCentredString(
-            sx + col_w / 2.0, sig_bot + 2.2 * mm,
+            sx + col_w / 2.0, sig_bot + 2.1 * mm,
             "Signature / Empreinte — Espace visa légalisation (Mairie / Commissariat)",
         )
 
-    # --- Encadrés Témoins (y = 35.4 -> 13.4 mm, h = 22.0 mm) ---
-    tem_top = 35.4 * mm
-    tem_h = 22.0 * mm
+    # --- Encadrés Témoins (y = 36.4 -> 13.0 mm, h = 23.4 mm) ---
+    tem_top = 36.4 * mm
+    tem_h = 23.4 * mm
     tem_bot = tem_top - tem_h
     temoins = data.get("temoins", [{}, {}])
     while len(temoins) < 2:
         temoins.append({})
 
+    t1_title = (temoins[0] or {}).get("titre", "TÉMOIN N° 1 (Côté Vendeur)")
+    t2_title = (temoins[1] or {}).get("titre", "TÉMOIN N° 2 (Côté Acheteur)")
+
     for idx, (ttitle, tdata, tx) in enumerate([
-        ("TÉMOIN N° 1 (Côté Vendeur — Optionnel)", temoins[0] or {}, margin_x),
-        ("TÉMOIN N° 2 (Côté Acheteur — Optionnel)", temoins[1] or {}, margin_x + col_w + gutter),
+        (t1_title, temoins[0] or {}, margin_x),
+        (t2_title, temoins[1] or {}, margin_x + col_w + gutter),
     ]):
         c.setFillColor(BG_SOFT)
         c.setStrokeColor(BORDER_STRONG)
@@ -765,32 +763,36 @@ def generer_recu_pdf(output_path: str, data: Dict[str, Any], fillable: bool = Fa
         c.roundRect(tx, tem_bot, col_w, tem_h, radius=1.5 * mm, stroke=1, fill=1)
 
         c.setFillColor(NAVY)
-        c.setFont(fonts["bold"], 7.4)
-        c.drawString(tx + 2.8 * mm, tem_top - 4.4 * mm, ttitle)
+        c.setFont(fonts["bold"], 7.3)
+        c.drawString(tx + 2.6 * mm, tem_top - 4.3 * mm, ttitle)
 
+        info_w = col_w * 0.65
         draw_field_line(
-            c, f"temoin_{idx+1}_nom", "Nom & Prénom :", tdata.get("nom"),
-            tx + 2.8 * mm, tem_top - 9.8 * mm, col_w * 0.62,
-            fonts, fillable=fillable, bold_value=True, font_size=7.3,
+            c, f"temoin_{idx+1}_nom", "Nom :", tdata.get("nom"),
+            tx + 2.6 * mm, tem_top - 9.4 * mm, info_w,
+            fonts, fillable=fillable, bold_value=True, font_size=7.2,
+        )
+        draw_field_line(
+            c, f"temoin_{idx+1}_piece", "Pièce/NINA :", tdata.get("piece"),
+            tx + 2.6 * mm, tem_top - 14.5 * mm, info_w,
+            fonts, fillable=fillable, bold_value=False, mono_value=bool(tdata.get("piece")), font_size=7.0,
         )
         draw_field_line(
             c, f"temoin_{idx+1}_tel", "Tél. :", tdata.get("telephone"),
-            tx + 2.8 * mm, tem_top - 15.2 * mm, col_w * 0.62,
-            fonts, fillable=fillable, bold_value=False, font_size=7.3,
+            tx + 2.6 * mm, tem_top - 19.6 * mm, info_w,
+            fonts, fillable=fillable, bold_value=False, font_size=7.1,
         )
 
-        # Zone signature témoin à droite
-        sig_tx = tx + col_w * 0.68
-        sig_tw = col_w * 0.29
+        sig_tx = tx + col_w * 0.70
+        sig_tw = col_w * 0.275
         c.setStrokeColor(BORDER_LIGHT)
         c.setFillColor(colors.white)
         c.setLineWidth(0.5)
-        c.roundRect(sig_tx, tem_bot + 2.2 * mm, sig_tw, tem_h - 7.4 * mm, radius=1.0 * mm, stroke=1, fill=1)
+        c.roundRect(sig_tx, tem_bot + 2.0 * mm, sig_tw, tem_h - 7.0 * mm, radius=1.0 * mm, stroke=1, fill=1)
         c.setFillColor(LIGHT_TEXT)
         c.setFont(fonts["italic"], 6.4)
-        c.drawCentredString(sig_tx + sig_tw / 2.0, tem_top - 9.2 * mm, "Signature")
+        c.drawCentredString(sig_tx + sig_tw / 2.0, tem_top - 8.8 * mm, "Signature")
 
-    # Pied de page discret
     c.setFillColor(LIGHT_TEXT)
     c.setFont(fonts["regular"], 6.7)
     c.drawCentredString(
